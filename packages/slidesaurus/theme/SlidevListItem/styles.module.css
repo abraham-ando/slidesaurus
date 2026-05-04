@@ -1,0 +1,331 @@
+.listItem {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.875rem 1rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  text-decoration: none !important;
+  background: var(--ifm-card-background-color);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  width: 100%;
+  position: relative;
+}
+
+.listItem:hover {
+  background: var(--ifm-color-emphasis-100);
+  border-color: var(--ifm-color-primary);
+  text-decoration: none;
+}
+
+.categoryItem {
+  border-color: var(--ifm-color-primary-darkest);
+}
+
+.titleSection {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 30%;
+  min-width: 200px;
+  flex-shrink: 0;
+}
+
+.icon {
+  color: var(--ifm-color-primary);
+  flex-shrink: 0;
+}
+
+.title {
+  font-weight: 600;
+  color: var(--ifm-color-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.devBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.65rem;
+  font-weight: 500;
+  background: var(--ifm-color-warning-lightest);
+  color: black;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.descriptionSection {
+  flex-grow: 1;
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.metaSection {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  min-width: 150px;
+  flex-shrink: 0;
+}
+
+.author {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--ifm-color-emphasis-600);
+  font-size: 0.85rem;
+}
+
+.authorIcon {
+  opacity: 0.7;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  background: var(--ifm-color-primary-lightest);
+  color: var(--ifm-color-primary-contrast-background);
+  white-space: nowrap;
+}
+
+.metaBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.badgeDeprecated {
+  background: var(--ifm-color-danger-contrast-background);
+  color: var(--ifm-color-danger-darkest);
+}
+
+.badgePlaylist {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  background: var(--ifm-color-secondary-contrast-background, #f0f4ff);
+  color: var(--ifm-color-secondary-darkest, #1a3a8a);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.levelBeginner {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.levelIntermediate {
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
+.levelAdvanced {
+  background: #fee2e2;
+  color: #7f1d1d;
+}
+
+.downloadBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  border: 1px solid var(--ifm-color-success-light, #4ade80);
+  border-radius: 4px;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--ifm-color-success-dark, #16a34a);
+  text-decoration: none !important;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.downloadBtn:hover {
+  background: var(--ifm-color-success-dark, #16a34a);
+  color: white;
+}
+
+.downloadBtn:focus-visible {
+  outline: 2px solid var(--ifm-color-success, #22c55e);
+  outline-offset: 2px;
+}
+
+.presenterBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  border: 1px solid var(--ifm-color-primary-light);
+  border-radius: 4px;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--ifm-color-primary);
+  text-decoration: none !important;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.presenterBtn:hover {
+  background: var(--ifm-color-primary);
+  color: white;
+}
+
+.presenterBtn:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 2px;
+}
+
+.favoriteBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--ifm-color-emphasis-400);
+  transition: color 0.15s, transform 0.15s;
+  padding: 0.25rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.favoriteBtn:hover {
+  color: #f59e0b;
+  transform: scale(1.15);
+}
+
+.favoriteBtn:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 2px;
+}
+
+.favoriteBtnActive {
+  color: #f59e0b;
+}
+
+/* Hover thumbnail preview */
+.hoverPreview {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 1rem;
+  width: 220px;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18), 0 0 0 1px var(--ifm-color-emphasis-200);
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  transform: translateY(4px);
+  z-index: 100;
+  background: var(--ifm-card-background-color);
+}
+
+.listItem:hover .hoverPreview {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hoverPreviewImg {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+/* ── Tablet (900 px and below) ───────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .titleSection {
+    width: 35%;
+    min-width: 160px;
+  }
+
+  .metaSection {
+    min-width: 120px;
+    justify-content: flex-end;
+  }
+
+  /* Hover preview: avoid going off-screen on narrower viewports */
+  .hoverPreview {
+    width: 180px;
+    right: 0.5rem;
+  }
+}
+
+/* ── Mobile (768 px and below) ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .listItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.75rem 0.875rem;
+  }
+
+  .titleSection {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .title {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+  }
+
+  .descriptionSection {
+    width: 100%;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .metaSection {
+    width: 100%;
+    justify-content: flex-start;
+    min-width: 0;
+  }
+
+  /* No hover on touch devices — hide the preview entirely */
+  .hoverPreview {
+    display: none;
+  }
+}
+
+/* ── Extra small (480 px and below) ──────────────────────────────────────── */
+@media (max-width: 480px) {
+  .listItem {
+    padding: 0.625rem 0.75rem;
+  }
+
+  .metaSection {
+    gap: 0.3rem;
+  }
+
+  .devBadge {
+    font-size: 0.6rem;
+  }
+}

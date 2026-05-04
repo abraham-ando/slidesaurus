@@ -1,0 +1,38 @@
+{
+  "name": "slidesaurus-monorepo",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "start": "turbo run start",
+    "serve": "turbo run serve",
+    "clean": "turbo run clean",
+    "build:plugin": "turbo run build --filter=slidesaurus",
+    "dev:sample": "turbo run dev --filter=@slidesaurus/sample",
+    "dev:docs": "turbo run dev --filter=@slidesaurus/docs"
+  },
+  "devDependencies": {
+    "@slidev/cli": "^52.0.0",
+    "@slidev/theme-seriph": "*",
+    "turbo": "^2.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "webpack": "~5.104.1",
+      "serialize-javascript": ">=7.0.5",
+      "dompurify": ">=3.3.4",
+      "webpack-dev-server": ">=5.2.1",
+      "uuid": ">=14.0.0"
+    },
+    "onlyBuiltDependencies": [
+      "core-js",
+      "core-js-pure",
+      "esbuild",
+      "playwright-chromium"
+    ]
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "packageManager": "pnpm@10.33.0"
+}

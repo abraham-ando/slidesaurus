@@ -1,0 +1,8 @@
+# Build output
+lib/
+
+# Test coverage
+coverage/
+
+# Misc
+*.tsbuildinfo

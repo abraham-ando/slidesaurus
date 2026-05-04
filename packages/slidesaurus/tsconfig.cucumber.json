@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "declaration": false,
+    "declarationMap": false
+  },
+  "ts-node": {
+    "transpileOnly": true
+  },
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "features/**/*.ts"]
+}

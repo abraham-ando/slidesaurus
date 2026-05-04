@@ -1,0 +1,234 @@
+/**
+ * SlidevLink Component Styles
+ * Reuses design patterns from SlidevCard with some adjustments for inline use
+ */
+
+.card {
+  display: inline-flex;
+  flex-direction: row;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  text-decoration: none !important;
+  background: var(--ifm-card-background-color);
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  width: var(--slidev-link-width, 550px);
+  max-width: 100%;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  text-decoration: none;
+  border-color: var(--ifm-color-primary);
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 2px;
+}
+
+.preview {
+  flex-shrink: 0;
+  height: 80px;
+  width: 142px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ifm-color-emphasis-100);
+  border-radius: 4px;
+  align-self: center;
+  overflow: hidden;
+  position: relative;
+}
+
+.previewLoading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ifm-color-emphasis-100);
+  z-index: 1;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--ifm-color-emphasis-300);
+  border-top-color: var(--ifm-color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.previewIframe {
+  width: 960px;
+  height: 540px;
+  border: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(var(--preview-scale, 0.148));
+  transform-origin: center center;
+  pointer-events: none;
+  background: white;
+  border-radius: 4px;
+  transition: opacity 0.3s ease;
+}
+
+.previewIframeLoading {
+  opacity: 0;
+}
+
+.previewIframeLoaded {
+  opacity: 1;
+}
+
+.previewIcon {
+  color: var(--ifm-color-primary);
+  opacity: 0.6;
+}
+
+.content {
+  flex-grow: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ifm-color-primary);
+  flex-grow: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.65rem;
+  font-weight: 500;
+  background: var(--ifm-color-warning-contrast-background);
+  color: var(--ifm-color-warning-contrast-foreground);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.description {
+  margin: 0;
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Error State Styles */
+.errorCard {
+  display: inline-flex;
+  flex-direction: row;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: var(--ifm-color-danger-contrast-background);
+  border: 1px solid var(--ifm-color-danger-dark);
+  max-width: 100%;
+}
+
+.errorPreview {
+  flex-shrink: 0;
+  height: 80px;
+  width: 142px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--ifm-color-danger-rgb), 0.1);
+  border-radius: 4px;
+}
+
+.errorIcon {
+  width: 40px;
+  height: 40px;
+  color: var(--ifm-color-danger-dark);
+  opacity: 0.8;
+}
+
+.errorContent {
+  flex-grow: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.errorTitle {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ifm-color-danger-darkest);
+}
+
+.errorMessage {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--ifm-color-danger-dark);
+  line-height: 1.4;
+}
+
+.errorPath {
+  font-size: 0.75rem;
+  background: rgba(var(--ifm-color-danger-rgb), 0.1);
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  word-break: break-all;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .card,
+  .errorCard {
+    flex-direction: column;
+    width: 100% !important;
+  }
+
+  .preview,
+  .errorPreview {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
+
+  .previewIframe {
+    transform: translate(-50%, -50%) scale(calc(100% / 960 * 0.95));
+  }
+}

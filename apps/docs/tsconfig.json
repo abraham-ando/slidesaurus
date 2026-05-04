@@ -1,0 +1,10 @@
+{
+  "extends": "@docusaurus/tsconfig",
+  "compilerOptions": {
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "ignoreDeprecations": "6.0",
+    "jsx": "react-jsx",
+    "resolveJsonModule": true
+  }
+}

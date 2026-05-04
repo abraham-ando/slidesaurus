@@ -1,0 +1,27 @@
+/**
+ * Custom CSS for the Slidev Plugin sample site
+ * Extends the default Docusaurus Infima theme
+ */
+
+:root {
+  --ifm-color-primary: #7a5af8;
+  --ifm-color-primary-dark: #6b47f7;
+  --ifm-color-primary-darker: #6340f6;
+  --ifm-color-primary-darkest: #4d26f4;
+  --ifm-color-primary-light: #896df9;
+  --ifm-color-primary-lighter: #9180fa;
+  --ifm-color-primary-lightest: #b0a3fc;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] {
+  --ifm-color-primary: #b0a3fc;
+  --ifm-color-primary-dark: #9d8dfb;
+  --ifm-color-primary-darker: #9382fb;
+  --ifm-color-primary-darkest: #7360f9;
+  --ifm-color-primary-light: #c3b9fd;
+  --ifm-color-primary-lighter: #cdc5fd;
+  --ifm-color-primary-lightest: #ecdafe;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
