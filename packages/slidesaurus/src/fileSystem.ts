@@ -11,9 +11,22 @@ export const SLIDEV_CACHE_DIR = PLUGIN_NAME;
 const SLIDEV_BUILD_ARTIFACTS = ["index.html", ".slidev", "dist"] as const;
 
 /**
+ * Validate a pluginId before using it as a filesystem path component.
+ * Rejects any value that could enable path traversal (dots, slashes, etc.).
+ */
+export function validatePluginId(pluginId: string): void {
+  if (!/^[a-zA-Z0-9_-]+$/.test(pluginId)) {
+    throw new Error(
+      `[Security] Invalid pluginId "${pluginId}": must contain only letters, digits, underscores and dashes.`,
+    );
+  }
+}
+
+/**
  * Get cache directory within .docusaurus for isolated builds
  */
 export function getSlidevCacheDir(siteDir: string, pluginId: string): string {
+  validatePluginId(pluginId);
   return path.join(siteDir, ".docusaurus", SLIDEV_CACHE_DIR, pluginId);
 }
 
@@ -38,18 +51,6 @@ export function cleanupSourceDirectory(sourcePath: string): void {
   }
 }
 
-/**
- * Clean up the Slidev cache directory
- */
-export function cleanupSlidevCache(cacheDir: string): void {
-  if (!fs.existsSync(cacheDir)) return;
-  try {
-    fs.rmSync(cacheDir, { recursive: true, force: true });
-    log.info(`Cleaned Slidev cache: ${log.path(cacheDir)}`);
-  } catch {
-    log.warn(`Failed to clean Slidev cache`);
-  }
-}
 
 /**
  * Create an isolated build directory for a single presentation.
@@ -130,6 +131,8 @@ export function copyBuiltPresentationsToOutput(
 }
 
 function copyDirRecursive(src: string, dest: string): void {
+  // Guard against src itself being a symlink pointing outside the safe perimeter
+  if (fs.lstatSync(src).isSymbolicLink()) return;
   fs.mkdirSync(dest, { recursive: true });
   const entries = fs.readdirSync(src, { withFileTypes: true });
   for (const entry of entries) {
@@ -192,7 +195,12 @@ export function saveHashManifest(cacheDir: string, manifest: Record<string, stri
  * (e.g. one that crashed mid-write) is not considered a valid cache hit.
  */
 export function hasCachedOutput(cacheDir: string, presentationId: string): boolean {
-  const outputDir = path.join(cacheDir, "output", presentationId);
+  const outputRoot = path.join(cacheDir, "output");
+  const outputDir = path.join(outputRoot, presentationId);
+  const rel = path.relative(outputRoot, outputDir);
+  if (rel.startsWith("..") || path.isAbsolute(rel)) {
+    throw new Error(`[Security] Path traversal detected in presentationId: "${presentationId}"`);
+  }
   return fs.existsSync(path.join(outputDir, "index.html"));
 }
 
@@ -242,13 +250,3 @@ export function writeSearchIndex(
   log.info(`Search index written to ${routeDir}/presentations-index.json`);
 }
 
-/**
- * Move a built presentation from the batch temp directory to the final cache output path.
- * Creates parent directories as needed; removes the destination first if it already exists.
- */
-export function moveBuildOutput(from: string, to: string): void {
-  if (!fs.existsSync(from)) return;
-  fs.mkdirSync(path.dirname(to), { recursive: true });
-  if (fs.existsSync(to)) fs.rmSync(to, { recursive: true, force: true });
-  fs.renameSync(from, to);
-}

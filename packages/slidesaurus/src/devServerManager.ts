@@ -71,7 +71,6 @@ export class DevServerManager {
     let idx = 0;
     const assignments = new Map<string, number>();
     for (const p of presentations) {
-      if (!this.isEligible(p.id)) continue;
       const port = basePort + idx;
       idx++;
       this.portAssignments.set(p.id, port);
@@ -125,15 +124,6 @@ export class DevServerManager {
     this.killAll();
   }
 
-  /** True if this presentation should get a dev server (respects devPresentations). */
-  private isEligible(id: string): boolean {
-    const patterns: string[] | undefined = undefined; // devPresentations removed from API
-    if (!patterns || patterns.length === 0) return true;
-    return patterns.some(
-      (pat) => pat === id || (pat.endsWith("/*") && id.startsWith(pat.slice(0, -2) + "/")),
-    );
-  }
-
   private async findAvailablePort(startPort: number): Promise<number> {
     for (let offset = 0; offset < MAX_PORT_RETRIES; offset++) {
       const port = startPort + offset;
@@ -158,6 +148,7 @@ export class DevServerManager {
     const base = `${routeBase}/_dry-run/${presentation.id}/`;
 
     const slidevArgs = [
+      "--",  // separator: prevents sourceAbsolutePath from being parsed as a CLI flag
       presentation.sourceAbsolutePath,
       "--port", String(port),
       "--base", base,

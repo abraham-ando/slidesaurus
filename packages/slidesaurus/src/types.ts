@@ -35,7 +35,6 @@ export interface UIOptions {
   pageTagline: string;
 }
 
-/** Options related to dev server. */
 /** Full plugin options — union of all segregated interfaces. */
 export interface PluginOptions extends ScanOptions, BuildOptions, UIOptions {
   /** Hook called after each presentation is scanned. Can modify metadata in-place. */

@@ -147,23 +147,9 @@ export default function pluginSlidev(
         const slidevInstalled = checkSlidevInstalled(context.siteDir);
         if (!slidevInstalled) {
           log.warn(`Slidev CLI not installed. Presentations will not be ${isDev ? "available in dev mode" : "built"}. Install with: pnpm add @slidev/cli`);
-        } else if (isDev) {
-          // Dev mode: build presentations the same way as production.
-          // The built output is served by webpack devServer.static (see configureWebpack).
-          // This eliminates Slidev dev server processes, port management, and
-          // the proxy complexity that caused repeated Windows compatibility issues.
-          const sourcePath = path.join(context.siteDir, options.path);
-          cleanupSourceDirectory(sourcePath);
-
-          if (!options.dryRun) {
-            await buildAllPresentations(presentations, options, {
-              siteDir: context.siteDir,
-              baseUrl: context.baseUrl,
-            });
-          } else {
-            log.info(`Dry-run mode: skipping build for ${presentations.length} presentation(s).`);
-          }
         } else {
+          // Build presentations for both dev and production.
+          // In dev mode, the built output is served by webpack devServer.static (see configureWebpack).
           const sourcePath = path.join(context.siteDir, options.path);
           cleanupSourceDirectory(sourcePath);
 

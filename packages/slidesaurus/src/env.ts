@@ -11,7 +11,8 @@ const ENV_ALLOWLIST = [
   "TEMP", "TMP", "TMPDIR", "LANG", "LC_ALL", "NODE_ENV",
   // npm_config_registry is intentionally excluded — inheriting a malicious registry
   // from the host environment would allow autoInstall to fetch packages from it.
-  "npm_config_cache",
+  // npm_config_cache is also excluded for consistency — child processes use the
+  // default npm cache location, preventing a compromised cache path from being injected.
   "PNPM_HOME", "NVM_DIR", "NVM_HOME",
   "SystemRoot", "COMSPEC", "windir",
   "PROGRAMFILES", "PROGRAMFILES(X86)", "COMMONPROGRAMFILES",

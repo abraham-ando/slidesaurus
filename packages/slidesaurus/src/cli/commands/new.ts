@@ -82,6 +82,14 @@ export async function runNew(rawName: string | undefined, opts: NewOptions): Pro
   const slidevDir = path.resolve(cwd, options.path ?? "./slidev");
   const targetPath = path.join(slidevDir, relativePath);
 
+  // Defense-in-depth: ensure targetPath is still inside slidevDir
+  // (slugify already blocks ".." but this guard catches any future regression)
+  const relToSlidev = path.relative(slidevDir, targetPath);
+  if (relToSlidev.startsWith("..") || path.isAbsolute(relToSlidev)) {
+    error(`Invalid presentation name: path traversal detected.`);
+    process.exit(1);
+  }
+
   if (fs.existsSync(targetPath) && !opts.force) {
     error(`File already exists: ${pc.cyan(relativePath)}`);
     info("Use --force to overwrite.");

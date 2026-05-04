@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import matter from "gray-matter";
+import { log } from "./logger";
 import type { PresentationLevel } from "./types";
 
 type ColorSchema = "dark" | "light" | "auto";
 const VALID_COLOR_SCHEMAS: ColorSchema[] = ["dark", "light", "auto"];
-import { log } from "./logger";
 
 const VALID_LEVELS: PresentationLevel[] = ["beginner", "intermediate", "advanced"];
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;

@@ -155,7 +155,9 @@ async function buildOne(
 
   const base = `${presentation.url.endsWith("/") ? presentation.url : presentation.url + "/"}`;
   const args = [
-    "build", isolatedSourcePath,
+    "build",
+    "--",  // separator: prevents isolatedSourcePath from being parsed as a CLI flag
+    isolatedSourcePath,
     "--out", presentation.outputPath,
     "--base", base,
   ];

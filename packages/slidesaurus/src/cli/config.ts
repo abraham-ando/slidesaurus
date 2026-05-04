@@ -62,7 +62,14 @@ export function loadPluginOptions(cwd: string, pluginId: string): LoadedConfig {
   }
 }
 
-/** Execute the config file using ts-node (for .ts) or node (for .js/.mjs). */
+/**
+ * Execute the config file using ts-node (for .ts) or node (for .js/.mjs).
+ *
+ * ⚠️ Security surface: this function executes the project's docusaurus.config file
+ * as JavaScript in a child process. This is intentional (it's the only way to read
+ * a Docusaurus config) and consistent with how webpack, ESLint, and other tools work.
+ * Never call this on a config file outside the project's own directory.
+ */
 function execLoadConfig(configFile: string): Record<string, unknown> {
   const isTs = configFile.endsWith(".ts");
 

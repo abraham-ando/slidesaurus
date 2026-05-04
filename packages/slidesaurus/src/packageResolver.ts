@@ -5,6 +5,7 @@ import fs from "node:fs";
 import { log } from "./logger";
 import { validatePackageName, walkUpTree } from "./utils";
 import { TREE_WALK_MAX_DEPTH } from "./constants";
+import { filterEnvAllowlist } from "./env";
 
 const execFileAsync = promisify(execFile);
 
@@ -78,6 +79,15 @@ export function checkPackageAvailable(
 ): { installed: boolean; resolvedName: string; error?: string } {
   if (packageName.startsWith(".") || packageName.startsWith("/") || packageName.startsWith("\\")) {
     const fullPath = path.resolve(siteDir, packageName);
+    // Guard: local paths must stay within the project directory
+    const rel = path.relative(siteDir, fullPath);
+    if (rel.startsWith("..") || path.isAbsolute(rel)) {
+      return {
+        installed: false,
+        resolvedName: packageName,
+        error: `[Security] Local package path "${packageName}" escapes the project directory.`,
+      };
+    }
     if (fs.existsSync(fullPath)) {
       return { installed: true, resolvedName: packageName };
     }
@@ -140,7 +150,11 @@ export async function installPackage(packageName: string, siteDir: string): Prom
     const pmName = pm === "pnpm" ? "pnpm" : pm === "yarn" ? "yarn" : "npm";
     const pmCmd = resolvePmBin(pmName);
     const pmArgs = pm === "npm" ? ["install", packageName] : ["add", packageName];
-    await execFileAsync(pmCmd, pmArgs, { cwd: siteDir });
+    // Filter env to prevent leaking secrets (NPM_TOKEN, custom registries, etc.)
+    await execFileAsync(pmCmd, pmArgs, {
+      cwd: siteDir,
+      env: filterEnvAllowlist(process.env),
+    });
     log.success(`Installed ${log.code(packageName)}`);
     return true;
   } catch (err) {

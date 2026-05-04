@@ -35,6 +35,12 @@ export interface RunResult {
  * Spawn the Slidev CLI with the given arguments and wait for completion.
  * Handles timeout, environment filtering, and error capture.
  */
+/**
+ * Keys allowed in extraEnv — must remain a small, known set of plugin-internal
+ * variables. Never forward user secrets through this mechanism.
+ */
+const ALLOWED_EXTRA_ENV_KEYS = new Set(["SLIDEV_SITE_DIR", "FORCE_COLOR", "NO_COLOR"]);
+
 export function runSlidevBuild(options: {
   siteDir: string;
   args: string[];
@@ -45,6 +51,13 @@ export function runSlidevBuild(options: {
   const { siteDir, args, timeoutMs, verbose, extraEnv } = options;
 
   return new Promise<RunResult>((resolve) => {
+    // Validate extraEnv keys to prevent accidental secret injection
+    for (const key of Object.keys(extraEnv ?? {})) {
+      if (!ALLOWED_EXTRA_ENV_KEYS.has(key)) {
+        resolve({ success: false, error: `[Security] Unexpected extraEnv key: "${key}"` });
+        return;
+      }
+    }
     const safeEnv = filterEnvAllowlist(process.env);
     const env = { ...safeEnv, ...extraEnv };
 

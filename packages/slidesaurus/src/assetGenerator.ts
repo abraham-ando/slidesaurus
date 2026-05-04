@@ -45,6 +45,7 @@ export async function generateThumbnail(
     const timeoutMs = Math.min(options.buildTimeout * 1000, THUMBNAIL_TIMEOUT_CAP_MS);
     const args = [
       "export",
+      "--",  // separator: prevents sourceAbsolutePath from being parsed as a CLI flag
       presentation.sourceAbsolutePath,
       "--format", "png",
       "--range", "1",
@@ -113,6 +114,7 @@ export async function generateExport(
     const timeoutMs = Math.min(options.buildTimeout * 1000, EXPORT_TIMEOUT_CAP_MS);
     const args = [
       "export",
+      "--",  // separator: prevents sourceAbsolutePath from being parsed as a CLI flag
       presentation.sourceAbsolutePath,
       "--format", fmt,
       "--output", exportFile,

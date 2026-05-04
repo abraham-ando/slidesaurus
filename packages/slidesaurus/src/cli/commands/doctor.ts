@@ -120,7 +120,10 @@ export async function runDoctor(opts: DoctorOptions): Promise<void> {
   if (fs.existsSync(cacheDir)) {
     const manifest = loadHashManifest(cacheDir);
     const ids = Object.keys(manifest);
-    const orphans = ids.filter((id) => !hasCachedOutput(cacheDir, id));
+    // hasCachedOutput throws on path traversal — ignore malformed entries defensively
+    const orphans = ids.filter((id) => {
+      try { return !hasCachedOutput(cacheDir, id); } catch { return false; }
+    });
     report(
       orphans.length === 0,
       `Cache manifest coherent (${ids.length} entries)`,

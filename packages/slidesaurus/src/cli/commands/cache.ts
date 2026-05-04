@@ -9,6 +9,7 @@ import {
   getSlidevBuildOutputDir,
   loadHashManifest,
   saveHashManifest,
+  validatePluginId,
 } from "../../fileSystem";
 
 interface CacheClearOptions {
@@ -19,6 +20,13 @@ interface CacheClearOptions {
 
 export async function runCacheClear(opts: CacheClearOptions): Promise<void> {
   const cwd = process.cwd();
+
+  // Validate pluginId and presentationId before using them as path components
+  try { validatePluginId(opts.pluginId); } catch {
+    fail(`Invalid --plugin-id "${opts.pluginId}": must contain only letters, digits, underscores and dashes.`);
+    process.exit(1);
+  }
+
   const cacheDir = getSlidevCacheDir(cwd, opts.pluginId);
 
   if (!fs.existsSync(cacheDir)) {
@@ -29,7 +37,14 @@ export async function runCacheClear(opts: CacheClearOptions): Promise<void> {
   // ── Targeted clear ────────────────────────────────────────────────────────
   if (opts.id) {
     const presentationId = opts.id;
-    const outputDir = path.join(getSlidevBuildOutputDir(cwd, opts.pluginId), presentationId);
+    const outputRoot = getSlidevBuildOutputDir(cwd, opts.pluginId);
+    const outputDir = path.join(outputRoot, presentationId);
+    // Guard against path traversal via --id flag
+    const rel = path.relative(outputRoot, outputDir);
+    if (rel.startsWith("..") || path.isAbsolute(rel)) {
+      fail(`Invalid --id "${presentationId}": path traversal detected.`);
+      process.exit(1);
+    }
 
     if (!fs.existsSync(outputDir)) {
       warn(`No cached output found for "${presentationId}"`);
