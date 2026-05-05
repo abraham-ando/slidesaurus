@@ -88,6 +88,17 @@ describe("BuildCache.computeOptionsFingerprint", () => {
     const fp = BuildCache.computeOptionsFingerprint(makeOptions(), "/");
     expect(fp).toMatch(/^[0-9a-f]{16}$/);
   });
+
+  it("produces the same hash regardless of object key insertion order", () => {
+    // A non-deterministic JSON.stringify would produce different hashes when the
+    // internal object key order changes across Node.js versions. Verify that two
+    // equivalent option objects (same values, spread-copied) produce the same hash.
+    const opts = makeOptions({ theme: "seriph", addons: ["slidev-addon-a"], download: true });
+    const fp1 = BuildCache.computeOptionsFingerprint(opts, "/training/");
+    const fp2 = BuildCache.computeOptionsFingerprint({ ...opts }, "/training/");
+    expect(fp1).toBe(fp2);
+    expect(fp1).toMatch(/^[0-9a-f]{16}$/);
+  });
 });
 
 // ── isCached ─────────────────────────────────────────────────────────────────

@@ -28,6 +28,21 @@ export interface BuildOptions {
   exportWithClicks: boolean;
 }
 
+/** Options related to the Slidev dev server (used during `docusaurus start`). */
+export interface DevServerOptions {
+  /**
+   * Base port for Slidev dev servers. Each presentation gets basePort+index.
+   * Useful to avoid collision when multiple plugin instances are configured.
+   * Defaults to 8600.
+   */
+  devServerBasePort: number;
+  /**
+   * Maximum time (ms) to wait for a Slidev dev server to become ready.
+   * Defaults to 60000 (60 s).
+   */
+  devServerTimeout: number;
+}
+
 /** Options related to UI / routing. */
 export interface UIOptions {
   routeBasePath: string;
@@ -36,7 +51,7 @@ export interface UIOptions {
 }
 
 /** Full plugin options — union of all segregated interfaces. */
-export interface PluginOptions extends ScanOptions, BuildOptions, UIOptions {
+export interface PluginOptions extends ScanOptions, BuildOptions, UIOptions, DevServerOptions {
   /** Hook called after each presentation is scanned. Can modify metadata in-place. */
   onPresentationScanned?: (presentation: PresentationMetadata) => void | Promise<void>;
   /** Hook called after all builds complete. Receives the full results array. */

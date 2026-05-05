@@ -30,17 +30,22 @@ export class BuildCache {
     options: Pick<PluginOptions, "theme" | "addons" | "download" | "exportFormats" | "exportWithClicks" | "withoutNotes">,
     baseUrl: string,
   ): string {
+    // Sort keys before serialising — JSON.stringify key order is insertion-order
+    // and can vary across Node.js versions, producing different hashes for identical
+    // option sets and needlessly invalidating the incremental cache.
+    const raw: Record<string, unknown> = {
+      addons: options.addons,
+      baseUrl,
+      download: options.download,
+      exportFormats: options.exportFormats,
+      exportWithClicks: options.exportWithClicks,
+      theme: options.theme,
+      withoutNotes: options.withoutNotes,
+    };
+    const sorted = Object.fromEntries(Object.entries(raw).sort(([a], [b]) => a.localeCompare(b)));
     return crypto
       .createHash("sha256")
-      .update(JSON.stringify({
-        theme: options.theme,
-        addons: options.addons,
-        download: options.download,
-        exportFormats: options.exportFormats,
-        exportWithClicks: options.exportWithClicks,
-        withoutNotes: options.withoutNotes,
-        baseUrl,
-      }))
+      .update(JSON.stringify(sorted))
       .digest("hex")
       .slice(0, 16);
   }

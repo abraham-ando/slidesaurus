@@ -133,6 +133,41 @@ export async function runDoctor(opts: DoctorOptions): Promise<void> {
     info(`Cache directory not yet created (${path.relative(cwd, cacheDir)})`);
   }
 
+  // ── Check 6: Node.js version ──────────────────────────────────────────────
+  const nodeMajor = parseInt(process.versions.node.split(".")[0], 10);
+  report(nodeMajor >= 18, `Node.js version ≥ 18`, `v${process.versions.node}`);
+
+  // ── Check 7: Playwright (required for thumbnails and export) ─────────────
+  let playwrightOk = false;
+  try {
+    require.resolve("playwright", { paths: [cwd] });
+    playwrightOk = true;
+  } catch {
+    playwrightOk = false;
+  }
+  if (!playwrightOk) {
+    info(`playwright not found — thumbnail and export generation will be skipped (optional: pnpm add playwright)`);
+  } else {
+    ok("playwright installed (thumbnails/exports)");
+    passed++;
+  }
+
+  // ── Check 8: Dev server ports available ───────────────────────────────────
+  const basePort = options.devServerBasePort ?? 8600;
+  const portCount = Math.min(presentations.length || 3, 5);
+  const portResults = await Promise.all(
+    Array.from({ length: portCount }, (_, i) => basePort + i).map(async (p) => ({
+      port: p,
+      free: await checkPort(p),
+    })),
+  );
+  const occupiedPorts = portResults.filter((r) => !r.free);
+  report(
+    occupiedPorts.length === 0,
+    `Dev server ports available (${basePort}–${basePort + portCount - 1})`,
+    occupiedPorts.length > 0 ? `Occupied: ${occupiedPorts.map((r) => r.port).join(", ")}` : undefined,
+  );
+
   // ── Summary ───────────────────────────────────────────────────────────────
   console.log();
   if (failed === 0) {

@@ -24,7 +24,7 @@ describe("validateOptions", () => {
     expect(result.buildTimeout).toBe(120);
     expect(result.verbose).toBe(false);
     expect(result.theme).toBe("unicorn");
-    expect(result.maxParallelBuilds).toBe(4);
+    expect(result.maxParallelBuilds).toBe(Math.max(1, require("node:os").cpus().length - 1));
     expect(result.download).toBe(false);
     expect(result.autoInstall).toBe(true);
   });

@@ -1,4 +1,5 @@
 import path from "node:path";
+import os from "node:os";
 import type { LoadContext, Plugin } from "@docusaurus/types";
 import { Joi } from "@docusaurus/utils-validation";
 import type { PluginOptions, PluginContentData } from "./types";
@@ -28,11 +29,13 @@ const DEFAULT_OPTIONS: PluginOptions = {
   addons: [],
   buildTimeout: 120,
   verbose: false,
-  maxParallelBuilds: 4,
+  maxParallelBuilds: Math.max(1, os.cpus().length - 1),
   autoInstall: true,
   dryRun: false,
   withoutNotes: false,
   exportWithClicks: false,
+  devServerBasePort: 8600,
+  devServerTimeout: 60000,
 };
 
 const DEPRECATED: Record<string, string> = {
@@ -298,11 +301,13 @@ export function validateOptions({
     id: Joi.string().default(DEFAULT_OPTIONS.id),
     buildTimeout: Joi.number().min(10).max(600).default(DEFAULT_OPTIONS.buildTimeout),
     verbose: Joi.boolean().default(DEFAULT_OPTIONS.verbose),
-    maxParallelBuilds: Joi.number().min(1).max(32).default(DEFAULT_OPTIONS.maxParallelBuilds),
+    maxParallelBuilds: Joi.number().min(1).max(64).default(DEFAULT_OPTIONS.maxParallelBuilds),
     autoInstall: Joi.boolean().default(DEFAULT_OPTIONS.autoInstall),
     dryRun: Joi.boolean().default(DEFAULT_OPTIONS.dryRun),
     withoutNotes: Joi.boolean().default(DEFAULT_OPTIONS.withoutNotes),
     exportWithClicks: Joi.boolean().default(DEFAULT_OPTIONS.exportWithClicks),
+    devServerBasePort: Joi.number().integer().min(1024).max(65535).default(DEFAULT_OPTIONS.devServerBasePort),
+    devServerTimeout: Joi.number().integer().min(5000).max(600000).default(DEFAULT_OPTIONS.devServerTimeout),
     onPresentationScanned: Joi.function().optional(),
     onBuildComplete: Joi.function().optional(),
     transformFrontmatter: Joi.function().optional(),

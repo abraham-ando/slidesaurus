@@ -151,7 +151,8 @@ export function patchFrontmatterAddons(filePath: string, addons: string[]): void
   const parsed = matter(content);
   const existing: string[] = Array.isArray(parsed.data.addons) ? parsed.data.addons : [];
   parsed.data.addons = [...new Set([...existing, ...addons])];
-  fs.writeFileSync(filePath, matter.stringify(parsed.content, parsed.data), "utf-8");
+  const newContent = matter.stringify(parsed.content, parsed.data);
+  if (newContent !== content) fs.writeFileSync(filePath, newContent, "utf-8");
 }
 
 /**

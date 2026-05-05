@@ -74,7 +74,7 @@ const config: Config = {
         pageTagline: "Hands-on training presentations",
         download: false,
         exportFormats: ["pdf", "pptx"],
-        maxParallelBuilds: 2,
+        maxParallelBuilds: 4,
         // Use port range 8700-8799 to avoid collision with @slidesaurus/sample (8600-8699)
         devServerBasePort: 8700,
         // Slidev dev server needs time for Vite + dependencies on first start

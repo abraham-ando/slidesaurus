@@ -1,5 +1,6 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import http from "node:http";
+import net from "node:net";
 import type { PresentationMetadata, PluginOptions } from "./types";
 import { log } from "./logger";
 import { filterEnvAllowlist } from "./env";
@@ -67,7 +68,7 @@ export class DevServerManager {
    */
   preAssignPorts(presentations: PresentationMetadata[]): Map<string, number> {
     this.registerCleanup();
-    const basePort = 8600;
+    const basePort = this.options.devServerBasePort ?? 8600;
     let idx = 0;
     const assignments = new Map<string, number>();
     for (const p of presentations) {
@@ -133,6 +134,18 @@ export class DevServerManager {
   }
 
   private async startOne(presentation: PresentationMetadata, port: number): Promise<string | undefined> {
+    // Quick pre-spawn port check: fail fast with a clear message instead of
+    // waiting 60s for the server timeout to expire.
+    const portFree = await new Promise<boolean>((resolve) => {
+      const s = net.createServer().listen(port, "127.0.0.1");
+      s.on("listening", () => { s.close(() => resolve(true)); });
+      s.on("error", () => resolve(false));
+    });
+    if (!portFree) {
+      log.warn(`Port ${port} is already in use — cannot start dev server for ${log.code(presentation.id)}.`);
+      return undefined;
+    }
+
     const slidevBin = resolveSlidevBin(this.siteDir);
 
     // Use a semantic sub-path under the presentation route as the Vite base:
@@ -187,7 +200,23 @@ export class DevServerManager {
       }
     };
     child.stderr?.on("data", captureOutput);
-    child.stdout?.on("data", captureOutput);
+
+    // Parse Vite's "ready in Xms" stdout signal to resolve readiness earlier
+    // than the HTTP poll — avoids wasted round-trips during the polling window.
+    // A 300ms grace period is added so the TCP socket has time to bind after
+    // Vite logs the message. The HTTP poll remains the fallback.
+    let viteReadyCallback: (() => void) | null = null;
+    const viteReadyPromise = new Promise<boolean>((resolve) => {
+      viteReadyCallback = () => setTimeout(() => resolve(true), 300);
+    });
+    const viteReadyRe = /ready in [\d.]+ ?(ms|s)\b/i;
+    child.stdout?.on("data", (data: Buffer) => {
+      captureOutput(data);
+      if (viteReadyCallback && viteReadyRe.test(data.toString())) {
+        viteReadyCallback();
+        viteReadyCallback = null;
+      }
+    });
 
     // Track whether we killed the process ourselves so the exit handler can
     // suppress misleading "exited with code X" warnings.  On Windows, SIGTERM
@@ -216,8 +245,12 @@ export class DevServerManager {
       });
     });
 
-    const timeoutMs = 60000;
-    const ready = await Promise.race([this.waitForServer(port, base, timeoutMs), earlyExitPromise]);
+    const timeoutMs = this.options.devServerTimeout ?? 60000;
+    const ready = await Promise.race([
+      this.waitForServer(port, base, timeoutMs),
+      earlyExitPromise,
+      viteReadyPromise,
+    ]);
 
     if (!ready) {
       if (!earlyFailed) {

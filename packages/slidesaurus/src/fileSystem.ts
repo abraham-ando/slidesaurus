@@ -74,13 +74,14 @@ export function createIsolatedBuildDir(
   }
   fs.mkdirSync(isolatedDir, { recursive: true });
 
-  // Copy the source .md file, renaming it to the safeId so that when Slidev
-  // builds multiple files in one batch command each gets a unique output folder
-  // (Slidev names the output folder after the input filename without extension).
+  // Copy the source .md file (not hard-linked — patchFrontmatterAddons/Theme writes
+  // to this path and hard links share the same inode, which would corrupt the original).
   const isolatedSourcePath = path.join(isolatedDir, `${safeId}.md`);
   fs.copyFileSync(sourceAbsolutePath, isolatedSourcePath);
 
-  // Copy co-located non-md assets (images, etc.)
+  // Copy co-located non-md assets (images, etc.).
+  // Hard links are attempted first to avoid I/O duplication across parallel builds;
+  // falls back to copyFileSync when hard links fail (e.g. cross-device or Windows FAT).
   const sourceDir = path.dirname(sourceAbsolutePath);
   const entries = fs.readdirSync(sourceDir, { withFileTypes: true });
   for (const entry of entries) {
@@ -92,9 +93,14 @@ export function createIsolatedBuildDir(
     if (entry.isDirectory()) {
       copyDirRecursive(srcPath, destPath);
     } else {
-      fs.copyFileSync(srcPath, destPath);
+      hardLinkOrCopy(srcPath, destPath);
     }
   }
+
+  // Scan the .md source for relative asset references (e.g. ![](./images/fig.png),
+  // background: ./assets/bg.jpg) and copy referenced files not already in the
+  // co-located directory. This handles assets stored in sibling/subdirectories.
+  copyRelativeAssets(fs.readFileSync(sourceAbsolutePath, "utf-8"), sourceDir, isolatedDir);
 
   // Create a dummy index.html to prevent Slidev CLI ENOENT when it tries to unlink it
   fs.writeFileSync(path.join(isolatedDir, "index.html"), "", "utf-8");
@@ -128,6 +134,48 @@ export function copyBuiltPresentationsToOutput(
   }
   fs.mkdirSync(finalOutputDir, { recursive: true });
   copyDirRecursive(cacheOutputDir, finalOutputDir);
+}
+
+/** Hard-link src to dest; fall back to copy on failure (cross-device, FAT, etc.). */
+function hardLinkOrCopy(src: string, dest: string): void {
+  try {
+    fs.linkSync(src, dest);
+  } catch {
+    fs.copyFileSync(src, dest);
+  }
+}
+
+/**
+ * Parse a Slidev markdown source for relative asset references and copy any
+ * files not already present in the isolated build directory. Handles:
+ *   - Markdown images:   ![alt](./path/to/img.png)
+ *   - HTML src/href:     src="./path" href="./path"
+ *   - CSS background:    background: ./path / url(./path)
+ */
+function copyRelativeAssets(mdContent: string, sourceDir: string, isolatedDir: string): void {
+  // Match bare relative paths in Markdown, HTML attributes and CSS
+  const RE = /(?:!\[[^\]]*\]\(|src=["']?|href=["']?|background:\s*|url\(["']?)(\.\.?\/[^)"'\s>]+)/g;
+  const seen = new Set<string>();
+  let m: RegExpExecArray | null;
+  while ((m = RE.exec(mdContent)) !== null) {
+    const relPath = m[1];
+    if (seen.has(relPath)) continue;
+    seen.add(relPath);
+
+    const srcAbs = path.resolve(sourceDir, relPath);
+    // Safety: resolved path must remain inside sourceDir's parent tree
+    const relCheck = path.relative(sourceDir, srcAbs);
+    if (relCheck.startsWith("..") && path.isAbsolute(relCheck)) continue;
+    if (!fs.existsSync(srcAbs) || !fs.statSync(srcAbs).isFile()) continue;
+
+    const destAbs = path.resolve(isolatedDir, relPath);
+    // Only copy files going UP from sourceDir (same-dir files already handled above)
+    if (!relPath.startsWith("../")) continue;
+    fs.mkdirSync(path.dirname(destAbs), { recursive: true });
+    if (!fs.existsSync(destAbs)) {
+      hardLinkOrCopy(srcAbs, destAbs);
+    }
+  }
 }
 
 function copyDirRecursive(src: string, dest: string): void {

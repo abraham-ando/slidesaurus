@@ -186,9 +186,14 @@ async function buildParallel(
   context: BuildContext,
   concurrency: number,
 ): Promise<Map<string, BuildResult>> {
-  const results = await runConcurrently(isolated, concurrency, (item) =>
-    buildOne(item, options, context),
-  );
+  const total = isolated.length;
+  let done = 0;
+  const results = await runConcurrently(isolated, concurrency, (item) => {
+    // Show inline progress counter so users can track long parallel builds
+    process.stdout.write(`\r  Building [${++done}/${total}] ${item.presentation.id}...\x1b[K`);
+    return buildOne(item, options, context);
+  });
+  if (total > 0) process.stdout.write("\n");
   return new Map(results.map((r) => [r.id, r]));
 }
 
