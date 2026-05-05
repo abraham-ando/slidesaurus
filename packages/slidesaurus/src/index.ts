@@ -57,8 +57,10 @@ function processDeprecated(opts: Record<string, unknown>): Record<string, unknow
   return processed;
 }
 
-async function runListCommand(options: PluginOptions, context: LoadContext): Promise<void> {
-  const result = await scanPresentations(options, { siteDir: context.siteDir, baseUrl: context.baseUrl });
+type ScanGetter = () => Promise<Awaited<ReturnType<typeof scanPresentations>>>;
+
+async function runListCommand(options: PluginOptions, getScan: ScanGetter): Promise<void> {
+  const result = await getScan();
   if (result.presentations.length === 0) { console.log("No presentations found."); return; }
   console.log(`\nFound ${result.presentations.length} presentation(s) in "${options.path}":\n`);
   for (const p of result.presentations) {
@@ -73,8 +75,8 @@ async function runListCommand(options: PluginOptions, context: LoadContext): Pro
   }
 }
 
-async function runStatsCommand(options: PluginOptions, context: LoadContext): Promise<void> {
-  const result = await scanPresentations(options, { siteDir: context.siteDir, baseUrl: context.baseUrl });
+async function runStatsCommand(options: PluginOptions, getScan: ScanGetter): Promise<void> {
+  const result = await getScan();
   const ps = result.presentations;
   if (ps.length === 0) { console.log("No presentations found."); return; }
   const authors = [...new Set(ps.map((p) => p.author).filter(Boolean))];
@@ -97,8 +99,8 @@ async function runStatsCommand(options: PluginOptions, context: LoadContext): Pr
   }
 }
 
-async function runValidateCommand(options: PluginOptions, context: LoadContext): Promise<void> {
-  const result = await scanPresentations(options, { siteDir: context.siteDir, baseUrl: context.baseUrl });
+async function runValidateCommand(options: PluginOptions, getScan: ScanGetter): Promise<void> {
+  const result = await getScan();
   const total = result.presentations.length;
   console.log(`\nScanned ${total} presentation(s) in "${options.path}"\n`);
   if (total === 0) return;
@@ -229,12 +231,20 @@ export default function pluginSlidev(
     },
 
     extendCli(cli) {
+      // Lazy scan cache: the first command that fires kicks off one scanPresentations()
+      // call; subsequent commands in the same CLI invocation reuse the cached result.
+      let scanPromise: ReturnType<typeof scanPresentations> | null = null;
+      const getScan: ScanGetter = () => {
+        scanPromise ??= scanPresentations(options, { siteDir: context.siteDir, baseUrl: context.baseUrl });
+        return scanPromise;
+      };
+
       cli.command("slidev:list").description("List all Slidev presentations discovered in the configured path")
-        .action(() => runListCommand(options, context));
+        .action(() => runListCommand(options, getScan));
       cli.command("slidev:stats").description("Print statistics about discovered presentations")
-        .action(() => runStatsCommand(options, context));
+        .action(() => runStatsCommand(options, getScan));
       cli.command("slidev:validate").description("Scan presentations and report metadata issues without building")
-        .action(() => runValidateCommand(options, context));
+        .action(() => runValidateCommand(options, getScan));
     },
 
     configureWebpack() {

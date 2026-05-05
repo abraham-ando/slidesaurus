@@ -4,6 +4,7 @@ import fs from "node:fs";
 import { filterEnvAllowlist } from "./env";
 import { STDERR_MAX_BYTES, SIGKILL_DELAY_MS, TREE_WALK_MAX_DEPTH } from "./constants";
 import { walkUpTree } from "./utils";
+import { log } from "./logger";
 
 const slidevBinCache = new Map<string, string>();
 
@@ -54,7 +55,9 @@ export function runSlidevBuild(options: {
     // Validate extraEnv keys to prevent accidental secret injection
     for (const key of Object.keys(extraEnv ?? {})) {
       if (!ALLOWED_EXTRA_ENV_KEYS.has(key)) {
-        resolve({ success: false, error: `[Security] Unexpected extraEnv key: "${key}"` });
+        const msg = `[Security] Unexpected extraEnv key: "${key}"`;
+        log.warn(msg);
+        resolve({ success: false, error: msg });
         return;
       }
     }

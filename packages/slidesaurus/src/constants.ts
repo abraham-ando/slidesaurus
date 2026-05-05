@@ -1,7 +1,9 @@
-import pkg from "../package.json";
-
-/** Plugin name derived from package.json — single source of truth. */
-export const PLUGIN_NAME: string = pkg.name;
+/**
+ * Stable identifier used for cache directory naming and plugin registration.
+ * Intentionally NOT derived from package.json — renaming or forking the npm
+ * package must not silently invalidate all users' incremental build caches.
+ */
+export const PLUGIN_NAME = "slidesaurus" as const;
 
 // Process management
 export const SIGKILL_DELAY_MS = 5_000;

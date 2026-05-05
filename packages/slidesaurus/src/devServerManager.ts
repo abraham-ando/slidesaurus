@@ -161,7 +161,6 @@ export class DevServerManager {
     const base = `${routeBase}/_dry-run/${presentation.id}/`;
 
     const slidevArgs = [
-      "--",  // separator: prevents sourceAbsolutePath from being parsed as a CLI flag
       presentation.sourceAbsolutePath,
       "--port", String(port),
       "--base", base,
@@ -271,7 +270,8 @@ export class DevServerManager {
 
   private waitForServer(port: number, basePath: string, timeoutMs: number): Promise<boolean> {
     const start = Date.now();
-    return new Promise((resolve) => {
+    let pendingTimer: ReturnType<typeof setTimeout> | null = null;
+    return new Promise<boolean>((resolve) => {
       const check = () => {
         if (Date.now() - start > timeoutMs) {
           resolve(false);
@@ -287,10 +287,14 @@ export class DevServerManager {
           // Any non-5xx status code means Vite is serving (200 OK or 3xx redirect).
           resolve(res.statusCode !== undefined && (res.statusCode < 500));
         });
-        req.on("error", () => setTimeout(check, DEV_SERVER_POLL_INTERVAL_MS));
-        req.on("timeout", () => { req.destroy(); setTimeout(check, DEV_SERVER_POLL_INTERVAL_MS); });
+        req.on("error", () => { pendingTimer = setTimeout(check, DEV_SERVER_POLL_INTERVAL_MS); });
+        req.on("timeout", () => { req.destroy(); pendingTimer = setTimeout(check, DEV_SERVER_POLL_INTERVAL_MS); });
       };
       check();
+    }).finally(() => {
+      // Cancel any pending retry timer to prevent it from firing after the Promise
+      // resolves (e.g. via the Vite stdout readiness signal added in Round 1).
+      if (pendingTimer !== null) clearTimeout(pendingTimer);
     });
   }
 
@@ -313,7 +317,9 @@ export class DevServerManager {
     if (this.cleanupRegistered) return;
     this.cleanupRegistered = true;
     process.on("exit", () => this.stopAll());
-    process.on("SIGINT", () => { this.stopAll(); process.exit(130); });
-    process.on("SIGTERM", () => { this.stopAll(); process.exit(143); });
+    // Use process.once so that in multi-instance setups (multiple DevServerManager instances),
+    // only the first registered handler fires per signal — prevents N exit(130) calls chaining.
+    process.once("SIGINT", () => { this.stopAll(); process.exit(130); });
+    process.once("SIGTERM", () => { this.stopAll(); process.exit(143); });
   }
 }

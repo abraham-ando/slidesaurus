@@ -52,11 +52,25 @@ export interface UIOptions {
 
 /** Full plugin options — union of all segregated interfaces. */
 export interface PluginOptions extends ScanOptions, BuildOptions, UIOptions, DevServerOptions {
-  /** Hook called after each presentation is scanned. Can modify metadata in-place. */
+  /**
+   * Called once per discovered presentation, before any build starts.
+   * May return a Promise. Modifications to `presentation` are applied in-place.
+   * If this hook throws, the presentation is skipped with a warning (not a fatal error).
+   * Invocations are parallelised (bounded by `maxParallelBuilds`).
+   * Called after `transformFrontmatter`.
+   */
   onPresentationScanned?: (presentation: PresentationMetadata) => void | Promise<void>;
-  /** Hook called after all builds complete. Receives the full results array. */
+  /**
+   * Called once after all builds complete — both successful and failed ones.
+   * Errors thrown here are logged but do NOT affect the overall build result
+   * or the process exit code.
+   */
   onBuildComplete?: (results: BuildResult[]) => void | Promise<void>;
-  /** Hook called to transform frontmatter before processing. Return modified data. */
+  /**
+   * Synchronous transform applied to raw Slidev frontmatter before validation.
+   * Must return the (possibly modified) data object. Called before `onPresentationScanned`.
+   * The `filePath` parameter receives a relative path only — absolute paths are never exposed.
+   */
   transformFrontmatter?: (data: SlidevFrontmatter, filePath: string) => SlidevFrontmatter;
 }
 
@@ -83,9 +97,26 @@ export interface SlidevFrontmatter {
   playlist?: string | string[];
 }
 
-export interface PresentationMetadata {
+/**
+ * Core fields always present immediately after a presentation is scanned.
+ * These are the minimum required fields for routing and filesystem operations.
+ */
+export interface CorePresentationMetadata {
   id: string;
   title: string;
+  sourcePath: string;
+  sourceAbsolutePath: string;
+  url: string;
+  outputPath: string;
+  previewUrl: string;
+  category: string;
+}
+
+/**
+ * Enriched metadata: adds optional fields read from the Slidev frontmatter.
+ * These fields are populated during the scan phase and may be undefined.
+ */
+export interface EnrichedPresentationMetadata extends CorePresentationMetadata {
   description?: string;
   theme?: string;
   /** Color scheme declared in frontmatter. Exposed to theme components for iframe styling. */
@@ -104,17 +135,18 @@ export interface PresentationMetadata {
   deprecated?: boolean;
   /** Playlist name(s) this presentation belongs to. */
   playlist?: string[];
-  sourcePath: string;
-  sourceAbsolutePath: string;
-  url: string;
-  outputPath: string;
-  previewUrl: string;
   devUrl?: string;
   thumbnailUrl?: string;
   /** URLs to pre-generated export files (one per format). Only set when options.download is true. */
   exportUrls?: string[];
-  category: string;
 }
+
+/**
+ * Backward-compatible alias — resolves to the most complete metadata shape.
+ * Use `CorePresentationMetadata` or `EnrichedPresentationMetadata` directly
+ * for narrower typing in new code.
+ */
+export type PresentationMetadata = EnrichedPresentationMetadata;
 
 /** An ordered sequence of presentations. */
 export interface PlaylistData {

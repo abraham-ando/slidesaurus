@@ -8,12 +8,14 @@ import { runSlidevBuild } from "./buildRunner";
 /**
  * Generate a static PNG thumbnail of the first slide for a presentation.
  * Non-fatal: warns and continues if Playwright or slidev export is unavailable.
+ * Returns true if a valid thumbnail exists after the call (or Playwright is unavailable),
+ * false if Slidev explicitly failed (caller can invalidate the cache entry).
  */
 export async function generateThumbnail(
   presentation: PresentationMetadata,
   options: PluginOptions,
   context: BuildContext,
-): Promise<void> {
+): Promise<boolean> {
   // Store thumbnail directly in the presentation's output directory so it is
   // picked up by copyBuiltPresentationsToOutput (which copies {cacheDir}/output/**).
   const thumbnailFile = path.join(presentation.outputPath, "thumbnail.png");
@@ -22,7 +24,7 @@ export async function generateThumbnail(
   // writes to a sub-path like thumbnail.png/1.png. Clean it up so we can regenerate.
   if (fs.existsSync(thumbnailFile)) {
     const stat = fs.statSync(thumbnailFile);
-    if (stat.isFile()) return; // Already a valid PNG — skip.
+    if (stat.isFile()) return true; // Already a valid PNG — skip.
     if (stat.isDirectory()) {
       // Check for the slide-1 file Slidev v52 writes inside the directory.
       const innerPng = path.join(thumbnailFile, "1.png");
@@ -32,7 +34,7 @@ export async function generateThumbnail(
         fs.copyFileSync(innerPng, tmp);
         fs.rmSync(thumbnailFile, { recursive: true, force: true });
         fs.renameSync(tmp, thumbnailFile);
-        return; // Done — no need to re-export.
+        return true; // Done — no need to re-export.
       }
       // Empty or unrecognised directory — remove and regenerate.
       fs.rmSync(thumbnailFile, { recursive: true, force: true });
@@ -41,11 +43,11 @@ export async function generateThumbnail(
 
   fs.mkdirSync(path.dirname(thumbnailFile), { recursive: true });
 
+  let exportFailed = false;
   try {
     const timeoutMs = Math.min(options.buildTimeout * 1000, THUMBNAIL_TIMEOUT_CAP_MS);
     const args = [
       "export",
-      "--",  // separator: prevents sourceAbsolutePath from being parsed as a CLI flag
       presentation.sourceAbsolutePath,
       "--format", "png",
       "--range", "1",
@@ -60,13 +62,18 @@ export async function generateThumbnail(
 
     const result = await runSlidevBuild({ siteDir: context.siteDir, args, timeoutMs, verbose: false, extraEnv: {} });
 
-    if (!result.success && options.verbose) {
-      log.warn(`Thumbnail generation failed for ${log.code(presentation.id)}: ${result.error ?? "unknown error"}`);
+    if (!result.success) {
+      exportFailed = true;
+      if (options.verbose) {
+        log.warn(`Thumbnail generation failed for ${log.code(presentation.id)}: ${result.error ?? "unknown error"}`);
+      }
     }
   } catch {
+    // Playwright not available or spawn failed — graceful skip, not a hard failure
     if (options.verbose) {
       log.warn(`Thumbnail generation skipped for ${log.code(presentation.id)} (Playwright not available)`);
     }
+    return true; // Non-fatal: don't invalidate cache
   } finally {
     // Slidev v52 creates thumbnail.png/ as a directory regardless of export success.
     // Promote 1.png if present; otherwise remove the empty directory artifact
@@ -84,11 +91,15 @@ export async function generateThumbnail(
       }
     }
   }
+
+  return !exportFailed;
 }
 
 /**
  * Generate a PDF/PPTX export of the presentation using `slidev export`.
  * Requires Playwright — non-fatal if unavailable.
+ * Returns true if the export file exists after the call (or download is disabled / Playwright unavailable),
+ * false if Slidev explicitly failed (caller can invalidate the cache entry).
  * Output: {presentation.outputPath}/export.{fmt} — copied to final output by postBuild.
  */
 export async function generateExport(
@@ -96,16 +107,16 @@ export async function generateExport(
   fmt: string,
   options: PluginOptions,
   context: BuildContext,
-): Promise<void> {
-  if (!options.download) return;
+): Promise<boolean> {
+  if (!options.download) return true; // feature disabled — not a failure
 
   const exportFile = path.join(presentation.outputPath, `export.${fmt}`);
-  if (fs.existsSync(exportFile)) return;
+  if (fs.existsSync(exportFile)) return true;
   // Slidev may ignore --output and use its own default filename — rename on first build
   const slidevDefaultFile = path.join(presentation.outputPath, `slidev-exported.${fmt}`);
   if (fs.existsSync(slidevDefaultFile)) {
     fs.renameSync(slidevDefaultFile, exportFile);
-    return;
+    return true;
   }
 
   fs.mkdirSync(path.dirname(exportFile), { recursive: true });
@@ -114,7 +125,6 @@ export async function generateExport(
     const timeoutMs = Math.min(options.buildTimeout * 1000, EXPORT_TIMEOUT_CAP_MS);
     const args = [
       "export",
-      "--",  // separator: prevents sourceAbsolutePath from being parsed as a CLI flag
       presentation.sourceAbsolutePath,
       "--format", fmt,
       "--output", exportFile,
@@ -140,14 +150,19 @@ export async function generateExport(
         log.warn(`${fmt.toUpperCase()} export failed for ${log.code(presentation.id)}: ${result.error ?? "unknown error"}`);
       }
       if (fs.existsSync(exportFile)) fs.unlinkSync(exportFile);
-    } else if (!fs.existsSync(exportFile)) {
-      // Slidev ignored --output; pick up its default-named file
-      if (fs.existsSync(slidevDefaultFile)) fs.renameSync(slidevDefaultFile, exportFile);
+      return false;
     }
+    // Slidev ignored --output; pick up its default-named file
+    if (!fs.existsSync(exportFile) && fs.existsSync(slidevDefaultFile)) {
+      fs.renameSync(slidevDefaultFile, exportFile);
+    }
+    return true;
   } catch {
+    // Playwright not available — graceful skip, not a hard failure
     if (options.verbose) {
       log.warn(`${fmt.toUpperCase()} export skipped for ${log.code(presentation.id)} (Playwright not available)`);
     }
     if (fs.existsSync(exportFile)) fs.unlinkSync(exportFile);
+    return true; // Non-fatal: don't invalidate cache
   }
 }

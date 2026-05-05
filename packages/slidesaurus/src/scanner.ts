@@ -15,6 +15,7 @@ import { log } from "./logger";
 import { getSlidevBuildOutputDir } from "./fileSystem";
 import { normalizeBaseUrl, normalizeRoutePath } from "./utils";
 import { FrontmatterValidator } from "./frontmatterValidator";
+import { runConcurrently } from "./concurrentRunner";
 
 function slugifyPlaylist(name: string): string {
   return name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
@@ -93,31 +94,6 @@ function readCategoryFile(dirPath: string): {
   return {};
 }
 
-/**
- * Check if a directory contains any markdown files (recursively).
- */
-function hasMarkdownFiles(dir: string): boolean {
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    // Skip symlinks — following them could escape outside the source directory
-    if (entry.isSymbolicLink()) continue;
-    if (
-      entry.isFile() &&
-      entry.name.endsWith(".md") &&
-      !entry.name.startsWith("_")
-    )
-      return true;
-    if (
-      entry.isDirectory() &&
-      !entry.name.startsWith(".") &&
-      entry.name !== "node_modules" &&
-      hasMarkdownFiles(path.join(dir, entry.name))
-    )
-      return true;
-  }
-  return false;
-}
-
 interface ScannedFile {
   relativePath: string;
   category: string;
@@ -179,19 +155,20 @@ function scanCategories(
         ? `${categoryPath}/${entry.name}`
         : entry.name;
 
-      if (hasMarkdownFiles(fullPath)) {
-        const data = readCategoryFile(fullPath);
-        const normalizedBase = normalizeBaseUrl(baseUrl);
-        const normalizedRoute = normalizeRoutePath(routeBasePath);
-        categories.set(newPath, {
-          path: newPath,
-          label: data.label || formatDirectoryName(entry.name),
-          description: data.description,
-          position: data.position ?? 99,
-          count: 0,
-          url: `${normalizedBase}${normalizedRoute}/${newPath}`,
-        });
-      }
+      // Register the category unconditionally — dirs with no .md files are pruned
+      // later by `.filter((cat) => cat.count > 0)`. This avoids a redundant full
+      // recursive traversal of each subdirectory (previously done by hasMarkdownFiles).
+      const data = readCategoryFile(fullPath);
+      const normalizedBase = normalizeBaseUrl(baseUrl);
+      const normalizedRoute = normalizeRoutePath(routeBasePath);
+      categories.set(newPath, {
+        path: newPath,
+        label: data.label || formatDirectoryName(entry.name),
+        description: data.description,
+        position: data.position ?? 99,
+        count: 0,
+        url: `${normalizedBase}${normalizedRoute}/${newPath}`,
+      });
       scan(fullPath, newPath);
     }
   }
@@ -309,11 +286,14 @@ export async function scanPresentations(
     },
   );
 
-  // Invoke onPresentationScanned hook for each presentation
+  // Invoke onPresentationScanned hook for each presentation — parallelised and bounded
+  // so that slow async hooks (e.g. network calls) don't block the full scan serially.
   if (options.onPresentationScanned) {
-    for (const p of presentations) {
-      await options.onPresentationScanned(p);
-    }
+    await runConcurrently(
+      presentations,
+      options.maxParallelBuilds ?? 4,
+      (p) => Promise.resolve(options.onPresentationScanned!(p)),
+    );
   }
 
   const categories = Array.from(categoriesMap.values())

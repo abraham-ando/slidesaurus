@@ -1,11 +1,25 @@
 import type { PresentationMetadata, PluginOptions } from "./types";
 import { DevServerManager } from "./devServerManager";
 
-// Module-level reference to the active manager. A second call to
-// allocateDevPorts() (e.g. on Docusaurus hot-reload) stops the previous
-// manager's processes before creating a new one, preventing orphaned Slidev
-// processes from accumulating.
+/**
+ * Module-level singleton for the active DevServerManager.
+ *
+ * In Docusaurus dev mode, ES modules are NOT re-evaluated on hot-reload:
+ * `currentManager` persists across successive `loadContent()` / `assignDevPorts()`
+ * invocations. `assignDevPorts()` stops the previous manager before creating a
+ * new one to prevent orphaned Slidev processes from accumulating.
+ *
+ * Port release note: `stopAll()` sends SIGTERM synchronously but ports are
+ * freed asynchronously by the OS. Race conditions are handled by the
+ * pre-spawn `net.createServer` port check inside `DevServerManager.startOne()`.
+ */
 let currentManager: DevServerManager | null = null;
+
+/** @internal — Reset module state between tests to ensure isolation. */
+export function resetManagerForTesting(): void {
+  currentManager?.stopAll();
+  currentManager = null;
+}
 
 /**
  * Synchronously pre-assign ports (basePort + index) for eligible presentations.
@@ -18,7 +32,7 @@ export function assignDevPorts(
   options: PluginOptions,
   siteDir: string,
 ): Map<string, number> {
-  currentManager?.stopAll();
+  if (currentManager) currentManager.stopAll();
   currentManager = new DevServerManager(siteDir, options);
   return currentManager.preAssignPorts(presentations);
 }

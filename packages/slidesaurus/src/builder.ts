@@ -156,7 +156,6 @@ async function buildOne(
   const base = `${presentation.url.endsWith("/") ? presentation.url : presentation.url + "/"}`;
   const args = [
     "build",
-    "--",  // separator: prevents isolatedSourcePath from being parsed as a CLI flag
     isolatedSourcePath,
     "--out", presentation.outputPath,
     "--base", base,
@@ -187,11 +186,15 @@ async function buildParallel(
   concurrency: number,
 ): Promise<Map<string, BuildResult>> {
   const total = isolated.length;
-  let done = 0;
-  const results = await runConcurrently(isolated, concurrency, (item) => {
-    // Show inline progress counter so users can track long parallel builds
-    process.stdout.write(`\r  Building [${++done}/${total}] ${item.presentation.id}...\x1b[K`);
-    return buildOne(item, options, context);
+  let completed = 0;
+  const results = await runConcurrently(isolated, concurrency, async (item) => {
+    const result = await buildOne(item, options, context);
+    // Increment AFTER build completes so the counter reflects finished presentations,
+    // not started ones (in a pool of N, the first N start simultaneously).
+    process.stdout.write(
+      `\r  Built [${++completed}/${total}] ${item.presentation.id}${result.success ? " ✓" : " ✗"}\x1b[K`,
+    );
+    return result;
   });
   if (total > 0) process.stdout.write("\n");
   return new Map(results.map((r) => [r.id, r]));
@@ -276,14 +279,24 @@ export async function buildAllPresentations(
     // Without bounding, large decks could spawn dozens of Playwright instances
     // simultaneously and exhaust memory.
     const successful = toBuild.filter((p) => buildResults.get(p.id)?.success);
+    const assetFailures = new Set<string>();
     const assetTasks: Array<() => Promise<void>> = [];
     for (const p of successful) {
-      assetTasks.push(() => generateThumbnail(p, options, context));
+      assetTasks.push(async () => {
+        const ok = await generateThumbnail(p, options, context);
+        if (!ok) assetFailures.add(p.id);
+      });
       for (const fmt of options.exportFormats ?? []) {
-        assetTasks.push(() => generateExport(p, fmt, options, context));
+        assetTasks.push(async () => {
+          const ok = await generateExport(p, fmt, options, context);
+          if (!ok) assetFailures.add(p.id);
+        });
       }
     }
     await runConcurrently(assetTasks, concurrency, (run) => run());
+    // Invalidate cache for presentations whose asset generation explicitly failed
+    // so they are rebuilt on the next run (rather than serving a broken thumbnail).
+    for (const id of assetFailures) cache.invalidate(id);
 
     sanitizeThumbnailArtifacts(successful);
     cache.persist();
@@ -299,10 +312,10 @@ export async function buildAllPresentations(
       [...buildResults.values()].filter((r) => !r.success),
     );
   } finally {
-    // ── Cleanup isolated dirs in parallel ─────────────────────────────────────
-    await Promise.all(isolated.map(({ isolatedDir }) =>
+    // ── Cleanup isolated dirs — bounded to same concurrency as builds ─────────
+    await runConcurrently(isolated, concurrency, ({ isolatedDir }) =>
       Promise.resolve().then(() => cleanupIsolatedBuildDir(isolatedDir)),
-    ));
+    );
   }
 
   // ── Merge with skipped ─────────────────────────────────────────────────────

@@ -140,7 +140,7 @@ describe("BuildCache.isCached", () => {
 
   it("returns true when hash matches and index.html is present", () => {
     const hash = "abc123";
-    fs.writeFileSync(path.join(tmpDir, "build-hashes.json"), JSON.stringify({ talk: hash }));
+    fs.writeFileSync(path.join(tmpDir, "build-hashes.json"), JSON.stringify({ version: 2, hashes: { talk: hash } }));
     const outputDir = path.join(tmpDir, "output", "talk");
     fs.mkdirSync(outputDir, { recursive: true });
     fs.writeFileSync(path.join(outputDir, "index.html"), "<html/>");
@@ -160,7 +160,7 @@ describe("BuildCache.persist", () => {
     cache.persist();
 
     const manifest = JSON.parse(fs.readFileSync(path.join(tmpDir, "build-hashes.json"), "utf-8"));
-    expect(manifest).toEqual({ talk: "hash-a", intro: "hash-b" });
+    expect(manifest).toEqual({ version: 2, hashes: { talk: "hash-a", intro: "hash-b" } });
   });
 
   it("invalidated entries are excluded from the persisted manifest", () => {
@@ -171,8 +171,8 @@ describe("BuildCache.persist", () => {
     cache.persist();
 
     const manifest = JSON.parse(fs.readFileSync(path.join(tmpDir, "build-hashes.json"), "utf-8"));
-    expect(manifest).toHaveProperty("talk", "hash-a");
-    expect(manifest).not.toHaveProperty("intro");
+    expect(manifest.hashes).toHaveProperty("talk", "hash-a");
+    expect(manifest.hashes).not.toHaveProperty("intro");
   });
 
   it("a second BuildCache instance reads the persisted manifest", () => {

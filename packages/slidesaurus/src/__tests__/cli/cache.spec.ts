@@ -57,10 +57,13 @@ describe("runCacheClear", () => {
     fs.mkdirSync(outputDir, { recursive: true });
     fs.writeFileSync(path.join(outputDir, "index.html"), "");
 
-    // Write a manifest with two entries
+    // Write a manifest with two entries (versioned format)
     const manifest = {
-      "intro/getting-started": "hash-a",
-      "advanced/deep-dive": "hash-b",
+      version: 2,
+      hashes: {
+        "intro/getting-started": "hash-a",
+        "advanced/deep-dive": "hash-b",
+      },
     };
     fs.writeFileSync(path.join(cacheDir, "build-hashes.json"), JSON.stringify(manifest));
 
@@ -71,8 +74,8 @@ describe("runCacheClear", () => {
 
     // Manifest should still have the other entry
     const saved = JSON.parse(fs.readFileSync(path.join(cacheDir, "build-hashes.json"), "utf-8"));
-    expect(saved["intro/getting-started"]).toBeUndefined();
-    expect(saved["advanced/deep-dive"]).toBe("hash-b");
+    expect(saved.hashes?.["intro/getting-started"]).toBeUndefined();
+    expect(saved.hashes?.["advanced/deep-dive"]).toBe("hash-b");
   });
 
   it("warns when the targeted presentation has no cached output", async () => {

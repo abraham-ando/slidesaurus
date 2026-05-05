@@ -52,37 +52,24 @@ export function cleanupSourceDirectory(sourcePath: string): void {
 }
 
 
+// ── createIsolatedBuildDir helpers ───────────────────────────────────────────
+
 /**
- * Create an isolated build directory for a single presentation.
- * Copies the .md file and co-located assets to prevent race conditions
- * when building multiple presentations in parallel.
+ * Copy the source .md file to the isolated directory.
+ * Hard links are intentionally NOT used here — patchFrontmatterAddons/Theme
+ * writes to this path and hard-linked inodes share the same content, which
+ * would silently corrupt the original presentation source.
  */
-export function createIsolatedBuildDir(
-  sourceAbsolutePath: string,
-  presentationId: string,
-  cacheDir: string,
-): string {
-  const safeId = presentationId.replaceAll(/[/\\]/g, "__");
-  const buildsRoot = path.resolve(cacheDir, "builds");
-  const isolatedDir = path.resolve(buildsRoot, safeId);
-  // Guard against path traversal: resolved path must stay inside buildsRoot.
-  // path.relative() is used instead of startsWith() to avoid the prefix-attack
-  // where "/builds/id" passes the startsWith check for buildsRoot "/builds/id".
-  const rel = path.relative(buildsRoot, isolatedDir);
-  if (rel.startsWith("..") || path.isAbsolute(rel)) {
-    throw new Error(`[Security] Path traversal detected in presentationId: "${presentationId}"`);
-  }
-  fs.mkdirSync(isolatedDir, { recursive: true });
+function copySourceFile(src: string, dest: string): void {
+  fs.copyFileSync(src, dest);
+}
 
-  // Copy the source .md file (not hard-linked — patchFrontmatterAddons/Theme writes
-  // to this path and hard links share the same inode, which would corrupt the original).
-  const isolatedSourcePath = path.join(isolatedDir, `${safeId}.md`);
-  fs.copyFileSync(sourceAbsolutePath, isolatedSourcePath);
-
-  // Copy co-located non-md assets (images, etc.).
-  // Hard links are attempted first to avoid I/O duplication across parallel builds;
-  // falls back to copyFileSync when hard links fail (e.g. cross-device or Windows FAT).
-  const sourceDir = path.dirname(sourceAbsolutePath);
+/**
+ * Hard-link (or copy as fallback) all co-located non-.md assets from sourceDir
+ * into isolatedDir. Hard links avoid I/O duplication across parallel builds;
+ * falls back to copyFileSync on cross-device or FAT filesystems.
+ */
+function copyColocatedAssets(sourceDir: string, isolatedDir: string): void {
   const entries = fs.readdirSync(sourceDir, { withFileTypes: true });
   for (const entry of entries) {
     if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
@@ -96,12 +83,39 @@ export function createIsolatedBuildDir(
       hardLinkOrCopy(srcPath, destPath);
     }
   }
+}
 
-  // Scan the .md source for relative asset references (e.g. ![](./images/fig.png),
-  // background: ./assets/bg.jpg) and copy referenced files not already in the
-  // co-located directory. This handles assets stored in sibling/subdirectories.
+/**
+ * Create an isolated build directory for a single presentation.
+ * Orchestrates: path-traversal guard → copy source file → co-located assets
+ * → relative assets referenced in the markdown → dummy index.html sentinel.
+ */
+export function createIsolatedBuildDir(
+  sourceAbsolutePath: string,
+  presentationId: string,
+  cacheDir: string,
+): string {
+  const safeId = presentationId.replaceAll(/[/\\]/g, "__");
+  const buildsRoot = path.resolve(cacheDir, "builds");
+  const isolatedDir = path.resolve(buildsRoot, safeId);
+  // Guard against path traversal: resolved path must stay inside buildsRoot.
+  // path.relative() is used instead of startsWith() to avoid the prefix-attack
+  // where "/builds/id" passes the startsWith check for buildsRoot "/builds/id".
+  const rel = path.relative(buildsRoot, isolatedDir);
+  // path.relative() never returns an absolute path — startsWith("..") is the sole guard.
+  if (rel.startsWith("..")) {
+    throw new Error(`[Security] Path traversal detected in presentationId: "${presentationId}"`);
+  }
+  fs.mkdirSync(isolatedDir, { recursive: true });
+
+  const isolatedSourcePath = path.join(isolatedDir, `${safeId}.md`);
+  const sourceDir = path.dirname(sourceAbsolutePath);
+
+  copySourceFile(sourceAbsolutePath, isolatedSourcePath);
+  copyColocatedAssets(sourceDir, isolatedDir);
+  // Scan the .md for relative asset references (e.g. ![](./images/fig.png),
+  // background: ./assets/bg.jpg) and copy files from sibling/parent directories.
   copyRelativeAssets(fs.readFileSync(sourceAbsolutePath, "utf-8"), sourceDir, isolatedDir);
-
   // Create a dummy index.html to prevent Slidev CLI ENOENT when it tries to unlink it
   fs.writeFileSync(path.join(isolatedDir, "index.html"), "", "utf-8");
 
@@ -146,6 +160,18 @@ function hardLinkOrCopy(src: string, dest: string): void {
 }
 
 /**
+ * Strip fenced code blocks, inline code, and HTML comments from Markdown.
+ * Applied before extracting relative asset paths to avoid false positives
+ * (e.g. example paths inside ``` code fences).
+ */
+function stripCodeFences(md: string): string {
+  return md
+    .replace(/^```[\s\S]*?^```/gm, "") // fenced blocks (``` ... ```)
+    .replace(/`[^`\n]+`/g, "")         // inline code (`...`)
+    .replace(/<!--[\s\S]*?-->/g, "");  // HTML comments
+}
+
+/**
  * Parse a Slidev markdown source for relative asset references and copy any
  * files not already present in the isolated build directory. Handles:
  *   - Markdown images:   ![alt](./path/to/img.png)
@@ -153,11 +179,13 @@ function hardLinkOrCopy(src: string, dest: string): void {
  *   - CSS background:    background: ./path / url(./path)
  */
 function copyRelativeAssets(mdContent: string, sourceDir: string, isolatedDir: string): void {
+  // Strip code fences first to avoid false positives on example paths in code blocks
+  const cleanContent = stripCodeFences(mdContent);
   // Match bare relative paths in Markdown, HTML attributes and CSS
   const RE = /(?:!\[[^\]]*\]\(|src=["']?|href=["']?|background:\s*|url\(["']?)(\.\.?\/[^)"'\s>]+)/g;
   const seen = new Set<string>();
   let m: RegExpExecArray | null;
-  while ((m = RE.exec(mdContent)) !== null) {
+  while ((m = RE.exec(cleanContent)) !== null) {
     const relPath = m[1];
     if (seen.has(relPath)) continue;
     seen.add(relPath);
@@ -165,7 +193,10 @@ function copyRelativeAssets(mdContent: string, sourceDir: string, isolatedDir: s
     const srcAbs = path.resolve(sourceDir, relPath);
     // Safety: resolved path must remain inside sourceDir's parent tree
     const relCheck = path.relative(sourceDir, srcAbs);
-    if (relCheck.startsWith("..") && path.isAbsolute(relCheck)) continue;
+    // Exclude empty ("foo/.."), self ("."), and traversing ("../") paths.
+    // NOTE: path.isAbsolute(path.relative()) is structurally always false —
+    // path.relative() never returns an absolute path. Use startsWith("..") only.
+    if (!relCheck || relCheck === "." || relCheck.startsWith("..")) continue;
     if (!fs.existsSync(srcAbs) || !fs.statSync(srcAbs).isFile()) continue;
 
     const destAbs = path.resolve(isolatedDir, relPath);
@@ -203,6 +234,18 @@ function copyDirRecursive(src: string, dest: string): void {
 const HASH_MANIFEST = "build-hashes.json";
 
 /**
+ * Current manifest format version. Increment this when the format changes in
+ * a backward-incompatible way — old manifests are then treated as missing,
+ * triggering a full rebuild rather than silently using stale data.
+ */
+const CACHE_MANIFEST_VERSION = 2;
+
+interface HashManifest {
+  version: number;
+  hashes: Record<string, string>;
+}
+
+/**
  * Compute a SHA-256 hash of a file's content.
  */
 export function computeFileHash(filePath: string): string {
@@ -213,12 +256,24 @@ export function computeFileHash(filePath: string): string {
 /**
  * Load the hash manifest from the cache directory.
  * Returns a map of presentation id → content hash.
+ * Returns {} (rebuild all) when the manifest is absent, malformed, or on a
+ * different version — prevents silently using data from an incompatible format.
  */
 export function loadHashManifest(cacheDir: string): Record<string, string> {
   const manifestPath = path.join(cacheDir, HASH_MANIFEST);
   if (!fs.existsSync(manifestPath)) return {};
   try {
-    return JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+    const raw: unknown = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+    // Legacy flat format (no version field) or version mismatch → rebuild all
+    if (
+      typeof raw !== "object" ||
+      raw === null ||
+      (raw as Record<string, unknown>).version !== CACHE_MANIFEST_VERSION
+    ) {
+      log.info("Cache manifest version mismatch — rebuilding all presentations");
+      return {};
+    }
+    return (raw as HashManifest).hashes ?? {};
   } catch {
     log.warn("Failed to read build hash manifest, rebuilding all");
     return {};
@@ -230,9 +285,10 @@ export function loadHashManifest(cacheDir: string): Record<string, string> {
  */
 export function saveHashManifest(cacheDir: string, manifest: Record<string, string>): void {
   fs.mkdirSync(cacheDir, { recursive: true });
+  const data: HashManifest = { version: CACHE_MANIFEST_VERSION, hashes: manifest };
   fs.writeFileSync(
     path.join(cacheDir, HASH_MANIFEST),
-    JSON.stringify(manifest, null, 2),
+    JSON.stringify(data, null, 2),
     "utf-8",
   );
 }
@@ -246,10 +302,15 @@ export function hasCachedOutput(cacheDir: string, presentationId: string): boole
   const outputRoot = path.join(cacheDir, "output");
   const outputDir = path.join(outputRoot, presentationId);
   const rel = path.relative(outputRoot, outputDir);
+  // path.isAbsolute() guards against Windows drive-letter paths (e.g. "C:\evil") that
+  // path.join() may produce when presentationId is an absolute path on Windows.
   if (rel.startsWith("..") || path.isAbsolute(rel)) {
     throw new Error(`[Security] Path traversal detected in presentationId: "${presentationId}"`);
   }
-  return fs.existsSync(path.join(outputDir, "index.html"));
+  const indexHtml = path.join(outputDir, "index.html");
+  if (!fs.existsSync(indexHtml)) return false;
+  // A zero-byte index.html indicates a crashed mid-write build — treat as cache miss.
+  return fs.statSync(indexHtml).size > 0;
 }
 
 /**

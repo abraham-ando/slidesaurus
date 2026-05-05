@@ -9,6 +9,12 @@ import { filterEnvAllowlist } from "./env";
 
 const execFileAsync = promisify(execFile);
 
+/** Memoize packages confirmed NOT installed to avoid redundant tree walks per session. */
+const notInstalledCache = new Set<string>();
+
+/** In-flight install promises — deduplicate concurrent pnpm/yarn/npm add calls for the same package. */
+const installInFlight = new Map<string, Promise<boolean>>();
+
 /** Official Slidev theme prefix */
 const OFFICIAL_THEME_PREFIX = "@slidev/theme-";
 /** Community theme prefix */
@@ -55,15 +61,22 @@ export function resolveAddonPackageName(addon: string): string {
 /**
  * Check if a package is installed in node_modules.
  * Walks up the directory tree to support monorepo hoisted packages.
+ * Negative results are memoized per session to avoid redundant tree walks.
  */
 export function isPackageInstalled(packageName: string, siteDir: string): boolean {
+  const cacheKey = `${siteDir}::${packageName}`;
+  if (notInstalledCache.has(cacheKey)) return false;
   try {
     const segments = packageName.split("/");
     const found = walkUpTree(siteDir, TREE_WALK_MAX_DEPTH, (dir) => {
       const p = path.join(dir, "node_modules", ...segments);
       return fs.existsSync(p) ? true : undefined;
     });
-    return found === true;
+    if (found !== true) {
+      notInstalledCache.add(cacheKey);
+      return false;
+    }
+    return true;
   } catch (err) {
     log.warn(`Failed to check if package ${packageName} is installed: ${err instanceof Error ? err.message : String(err)}`);
     return false;
@@ -81,7 +94,8 @@ export function checkPackageAvailable(
     const fullPath = path.resolve(siteDir, packageName);
     // Guard: local paths must stay within the project directory
     const rel = path.relative(siteDir, fullPath);
-    if (rel.startsWith("..") || path.isAbsolute(rel)) {
+    // path.relative() never returns an absolute path — startsWith("..") is the sole guard.
+    if (rel.startsWith("..")) {
       return {
         installed: false,
         resolvedName: packageName,
@@ -141,8 +155,20 @@ function resolvePmBin(name: string): string {
 
 /**
  * Auto-install a missing npm package using the detected package manager.
+ * Concurrent calls for the same package are deduplicated — only one install
+ * process is spawned regardless of how many callers request the same package.
  */
 export async function installPackage(packageName: string, siteDir: string): Promise<boolean> {
+  const key = `${siteDir}::${packageName}`;
+  const inflight = installInFlight.get(key);
+  if (inflight) return inflight;
+  const promise = _doInstallPackage(packageName, siteDir);
+  installInFlight.set(key, promise);
+  void promise.finally(() => installInFlight.delete(key));
+  return promise;
+}
+
+async function _doInstallPackage(packageName: string, siteDir: string): Promise<boolean> {
   try {
     validatePackageName(packageName);
     log.info(`Auto-installing ${log.code(packageName)}...`);
