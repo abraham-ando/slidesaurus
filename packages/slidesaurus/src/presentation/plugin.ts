@@ -54,7 +54,10 @@ const DEFAULT_OPTIONS: PluginOptions = {
   exportWithClicks: false,
   devServerBasePort: 8600,
   devServerTimeout: 60000,
+  uiTheme: "default",
 };
+
+export type SlidesaurusPluginOptions = Partial<PluginOptions>;
 
 const DEPRECATED: Record<string, string> = {
   sourceDir: "path",
@@ -79,12 +82,11 @@ function processDeprecated(
 
 export default function pluginSlidev(
   context: LoadContext,
-  opts: Partial<PluginOptions>,
+  opts: SlidesaurusPluginOptions,
 ): Plugin<PluginContentData> {
-  const processedOpts = processDeprecated(opts as Record<string, unknown>);
   const options: PluginOptions = {
     ...DEFAULT_OPTIONS,
-    ...processedOpts,
+    ...opts,
   } as PluginOptions;
   const isDev = process.env.NODE_ENV === "development";
   const buildContext = { siteDir: context.siteDir, baseUrl: context.baseUrl };
@@ -179,8 +181,6 @@ export function validateOptions({
   options: Record<string, unknown>;
   validate: (schema: unknown, options: unknown) => unknown;
 }): PluginOptions {
-  const processed = processDeprecated(options);
-
   const schema = Joi.object({
     path: Joi.string().default(DEFAULT_OPTIONS.path),
     sourceDir: Joi.string().optional(),
@@ -220,11 +220,15 @@ export function validateOptions({
       .min(5000)
       .max(600000)
       .default(DEFAULT_OPTIONS.devServerTimeout),
+    // Any string is valid — built-ins are "default" | "compact" | "minimal".
+    // Custom values are passed as-is to data-slidev-ui-theme on component roots.
+    uiTheme: Joi.string().default(DEFAULT_OPTIONS.uiTheme),
     onPresentationScanned: Joi.function().optional(),
     onBuildComplete: Joi.function().optional(),
     transformFrontmatter: Joi.function().optional(),
   });
 
+  const processed = processDeprecated(options);
   const { value, error } = schema.validate(processed);
   if (error) throw error;
 

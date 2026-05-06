@@ -1,12 +1,30 @@
 import { themes as prismThemes } from "prism-react-renderer";
 import type { Config } from "@docusaurus/types";
 import type * as Preset from "@docusaurus/preset-classic";
+import { SlidesaurusPluginOptions } from "slidesaurus";
 
 const isProd = process.env.NODE_ENV === "production";
 
+const slidesaurusPluginOptions: SlidesaurusPluginOptions = {
+  path: "./slidev",
+  routeBasePath: "/training",
+  theme: "seriph",
+  uiTheme: "default",
+  pageTitle: "Training",
+  pageTagline: "Hands-on training presentations",
+  download: false,
+  exportFormats: ["pdf", "pptx"],
+  maxParallelBuilds: 4,
+  // Use port range 8700-8799 to avoid collision with @slidesaurus/sample (8600-8699)
+  devServerBasePort: 8700,
+  // Slidev dev server needs time for Vite + dependencies on first start
+  devServerTimeout: 60000,
+};
+
 const config: Config = {
   title: "🦕 slidesaurus",
-  tagline: "Seamlessly integrate Slidev presentations into your Docusaurus site",
+  tagline:
+    "Seamlessly integrate Slidev presentations into your Docusaurus site",
   favicon: "img/favicon.ico",
 
   url: "http://localhost:3001",
@@ -29,14 +47,18 @@ const config: Config = {
     // CSP is only applied in production: webpack dev server uses eval() for
     // source maps which violates script-src without 'unsafe-eval', causing a
     // blank page in development mode.
-    ...(isProd ? [{
-      tagName: "meta",
-      attributes: {
-        "http-equiv": "Content-Security-Policy",
-        content:
-          "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; frame-src 'self'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self' https: http: wss: ws:; upgrade-insecure-requests",
-      },
-    }] : []),
+    ...(isProd
+      ? [
+          {
+            tagName: "meta",
+            attributes: {
+              "http-equiv": "Content-Security-Policy",
+              content:
+                "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; frame-src 'self'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self' https: http: wss: ws:; upgrade-insecure-requests",
+            },
+          },
+        ]
+      : []),
     {
       tagName: "meta",
       attributes: {
@@ -63,25 +85,7 @@ const config: Config = {
     ],
   ],
 
-  plugins: [
-    [
-      "slidesaurus",
-      {
-        path: "./slidev",
-        routeBasePath: "/training",
-        theme: "seriph",
-        pageTitle: "Training",
-        pageTagline: "Hands-on training presentations",
-        download: false,
-        exportFormats: ["pdf", "pptx"],
-        maxParallelBuilds: 4,
-        // Use port range 8700-8799 to avoid collision with @slidesaurus/sample (8600-8699)
-        devServerBasePort: 8700,
-        // Slidev dev server needs time for Vite + dependencies on first start
-        devServerTimeout: 60000,
-      },
-    ],
-  ],
+  plugins: [["slidesaurus", { ...slidesaurusPluginOptions }]],
 
   themeConfig: {
     navbar: {

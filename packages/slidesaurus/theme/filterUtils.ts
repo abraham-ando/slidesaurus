@@ -1,4 +1,4 @@
-import type { Presentation, PlaylistData } from "../domain/types";
+import type { Presentation, PlaylistData } from "./types";
 
 export function matchesSearch(query: string, p: Presentation): boolean {
   const q = query.toLowerCase();

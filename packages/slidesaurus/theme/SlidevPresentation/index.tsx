@@ -46,7 +46,8 @@ function PresentationHead({ p, url }: { p: Presentation; url: string }) {
 }
 
 export default function SlidevPresentation({ pluginId = "default" }: { readonly pluginId?: string }) {
-  const { presentations, playlists } = usePluginData(PLUGIN_NAME, pluginId) as PluginData;
+  const { presentations, playlists, config } = usePluginData(PLUGIN_NAME, pluginId) as PluginData;
+  const uiTheme = config?.uiTheme ?? "default";
   const location = useLocation();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [resumeSlide, setResumeSlide] = useState<number | null>(null);
@@ -197,25 +198,27 @@ export default function SlidevPresentation({ pluginId = "default" }: { readonly 
   return (
     <Layout title={presentation.title} description={presentation.description}>
       <PresentationHead p={presentation} url={presentation.url} />
-      <div className={styles.presentationContainer}>
-        <div className={styles.presenterLinkBar}>
-          {presentation.exportUrls?.map((exportUrl) => (
-            <a key={exportUrl} href={exportUrl} download className={styles.downloadLink} aria-label={`Download ${exportLabel(exportUrl)}`}>
-              <DownloadIcon width={13} height={13} />
-              {exportLabel(exportUrl)}
+      <div className={styles.presentationContainer} data-slidev-ui-theme={uiTheme}>
+        {uiTheme !== "minimal" && (
+          <div className={styles.presenterLinkBar}>
+            {presentation.exportUrls?.map((exportUrl) => (
+              <a key={exportUrl} href={exportUrl} download className={styles.downloadLink} aria-label={`Download ${exportLabel(exportUrl)}`}>
+                <DownloadIcon width={13} height={13} />
+                {exportLabel(exportUrl)}
+              </a>
+            ))}
+            <a
+              href={`${presentation.url}presenter/`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.presenterLink}
+            >
+              Presenter View
             </a>
-          ))}
-          <a
-            href={`${presentation.url}presenter/`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.presenterLink}
-          >
-            Presenter View
-          </a>
-        </div>
+          </div>
+        )}
         {resumeBar}
-        {playlistBar}
+        {uiTheme !== "minimal" && playlistBar}
         <iframe
           ref={iframeRef}
           src={iframeSrc || presentation.url}

@@ -8,7 +8,7 @@ import SlidevCategoryCard from "../SlidevCategoryCard";
 import SlidevListItem from "../SlidevListItem";
 import type { PluginData, Presentation, PresentationLevel } from "../types";
 import { PLUGIN_NAME, LEVEL_LABELS } from "../types";
-import { matchesSearch, applyFilters } from "../../src/shared/filterUtils";
+import { matchesSearch, applyFilters } from "../filterUtils";
 import { useFavorites } from "../useFavorites";
 import {
   FolderIcon,
@@ -74,6 +74,7 @@ export default function SlidevOverview({ pluginId = "default" }: { readonly plug
     PLUGIN_NAME,
     pluginId,
   ) as PluginData;
+  const uiTheme = config.uiTheme ?? "default";
   const location = useLocation();
 
   const initialParams = useMemo(() => readUrlParams(location.search), []);
@@ -95,6 +96,8 @@ export default function SlidevOverview({ pluginId = "default" }: { readonly plug
   });
 
   const [viewMode, setViewMode] = useState(() => {
+    // Minimal theme forces list view — no grid
+    if (uiTheme === "minimal") return "list";
     if (globalThis.window !== undefined) {
       return localStorage.getItem(STORAGE_KEYS.viewMode) || "grid";
     }
@@ -269,7 +272,8 @@ export default function SlidevOverview({ pluginId = "default" }: { readonly plug
     [categories],
   );
 
-  const hasSidebar = topLevelCategories.length > 0;
+  // Minimal theme: no sidebar — categories are visible in the main list
+  const hasSidebar = topLevelCategories.length > 0 && uiTheme !== "minimal";
 
   const title = currentCategoryMeta?.label || config.pageTitle || "Slidev Presentations";
   const tagline = currentCategoryMeta?.description || config.pageTagline || "Interactive presentation overview";
@@ -462,10 +466,10 @@ export default function SlidevOverview({ pluginId = "default" }: { readonly plug
         {hasContent && !noResults && viewMode === "grid" && (
           <div className={styles.grid}>
             {sortedCategories.map((category) => (
-              <SlidevCategoryCard key={`cat-${category.path}`} category={category} />
+              <SlidevCategoryCard key={`cat-${category.path}`} category={category} uiTheme={uiTheme} />
             ))}
             {sortedPresentations.map((presentation) => (
-              <SlidevCard key={presentation.id} presentation={presentation} isDev={isDev} />
+              <SlidevCard key={presentation.id} presentation={presentation} isDev={isDev} uiTheme={uiTheme} />
             ))}
           </div>
         )}
@@ -473,12 +477,14 @@ export default function SlidevOverview({ pluginId = "default" }: { readonly plug
         {hasContent && !noResults && viewMode === "list" && (
           <div className={styles.list}>
             {sortedCategories.map((category) => (
-              <SlidevListItem key={`cat-${category.path}`} type="category" category={category} />
+              <SlidevListItem key={`cat-${category.path}`} type="category" category={category} uiTheme={uiTheme} />
             ))}
             {sortedPresentations.map((presentation) => (
-              // Horizontal SlidevCard in list view: thumbnail on left, metadata on right.
-              // More informative than a plain text row when thumbnails are available.
-              <SlidevCard key={presentation.id} presentation={presentation} isDev={isDev} horizontal />
+              uiTheme === "minimal"
+                // Minimal: pure text row using SlidevListItem (no thumbnail at all)
+                ? <SlidevListItem key={presentation.id} type="presentation" presentation={presentation} isDev={isDev} uiTheme={uiTheme} />
+                // Default / compact: horizontal card (thumbnail on left)
+                : <SlidevCard key={presentation.id} presentation={presentation} isDev={isDev} horizontal uiTheme={uiTheme} />
             ))}
           </div>
         )}
@@ -488,7 +494,7 @@ export default function SlidevOverview({ pluginId = "default" }: { readonly plug
 
   return (
     <Layout title={title} description={tagline}>
-      <div className={styles.container}>
+      <div className={styles.container} data-slidev-ui-theme={uiTheme}>
         <div className={styles.bannerWrapper}>
           {isInCategory && backUrl !== null && (
             <Link to={backUrl} className={styles.backButton} aria-label="Go back">
@@ -502,7 +508,7 @@ export default function SlidevOverview({ pluginId = "default" }: { readonly plug
             </h1>
             <p className={styles.subtitle}>{tagline}</p>
           </div>
-          {(hasContent || isInCategory) && (
+          {(hasContent || isInCategory) && uiTheme !== "minimal" && (
             <div className={styles.controls} role="toolbar" aria-label="View controls">
               <button
                 type="button"

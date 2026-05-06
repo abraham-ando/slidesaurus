@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "@docusaurus/Link";
 import { PresentationIcon, FolderIcon, AuthorIcon, ClockIcon, StarIcon, PresenterIcon, DownloadIcon, PlaylistIcon } from "../icons";
-import type { Presentation, Category } from "../types";
+import type { Presentation, Category, UITheme } from "../types";
 import { LEVEL_LABELS } from "../types";
 import { useFavorites } from "../useFavorites";
 import styles from "./styles.module.css";
@@ -18,16 +18,17 @@ const LEVEL_CLASS: Record<string, string> = {
 };
 
 type Props =
-  | { type: "presentation"; presentation: Presentation; isDev: boolean }
-  | { type: "category"; category: Category };
+  | { type: "presentation"; presentation: Presentation; isDev: boolean; uiTheme?: UITheme }
+  | { type: "category"; category: Category; uiTheme?: UITheme };
 
 export default function SlidevListItem(props: Props) {
   const { isFavorite, toggleFavorite } = useFavorites();
+  const uiTheme = props.uiTheme ?? "default";
 
   if (props.type === "category") {
     const { category } = props;
     return (
-      <Link to={category.url} className={`${styles.listItem} ${styles.categoryItem}`}>
+      <Link to={category.url} className={`${styles.listItem} ${styles.categoryItem}`} data-slidev-ui-theme={uiTheme}>
         <div className={styles.titleSection}>
           <FolderIcon className={styles.icon} width={18} height={18} />
           <span className={styles.title}>{category.label}</span>
@@ -45,6 +46,7 @@ export default function SlidevListItem(props: Props) {
   }
 
   const { presentation, isDev } = props;
+
   const content = (
     <>
       <div className={styles.titleSection}>
@@ -127,10 +129,10 @@ export default function SlidevListItem(props: Props) {
   );
 
   if (isDev) {
-    return <a href={presentation.url} className={styles.listItem}>{content}</a>;
+    return <a href={presentation.url} className={styles.listItem} data-slidev-ui-theme={uiTheme}>{content}</a>;
   }
   return (
-    <a href={presentation.url} className={styles.listItem} target="_blank" rel="noopener noreferrer">
+    <a href={presentation.url} className={styles.listItem} data-slidev-ui-theme={uiTheme} target="_blank" rel="noopener noreferrer">
       {content}
     </a>
   );

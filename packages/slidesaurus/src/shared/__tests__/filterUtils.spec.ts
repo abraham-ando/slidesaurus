@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { matchesSearch, applyFilters } from "../filterUtils";
+import { matchesSearch, applyFilters } from "../../../theme/filterUtils";
 import type { Presentation } from "../../domain/types";
-import type { FilterOptions } from "../filterUtils";
+import type { FilterOptions } from "../../../theme/filterUtils";
 
 function makePresentation(overrides: Partial<Presentation> = {}): Presentation {
   return {

@@ -122,3 +122,69 @@
   -webkit-line-clamp: 1;
   line-clamp: 1;
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Built-in CSS variants — driven by data-slidev-ui-theme on the root element.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── compact ──────────────────────────────────────────────────────────────── */
+
+.card[data-slidev-ui-theme="compact"] .folderPreview {
+  aspect-ratio: unset;
+  height: 80px;
+}
+
+.card[data-slidev-ui-theme="compact"] .content {
+  padding: 0.5rem 0.75rem;
+}
+
+.card[data-slidev-ui-theme="compact"] .title {
+  font-size: 0.85rem;
+}
+
+.card[data-slidev-ui-theme="compact"] .description {
+  display: none;
+}
+
+/* ── Minimal variant — text-only row ─────────────────────────────────────── */
+
+.cardMinimal {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem 0.875rem;
+  border-radius: 6px;
+  text-decoration: none !important;
+  background: var(--ifm-card-background-color);
+  border: 1px solid var(--ifm-color-primary-lightest);
+  width: 100%;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.cardMinimal:hover {
+  background: var(--ifm-color-emphasis-100);
+  border-color: var(--ifm-color-primary);
+  text-decoration: none;
+}
+
+.cardMinimal:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 2px;
+}
+
+.minimalIcon {
+  color: var(--ifm-color-primary);
+  flex-shrink: 0;
+}
+
+.minimalTitle {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--ifm-color-primary);
+  flex-grow: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

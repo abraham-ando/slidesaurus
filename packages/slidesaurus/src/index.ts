@@ -8,4 +8,9 @@
  * Business logic lives in `presentation/plugin.ts`; this file must remain a
  * thin re-export with no logic of its own.
  */
-export { default, getSwizzleComponentList, validateOptions } from "./presentation/plugin";
+export {
+  default,
+  getSwizzleComponentList,
+  validateOptions,
+  SlidesaurusPluginOptions,
+} from "./presentation/plugin";

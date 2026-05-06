@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from "react";
 import { PresentationIcon, AuthorIcon, ClockIcon, StarIcon, PresenterIcon, DownloadIcon, PlaylistIcon } from "../icons";
-import type { Presentation } from "../types";
+import type { Presentation, UITheme } from "../types";
 import { LEVEL_LABELS } from "../types";
 import { useFavorites } from "../useFavorites";
 import styles from "./styles.module.css";
@@ -10,32 +10,103 @@ function exportLabel(url: string): string {
   return ["PDF", "PPTX"].includes(ext) ? ext : "FILE";
 }
 
+/** Native Slidev slide width in pixels. The iframe renders at this width and
+ *  is scaled down via CSS transform to fit the card preview area. */
+const SLIDE_NATIVE_WIDTH = 980;
+
 const LEVEL_CLASS: Record<string, string> = {
   beginner: styles.levelBeginner,
   intermediate: styles.levelIntermediate,
   advanced: styles.levelAdvanced,
 };
 
-/** Native Slidev slide width in pixels. The iframe renders at this width and
- *  is scaled down via CSS transform to fit the card preview area. */
-const SLIDE_NATIVE_WIDTH = 980;
-
 interface Props {
   readonly presentation: Presentation;
   readonly isDev: boolean;
   /** When true, renders image on the left and content on the right (list view). */
   readonly horizontal?: boolean;
+  /**
+   * Visual layout variant — set via the plugin's `uiTheme` option.
+   * Applied as `data-slidev-ui-theme` on the root element so custom CSS
+   * can target `[data-slidev-ui-theme="my-theme"] .card { ... }`.
+   * Built-in: `"default"` | `"compact"` | `"minimal"`.
+   */
+  readonly uiTheme?: UITheme;
 }
 
-export default function SlidevCard({ presentation, isDev, horizontal = false }: Props) {
+// ── Minimal variant — text-only row, fundamentally different DOM structure ──
+// Cannot be expressed via CSS alone (row layout with no preview zone),
+// so it uses a dedicated render path. The `data-slidev-ui-theme` attribute
+// is still applied for user CSS overrides.
+function SlidevCardMinimal({ presentation, isDev, uiTheme }: { presentation: Presentation; isDev: boolean; uiTheme: UITheme }) {
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const linkProps = isDev
+    ? { href: presentation.url }
+    : { href: presentation.url, target: "_blank", rel: "noopener noreferrer" };
+
+  return (
+    <a {...linkProps} className={styles.cardMinimal} data-slidev-ui-theme={uiTheme}>
+      <PresentationIcon className={styles.minimalIcon} width={16} height={16} />
+      <span className={styles.minimalTitle}>
+        {presentation.title}
+        {isDev && <span className={`${styles.metaBadge} ${styles.unavailableBadge}`}>Build Required</span>}
+      </span>
+      <div className={styles.minimalBadges}>
+        {presentation.deprecated && (
+          <span className={`${styles.metaBadge} ${styles.badgeDeprecated}`}>Deprecated</span>
+        )}
+        {presentation.level && (
+          <span className={`${styles.metaBadge} ${LEVEL_CLASS[presentation.level] ?? ""}`}>
+            {LEVEL_LABELS[presentation.level] ?? presentation.level}
+          </span>
+        )}
+        {presentation.playlist && presentation.playlist.length > 0 && (
+          <span className={`${styles.metaBadge} ${styles.badgePlaylist}`}>
+            <PlaylistIcon width={8} height={8} />
+            {presentation.playlist[0]}
+            {presentation.playlist.length > 1 && ` +${presentation.playlist.length - 1}`}
+          </span>
+        )}
+      </div>
+      <div className={styles.minimalMeta}>
+        {presentation.author && (
+          <span className={styles.minimalMetaItem}>
+            <AuthorIcon width={11} height={11} />
+            {presentation.author}
+          </span>
+        )}
+        {presentation.duration !== undefined && (
+          <span className={styles.minimalMetaItem}>
+            <ClockIcon width={11} height={11} />
+            {presentation.duration} min
+          </span>
+        )}
+      </div>
+      <button
+        type="button"
+        className={`${styles.minimalFavoriteBtn} ${isFavorite(presentation.id) ? styles.favoriteBtnActive : ""}`}
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(presentation.id); }}
+        aria-label={isFavorite(presentation.id) ? "Remove from favorites" : "Add to favorites"}
+        aria-pressed={isFavorite(presentation.id)}
+      >
+        <StarIcon filled={isFavorite(presentation.id)} width={13} height={13} />
+      </button>
+    </a>
+  );
+}
+
+export default function SlidevCard({ presentation, isDev, horizontal = false, uiTheme = "default" }: Props) {
+  // Minimal: fundamentally different DOM (no preview, row layout) → dedicated path
+  if (uiTheme === "minimal") {
+    return <SlidevCardMinimal presentation={presentation} isDev={isDev} uiTheme={uiTheme} />;
+  }
+
   const previewRef = useRef<HTMLDivElement>(null);
   const { isFavorite, toggleFavorite } = useFavorites();
   const [previewLoaded, setPreviewLoaded] = useState(isDev);
-  // Fall back to iframe preview when the thumbnail PNG fails to load (e.g. not generated yet).
   const [thumbnailError, setThumbnailError] = useState(false);
 
-  // Compute scale = preview-container-width / native-slide-width.
-  // Updates on resize so the thumbnail stays sharp at any card width.
+  // Scale the iframe/thumbnail preview to the card width via CSS custom property.
   useEffect(() => {
     if (isDev || !previewRef.current) return;
     const el = previewRef.current;
@@ -47,8 +118,20 @@ export default function SlidevCard({ presentation, isDev, horizontal = false }: 
     return () => observer.disconnect();
   }, [isDev]);
 
-  const cardContent = (
-    <>
+  const cardClass = [
+    styles.card,
+    horizontal ? styles.cardHorizontal : "",
+  ].filter(Boolean).join(" ");
+
+  const linkProps = isDev
+    ? { href: presentation.url }
+    : { href: presentation.url, target: "_blank", rel: "noopener noreferrer" };
+
+  return (
+    // data-slidev-ui-theme drives all visual variants via CSS attribute selectors.
+    // This is the public CSS API: users can target [data-slidev-ui-theme="my-brand"]
+    // in their custom.css without swizzling the component.
+    <a {...linkProps} className={cardClass} data-slidev-ui-theme={uiTheme}>
       <div className={`${styles.preview} ${previewLoaded ? "" : styles.previewLoading}`} ref={previewRef}>
         {isDev ? (
           <PresentationIcon className={styles.previewIcon} />
@@ -74,15 +157,6 @@ export default function SlidevCard({ presentation, isDev, horizontal = false }: 
             onLoad={() => setPreviewLoaded(true)}
           />
         )}
-        <button
-          type="button"
-          className={`${styles.favoriteBtn} ${isFavorite(presentation.id) ? styles.favoriteBtnActive : ""}`}
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(presentation.id); }}
-          aria-label={isFavorite(presentation.id) ? "Remove from favorites" : "Add to favorites"}
-          aria-pressed={isFavorite(presentation.id)}
-        >
-          <StarIcon filled={isFavorite(presentation.id)} width={14} height={14} />
-        </button>
         {!isDev && (
           <div className={styles.overlayActions}>
             <a
@@ -112,6 +186,19 @@ export default function SlidevCard({ presentation, isDev, horizontal = false }: 
           </div>
         )}
       </div>
+
+      {/* Favorite button lives OUTSIDE .preview so CSS variants can reposition
+          it without needing to toggle its visibility separately. */}
+      <button
+        type="button"
+        className={`${styles.favoriteBtn} ${isFavorite(presentation.id) ? styles.favoriteBtnActive : ""}`}
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(presentation.id); }}
+        aria-label={isFavorite(presentation.id) ? "Remove from favorites" : "Add to favorites"}
+        aria-pressed={isFavorite(presentation.id)}
+      >
+        <StarIcon filled={isFavorite(presentation.id)} width={14} height={14} />
+      </button>
+
       <div className={styles.content}>
         <div className={styles.header}>
           <h3 className={styles.title}>{presentation.title}</h3>
@@ -158,18 +245,6 @@ export default function SlidevCard({ presentation, isDev, horizontal = false }: 
           </div>
         )}
       </div>
-    </>
-  );
-
-  const cardClass = `${styles.card}${horizontal ? ` ${styles.cardHorizontal}` : ""}`;
-
-  if (isDev) {
-    return <a href={presentation.url} className={cardClass}>{cardContent}</a>;
-  }
-
-  return (
-    <a href={presentation.url} className={cardClass} target="_blank" rel="noopener noreferrer">
-      {cardContent}
     </a>
   );
 }

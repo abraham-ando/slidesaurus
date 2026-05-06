@@ -329,3 +329,48 @@
     font-size: 0.6rem;
   }
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Built-in CSS variants — driven by data-slidev-ui-theme on the root element.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── compact — reduced padding, no hover preview ─────────────────────────── */
+
+.listItem[data-slidev-ui-theme="compact"] {
+  padding: 0.5rem 0.75rem;
+  gap: 0.65rem;
+}
+
+.listItem[data-slidev-ui-theme="compact"] .titleSection {
+  width: 35%;
+  min-width: 160px;
+}
+
+.listItem[data-slidev-ui-theme="compact"] .descriptionSection {
+  font-size: 0.82rem;
+}
+
+.listItem[data-slidev-ui-theme="compact"] .hoverPreview {
+  display: none;
+}
+
+/* ── minimal — no description column, tighter row ────────────────────────── */
+
+.listItem[data-slidev-ui-theme="minimal"] {
+  padding: 0.45rem 0.75rem;
+  gap: 0.5rem;
+}
+
+.listItem[data-slidev-ui-theme="minimal"] .descriptionSection {
+  display: none;
+}
+
+.listItem[data-slidev-ui-theme="minimal"] .hoverPreview {
+  display: none;
+}
+
+.listItem[data-slidev-ui-theme="minimal"] .titleSection {
+  width: auto;
+  flex: 1;
+  min-width: 0;
+}

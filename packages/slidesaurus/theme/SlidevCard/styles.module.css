@@ -1,3 +1,14 @@
+/*
+ * CSS theming API
+ * ──────────────────────────────────────────────────────────────────────────
+ * The `data-slidev-ui-theme` attribute is set on the root element by the
+ * plugin. Use it to target custom styles without swizzling:
+ *
+ *   [data-slidev-ui-theme="my-brand"] .card { border-color: hotpink; }
+ *
+ * Built-in variants: "default" (no selector) | "compact" | "minimal"
+ */
+
 .card {
   display: flex;
   flex-direction: column;
@@ -8,6 +19,8 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--ifm-color-emphasis-200);
   overflow: hidden;
   width: 100%;
+  /* Needed so .favoriteBtn (position: absolute) is anchored to the card */
+  position: relative;
 }
 
 .card:hover {
@@ -291,6 +304,10 @@
   outline-offset: 2px;
 }
 
+/*
+ * .favoriteBtn is positioned absolute relative to .card (which has position: relative).
+ * This keeps the button visible even when CSS hides or transforms .preview.
+ */
 .favoriteBtn {
   position: absolute;
   top: 0.5rem;
@@ -398,5 +415,136 @@
 @media (max-width: 480px) {
   .content {
     padding: 0.6rem 0.75rem;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Built-in CSS variants — driven by data-slidev-ui-theme attribute.
+   Custom variants: add `[data-slidev-ui-theme="your-value"] .card { ... }`
+   in your custom.css (or swizzle this module for full control).
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── compact — denser card, fixed preview height, description hidden ─────── */
+
+.card[data-slidev-ui-theme="compact"] .preview {
+  aspect-ratio: unset;
+  height: 100px;
+}
+
+.card[data-slidev-ui-theme="compact"] .content {
+  padding: 0.5rem 0.75rem;
+  gap: 0.15rem;
+}
+
+.card[data-slidev-ui-theme="compact"] .title {
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  font-size: 0.85rem;
+}
+
+.card[data-slidev-ui-theme="compact"] .description {
+  display: none;
+}
+
+/* ── Minimal variant — text-only row, no thumbnail ──────────────────────────── */
+
+.cardMinimal {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem 0.875rem;
+  border-radius: 6px;
+  text-decoration: none !important;
+  background: var(--ifm-card-background-color);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  width: 100%;
+  transition: background 0.15s, border-color 0.15s;
+  min-height: 0;
+}
+
+.cardMinimal:hover {
+  background: var(--ifm-color-emphasis-100);
+  border-color: var(--ifm-color-primary);
+  text-decoration: none;
+}
+
+.cardMinimal:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 2px;
+}
+
+.minimalIcon {
+  color: var(--ifm-color-primary);
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+.minimalTitle {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--ifm-color-primary);
+  flex-grow: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.minimalBadges {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.minimalMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--ifm-color-emphasis-500);
+  flex-shrink: 0;
+}
+
+.minimalMetaItem {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.minimalFavoriteBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--ifm-color-emphasis-400);
+  transition: color 0.15s, transform 0.15s;
+  padding: 0.2rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.minimalFavoriteBtn:hover {
+  color: #f59e0b;
+  transform: scale(1.15);
+}
+
+.minimalFavoriteBtn:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .minimalMeta {
+    display: none;
+  }
+
+  .minimalBadges {
+    display: none;
   }
 }

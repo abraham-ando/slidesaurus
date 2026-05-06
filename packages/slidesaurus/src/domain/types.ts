@@ -43,11 +43,33 @@ export interface DevServerOptions {
   devServerTimeout: number;
 }
 
+/**
+ * Visual layout variant for plugin UI components.
+ *
+ * Built-in values: `"default"` | `"compact"` | `"minimal"`.
+ *
+ * Accepts **any string** — custom values are applied as a
+ * `data-slidev-ui-theme` attribute on every component root element,
+ * letting you style them via CSS in `custom.css`:
+ *
+ * ```css
+ * [data-slidev-ui-theme="my-brand"] .card { ... }
+ * ```
+ */
+export type UITheme = "default" | "compact" | "minimal" | (string & {});
+
 /** Options related to UI / routing. */
 export interface UIOptions {
   routeBasePath: string;
   pageTitle: string;
   pageTagline: string;
+  /**
+   * Pre-built visual layout variant for all plugin theme components.
+   * - `"default"` — full-featured cards with thumbnail previews (default)
+   * - `"compact"` — denser cards, reduced padding, no description text
+   * - `"minimal"` — text-only rows, no thumbnails, maximum information density
+   */
+  uiTheme: UITheme;
 }
 
 /** Full plugin options — union of all segregated interfaces. */
@@ -214,6 +236,7 @@ export interface PluginConfig {
   path?: string;
   pageTitle?: string;
   pageTagline?: string;
+  uiTheme: UITheme;
 }
 
 /** Global data shape consumed by usePluginData() in theme components. */
