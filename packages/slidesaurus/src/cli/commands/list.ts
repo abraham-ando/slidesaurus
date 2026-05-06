@@ -4,7 +4,7 @@ import { loadPluginOptions, resolveOptions } from "../config";
 import { renderTable } from "../table";
 import { cliLogger } from "../output";
 const { heading, warn } = cliLogger;
-import { scanPresentations } from "../../scanner";
+import { scanPresentations } from "../../application/scanner";
 
 interface ListOptions {
   json?: boolean;

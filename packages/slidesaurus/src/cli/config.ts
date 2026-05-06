@@ -1,7 +1,7 @@
 import path from "node:path";
 import fs from "node:fs";
 import { execFileSync } from "node:child_process";
-import type { PluginOptions } from "../types";
+import type { PluginOptions } from "../domain/types";
 
 const PLUGIN_NAME = "slidesaurus";
 

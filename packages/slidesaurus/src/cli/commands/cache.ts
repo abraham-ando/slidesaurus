@@ -4,13 +4,9 @@ import prompts from "prompts";
 import pc from "picocolors";
 import { cliLogger } from "../output";
 const { ok, fail, info, warn } = cliLogger;
-import {
-  getSlidevCacheDir,
-  getSlidevBuildOutputDir,
-  loadHashManifest,
-  saveHashManifest,
-  validatePluginId,
-} from "../../fileSystem";
+import { getSlidevCacheDir, validatePluginId } from "../../infrastructure/fs/fileSystem";
+import { getSlidevBuildOutputDir } from "../../infrastructure/fs/outputManager";
+import { loadHashManifest, saveHashManifest } from "../../infrastructure/fs/hashManifest";
 
 interface CacheClearOptions {
   id?: string;     // presentationId to target

@@ -8,7 +8,7 @@ import SlidevCategoryCard from "../SlidevCategoryCard";
 import SlidevListItem from "../SlidevListItem";
 import type { PluginData, Presentation, PresentationLevel } from "../types";
 import { PLUGIN_NAME, LEVEL_LABELS } from "../types";
-import { matchesSearch, applyFilters } from "../../src/filterUtils";
+import { matchesSearch, applyFilters } from "../../src/shared/filterUtils";
 import { useFavorites } from "../useFavorites";
 import {
   FolderIcon,

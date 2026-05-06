@@ -5,10 +5,12 @@ import pc from "picocolors";
 import { loadPluginOptions, resolveOptions, findConfigFile } from "../config";
 import { cliLogger } from "../output";
 const { ok, fail, warn, heading, info } = cliLogger;
-import { scanPresentations } from "../../scanner";
-import { isPackageInstalled, checkPackageAvailable } from "../../packageResolver";
-import { getSlidevCacheDir, loadHashManifest, hasCachedOutput } from "../../fileSystem";
-import { checkSlidevInstalled } from "../../builder";
+import { scanPresentations } from "../../application/scanner";
+import { isPackageInstalled, checkPackageAvailable } from "../../infrastructure/packages/packageResolver";
+import { getSlidevCacheDir } from "../../infrastructure/fs/fileSystem";
+import { loadHashManifest } from "../../infrastructure/fs/hashManifest";
+import { hasCachedOutput } from "../../infrastructure/fs/outputManager";
+import { checkSlidevInstalled } from "../../application/builder";
 
 interface DoctorOptions {
   pluginId: string;

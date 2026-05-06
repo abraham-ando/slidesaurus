@@ -1,5 +1,5 @@
 import pc from "picocolors";
-import { PluginLogger } from "../logger";
+import { PluginLogger } from "../shared/logger";
 
 /**
  * Terminal logger for the slidesaurus CLI.

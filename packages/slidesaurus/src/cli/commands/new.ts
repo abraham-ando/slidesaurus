@@ -6,8 +6,8 @@ import { loadPluginOptions, resolveOptions } from "../config";
 import { renderTemplate, TEMPLATE_NAMES, type TemplateName } from "../templates";
 import { cliLogger } from "../output";
 const { success, error, info } = cliLogger;
-import type { PluginOptions } from "../../types";
-import { normalizeRoutePath } from "../../utils";
+import type { PluginOptions } from "../../domain/types";
+import { normalizeRoutePath } from "../../shared/utils";
 
 interface NewOptions {
   category?: string;
