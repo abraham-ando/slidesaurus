@@ -71,7 +71,7 @@ async function runListCommand(options: PluginOptions, getScan: ScanGetter): Prom
     if (p.deprecated) meta.push("DEPRECATED");
     const metaStr = meta.length ? `  [${meta.join(", ")}]` : "";
     const prefix = p.category ? `${p.category}/` : "";
-    console.log(`  ${prefix}${path.basename(p.sourcePath)}  →  ${p.title}${metaStr}`);
+    console.log(`  ${prefix}${path.basename(p.sourcePath, ".md")}  →  ${p.title}${metaStr}`);
   }
 }
 

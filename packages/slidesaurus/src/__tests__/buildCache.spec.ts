@@ -190,6 +190,33 @@ describe("BuildCache.persist", () => {
   });
 });
 
+// ── isCached — security / robustness ─────────────────────────────────────────
+
+describe("BuildCache.isCached — invalid IDs", () => {
+  it("returns false (not throws) for an absolute path as presentationId", () => {
+    const hash = "abc123";
+    fs.writeFileSync(
+      path.join(tmpDir, "build-hashes.json"),
+      JSON.stringify({ version: 2, hashes: { "/etc/passwd": hash } }),
+    );
+    const cache = new BuildCache(tmpDir);
+    // hasCachedOutput throws [Security] for absolute paths — isCached must catch it
+    expect(() => cache.isCached("/etc/passwd", hash)).not.toThrow();
+    expect(cache.isCached("/etc/passwd", hash)).toBe(false);
+  });
+
+  it("returns false (not throws) for a traversal presentationId", () => {
+    const hash = "abc123";
+    fs.writeFileSync(
+      path.join(tmpDir, "build-hashes.json"),
+      JSON.stringify({ version: 2, hashes: { "../escape": hash } }),
+    );
+    const cache = new BuildCache(tmpDir);
+    expect(() => cache.isCached("../escape", hash)).not.toThrow();
+    expect(cache.isCached("../escape", hash)).toBe(false);
+  });
+});
+
 // ── computeHash ──────────────────────────────────────────────────────────────
 
 describe("BuildCache.computeHash", () => {

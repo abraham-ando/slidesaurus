@@ -475,3 +475,166 @@ describe("scanPresentations", () => {
     });
   });
 });
+
+// ── onPresentationScanned error isolation ──────────────────────────────────
+
+describe("scanPresentations — onPresentationScanned hook error handling", () => {
+  let tmpDir: string;
+  let slidevDir: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scanner-hook-test-"));
+    slidevDir = path.join(tmpDir, "slidev");
+    fs.mkdirSync(slidevDir, { recursive: true });
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  function context(): BuildContext {
+    return { siteDir: tmpDir, baseUrl: "/" };
+  }
+
+  it("logs a warning and continues when hook throws — scan does not crash", async () => {
+    const { log } = await import("../logger");
+    const { scanPresentations } = await import("../scanner");
+
+    fs.writeFileSync(path.join(slidevDir, "a.md"), "---\ntitle: A\n---\n\n# A");
+    fs.writeFileSync(path.join(slidevDir, "b.md"), "---\ntitle: B\n---\n\n# B");
+
+    const hookError = new Error("hook failed for testing");
+    let callCount = 0;
+    const result = await scanPresentations(
+      {
+        ...{
+          path: "slidev",
+          download: false,
+          exportFormats: [],
+          routeBasePath: "/slidev",
+          pageTitle: "",
+          pageTagline: "",
+          id: "default",
+          theme: undefined,
+          addons: [],
+          buildTimeout: 120,
+          verbose: false,
+          maxParallelBuilds: 4,
+          autoInstall: false,
+          dryRun: false,
+          withoutNotes: false,
+          exportWithClicks: false,
+          devServerBasePort: 8600,
+          devServerTimeout: 60000,
+        },
+        onPresentationScanned: async () => {
+          callCount++;
+          throw hookError;
+        },
+      },
+      context(),
+    );
+
+    // Scan completes — presentations are returned, not lost
+    expect(result.presentations).toHaveLength(2);
+    // Hook was called for each presentation
+    expect(callCount).toBe(2);
+    // Warning logged for each failure
+    expect(vi.mocked(log.warn)).toHaveBeenCalledWith(
+      expect.stringContaining("onPresentationScanned hook threw"),
+    );
+  });
+});
+
+// ── relativePath normalization ─────────────────────────────────────────────
+
+describe("scanPresentations — relativePath uses forward slashes", () => {
+  let tmpDir: string;
+  let slidevDir: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scanner-path-test-"));
+    slidevDir = path.join(tmpDir, "slidev");
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("passes forward-slash relative path to transformFrontmatter on all platforms", async () => {
+    const { scanPresentations } = await import("../scanner");
+
+    const subDir = path.join(slidevDir, "getting-started");
+    fs.mkdirSync(subDir, { recursive: true });
+    fs.writeFileSync(path.join(subDir, "intro.md"), "---\ntitle: Intro\n---\n\n# Intro");
+
+    const capturedPaths: string[] = [];
+    await scanPresentations(
+      {
+        path: "slidev",
+        download: false,
+        exportFormats: [],
+        routeBasePath: "/slidev",
+        pageTitle: "",
+        pageTagline: "",
+        id: "default",
+        theme: undefined,
+        addons: [],
+        buildTimeout: 120,
+        verbose: false,
+        maxParallelBuilds: 4,
+        autoInstall: false,
+        dryRun: false,
+        withoutNotes: false,
+        exportWithClicks: false,
+        devServerBasePort: 8600,
+        devServerTimeout: 60000,
+        transformFrontmatter: (data, filePath) => { capturedPaths.push(filePath); return data; },
+      },
+      { siteDir: tmpDir, baseUrl: "/" },
+    );
+
+    expect(capturedPaths).toHaveLength(1);
+    // Must use forward slashes regardless of OS
+    expect(capturedPaths[0]).toBe("getting-started/intro.md");
+    expect(capturedPaths[0]).not.toContain("\\");
+  });
+
+  it("stores sourcePath with forward slashes in presentation metadata", async () => {
+    const { scanPresentations } = await import("../scanner");
+
+    const subDir = path.join(slidevDir, "category");
+    fs.mkdirSync(subDir, { recursive: true });
+    fs.writeFileSync(path.join(subDir, "talk.md"), "---\ntitle: Talk\n---\n\n# Talk");
+
+    const result = await scanPresentations(
+      {
+        path: "slidev",
+        download: false,
+        exportFormats: [],
+        routeBasePath: "/slidev",
+        pageTitle: "",
+        pageTagline: "",
+        id: "default",
+        theme: undefined,
+        addons: [],
+        buildTimeout: 120,
+        verbose: false,
+        maxParallelBuilds: 4,
+        autoInstall: false,
+        dryRun: false,
+        withoutNotes: false,
+        exportWithClicks: false,
+        devServerBasePort: 8600,
+        devServerTimeout: 60000,
+      },
+      { siteDir: tmpDir, baseUrl: "/" },
+    );
+
+    const p = result.presentations[0];
+    expect(p.sourcePath).toBe("category/talk.md");
+    expect(p.sourcePath).not.toContain("\\");
+    expect(p.id).toBe("category/talk");
+    expect(p.id).not.toContain("\\");
+  });
+});

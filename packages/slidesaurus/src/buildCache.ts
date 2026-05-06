@@ -25,6 +25,10 @@ export class BuildCache {
    * Compute a short fingerprint that captures all build-affecting options.
    * Any change to theme, addons, download/export config, withoutNotes, or
    * baseUrl invalidates cached output.
+   *
+   * `baseUrl` is included because Vite embeds it into every asset URL at
+   * build time — a base change produces a functionally different build even
+   * when the source file is unchanged.
    */
   static computeOptionsFingerprint(
     options: Pick<PluginOptions, "theme" | "addons" | "download" | "exportFormats" | "exportWithClicks" | "withoutNotes">,
@@ -55,10 +59,19 @@ export class BuildCache {
     return `${computeFileHash(sourceAbsolutePath)}:${optionsFingerprint}`;
   }
 
-  /** True if the stored hash matches and the built output directory exists. */
+  /**
+   * True if the stored hash matches and the built output directory exists.
+   * Returns false (not throws) for invalid presentationIds — the security
+   * exception from hasCachedOutput is treated as a cache miss so the build
+   * pipeline continues normally with a fresh build.
+   */
   isCached(presentationId: string, hash: string): boolean {
-    return this.oldHashes[presentationId] === hash
-      && hasCachedOutput(this.cacheDir, presentationId);
+    if (this.oldHashes[presentationId] !== hash) return false;
+    try {
+      return hasCachedOutput(this.cacheDir, presentationId);
+    } catch {
+      return false;
+    }
   }
 
   /** Register the hash for a successfully built (or up-to-date) presentation. */

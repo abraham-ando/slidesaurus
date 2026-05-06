@@ -16,6 +16,9 @@ const ENV_ALLOWLIST = [
   "PNPM_HOME", "NVM_DIR", "NVM_HOME",
   "SystemRoot", "COMSPEC", "windir",
   "PROGRAMFILES", "PROGRAMFILES(X86)", "COMMONPROGRAMFILES",
+  // Terminal color control — safe to inherit so Slidev output respects the
+  // user's terminal preferences (e.g. FORCE_COLOR=1 in verbose mode).
+  "FORCE_COLOR", "NO_COLOR",
 ];
 
 /**

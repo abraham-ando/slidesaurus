@@ -21,7 +21,9 @@ function slugifyPlaylist(name: string): string {
   return name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 }
 
-const NATURAL_COLLATOR = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
+// Use "en" locale explicitly — undefined uses the system locale, which differs
+// between developer machines and CI, causing non-deterministic sort order.
+const NATURAL_COLLATOR = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
 
 function buildPlaylists(presentations: PresentationMetadata[]): PlaylistData[] {
   const titles = new Map<string, string>();
@@ -248,13 +250,17 @@ export async function scanPresentations(
   const presentations: PresentationMetadata[] = scannedFiles.map(
     ({ relativePath, category }) => {
       const sourceAbsolutePath = path.join(sourceDir, relativePath);
-      const id = relativePath.replace(/\.md$/, "").replace(/\\/g, "/");
+      // Normalize to forward slashes once. path.relative() uses OS separators (backslash
+      // on Windows), which would otherwise leak into id, sourcePath, and the transformFrontmatter
+      // hook — all of which have a contract of forward-slash POSIX paths.
+      const normalizedRelativePath = relativePath.replace(/\\/g, "/");
+      const id = normalizedRelativePath.replace(/\.md$/, "");
       const fm = extractMetadata(
         sourceAbsolutePath,
-        relativePath,
+        normalizedRelativePath,
         options.transformFrontmatter,
       );
-      const title = (fm.title as string) || path.basename(relativePath, ".md");
+      const title = (fm.title as string) || path.basename(normalizedRelativePath, ".md");
       const url = `${baseUrl}${normalizedRoute}/${id}/`;
       const thumbnailUrl = `${url}thumbnail.png`;
       const exportUrls = options.download && options.exportFormats?.length
@@ -264,7 +270,7 @@ export async function scanPresentations(
         getSlidevBuildOutputDir(context.siteDir, options.id),
         id,
       );
-      const enriched = new FrontmatterValidator(relativePath).validate(fm);
+      const enriched = new FrontmatterValidator(normalizedRelativePath).validate(fm);
 
       return {
         id,
@@ -274,7 +280,7 @@ export async function scanPresentations(
         addons: Array.isArray(fm.addons) ? (fm.addons as string[]) : undefined,
         author: fm.author as string | undefined,
         ...enriched,
-        sourcePath: relativePath,
+        sourcePath: normalizedRelativePath,
         sourceAbsolutePath,
         url,
         outputPath,
@@ -286,13 +292,23 @@ export async function scanPresentations(
     },
   );
 
-  // Invoke onPresentationScanned hook for each presentation — parallelised and bounded
-  // so that slow async hooks (e.g. network calls) don't block the full scan serially.
+  // Invoke onPresentationScanned hook for each presentation — parallelised and bounded.
+  // Each invocation is wrapped in try/catch so a single failing hook skips that
+  // presentation with a warning rather than crashing the entire scan (as documented
+  // in PluginOptions.onPresentationScanned JSDoc).
   if (options.onPresentationScanned) {
     await runConcurrently(
       presentations,
       options.maxParallelBuilds ?? 4,
-      (p) => Promise.resolve(options.onPresentationScanned!(p)),
+      async (p) => {
+        try {
+          await Promise.resolve(options.onPresentationScanned!(p));
+        } catch (err) {
+          log.warn(
+            `onPresentationScanned hook threw for ${log.code(p.id)}: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
+      },
     );
   }
 
