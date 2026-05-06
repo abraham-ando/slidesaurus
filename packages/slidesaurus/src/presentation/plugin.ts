@@ -174,7 +174,6 @@ export function getSwizzleComponentList(): string[] {
     "SlidevPresentation",
   ];
 }
-
 export function validateOptions({
   options,
 }: {

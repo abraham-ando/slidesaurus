@@ -1,0 +1,163 @@
+/**
+ * Slidesaurus — "glass" custom uiTheme
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Glassmorphism visual style: frosted semi-transparent cards with subtle
+ * depth and glowing borders on hover.
+ *
+ * Usage in docusaurus.config.ts:
+ *
+ *   plugins: [["slidesaurus", { uiTheme: "glass" }]]
+ *
+ * Import in src/css/custom.css:
+ *
+ *   @import "./themes/glass.css";
+ *
+ * How it works:
+ *   Every Slidesaurus component root carries `data-slidev-ui-theme="glass"`.
+ *   Styles are applied via attribute selectors and CSS custom properties.
+ *   No swizzling required.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+/* ── Design tokens — light mode ─────────────────────────────────────────── */
+
+a[data-slidev-ui-theme="glass"],
+div[data-slidev-ui-theme="glass"] {
+  /* Card surface */
+  --slidev-card-bg:             rgba(255, 255, 255, 0.55);
+  --slidev-card-shadow:         0 4px 24px rgba(124, 58, 237, 0.08),
+                                inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+  --slidev-card-radius:         14px;
+  --slidev-card-hover-transform: translateY(-4px) scale(1.01);
+  --slidev-card-hover-shadow:   0 12px 40px rgba(124, 58, 237, 0.22),
+                                inset 0 0 0 1.5px rgba(124, 58, 237, 0.5);
+
+  /* Preview area */
+  --slidev-card-preview-bg:     linear-gradient(135deg,
+                                  rgba(196, 181, 253, 0.4) 0%,
+                                  rgba(167, 139, 250, 0.5) 100%);
+
+  /* Typography */
+  --slidev-card-title-color:    #3b0764;
+
+  /* Glass blur on the element itself */
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* ── Design tokens — dark mode ──────────────────────────────────────────── */
+
+[data-theme="dark"] a[data-slidev-ui-theme="glass"],
+[data-theme="dark"] div[data-slidev-ui-theme="glass"] {
+  --slidev-card-bg:             rgba(15, 10, 40, 0.55);
+  --slidev-card-shadow:         0 4px 24px rgba(0, 0, 0, 0.4),
+                                inset 0 0 0 1px rgba(167, 139, 250, 0.15);
+  --slidev-card-hover-shadow:   0 12px 40px rgba(124, 58, 237, 0.4),
+                                inset 0 0 0 1.5px rgba(167, 139, 250, 0.6);
+
+  --slidev-card-preview-bg:     linear-gradient(135deg,
+                                  rgba(76, 29, 149, 0.5) 0%,
+                                  rgba(109, 40, 217, 0.5) 100%);
+
+  --slidev-card-title-color:    #e9d5ff;
+}
+
+/* ── SlidevOverview — page-level glass container ────────────────────────── */
+
+[data-slidev-ui-theme="glass"].container,
+div[data-slidev-ui-theme="glass"] {
+  background: transparent;
+}
+
+/* Banner title accent */
+[data-slidev-ui-theme="glass"] .title {
+  background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+[data-theme="dark"] [data-slidev-ui-theme="glass"] .title {
+  background: linear-gradient(135deg, #a78bfa 0%, #ddd6fe 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Sidebar nav — glass panel */
+[data-slidev-ui-theme="glass"] .sidebar {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 12px;
+}
+
+[data-theme="dark"] [data-slidev-ui-theme="glass"] .sidebar {
+  background: rgba(15, 10, 40, 0.5);
+  border-color: rgba(167, 139, 250, 0.2);
+}
+
+/* Search / filter bar — glass input */
+[data-slidev-ui-theme="glass"] .searchInputWrapper {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 10px;
+  border: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+[data-theme="dark"] [data-slidev-ui-theme="glass"] .searchInputWrapper {
+  background: rgba(20, 10, 50, 0.5);
+  border-color: rgba(167, 139, 250, 0.3);
+}
+
+[data-slidev-ui-theme="glass"] .searchInput {
+  background: transparent;
+}
+
+/* Tag chips — pill style */
+[data-slidev-ui-theme="glass"] .tagChip {
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 20px;
+}
+
+[data-theme="dark"] [data-slidev-ui-theme="glass"] .tagChip {
+  background: rgba(124, 58, 237, 0.15);
+  border-color: rgba(167, 139, 250, 0.3);
+}
+
+[data-slidev-ui-theme="glass"] .tagChipActive {
+  background: rgba(124, 58, 237, 0.2);
+  border-color: rgba(124, 58, 237, 0.6);
+}
+
+/* ── SlidevListItem — glass row ─────────────────────────────────────────── */
+
+a[data-slidev-ui-theme="glass"].listItem,
+a[data-slidev-ui-theme="glass"] {
+  background: rgba(255, 255, 255, 0.45) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+  border-radius: 10px;
+}
+
+[data-theme="dark"] a[data-slidev-ui-theme="glass"].listItem,
+[data-theme="dark"] a[data-slidev-ui-theme="glass"] {
+  background: rgba(15, 10, 40, 0.5) !important;
+  border-color: rgba(167, 139, 250, 0.2) !important;
+}
+
+a[data-slidev-ui-theme="glass"]:hover {
+  background: rgba(255, 255, 255, 0.7) !important;
+  border-color: rgba(124, 58, 237, 0.4) !important;
+}
+
+[data-theme="dark"] a[data-slidev-ui-theme="glass"]:hover {
+  background: rgba(30, 15, 70, 0.65) !important;
+  border-color: rgba(167, 139, 250, 0.5) !important;
+}

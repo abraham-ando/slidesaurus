@@ -1,3 +1,9 @@
+/*
+ * Custom uiTheme examples — uncomment to activate.
+ * Also set `uiTheme: "glass"` in docusaurus.config.ts.
+ */
+@import "./themes/glass.css";
+
 :root {
   --ifm-color-primary: #7c3aed;
   --ifm-color-primary-dark: #6d28d9;

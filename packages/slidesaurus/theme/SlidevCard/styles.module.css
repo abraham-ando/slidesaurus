@@ -9,14 +9,27 @@
  * Built-in variants: "default" (no selector) | "compact" | "minimal"
  */
 
+/*
+ * ── Design tokens ────────────────────────────────────────────────────────────
+ * Override these CSS custom properties from custom.css to theme the card.
+ * Target the root element that carries `data-slidev-ui-theme`:
+ *
+ *   a[data-slidev-ui-theme="my-theme"] {
+ *     --slidev-card-bg:           rgba(255,255,255,0.06);
+ *     --slidev-card-shadow:       0 8px 32px rgba(0,0,0,0.3);
+ *     --slidev-card-radius:       12px;
+ *     --slidev-card-title-color:  #e0d9ff;
+ *   }
+ */
+
 .card {
   display: flex;
   flex-direction: column;
-  border-radius: 8px;
+  border-radius: var(--slidev-card-radius, 8px);
   transition: box-shadow 0.2s ease, transform 0.2s ease;
   text-decoration: none !important;
-  background: var(--ifm-card-background-color);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--ifm-color-emphasis-200);
+  background: var(--slidev-card-bg, var(--ifm-card-background-color));
+  box-shadow: var(--slidev-card-shadow, 0 1px 3px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--ifm-color-emphasis-200));
   overflow: hidden;
   width: 100%;
   /* Needed so .favoriteBtn (position: absolute) is anchored to the card */
@@ -24,8 +37,8 @@
 }
 
 .card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 0 0 1px var(--ifm-color-primary-light);
+  transform: var(--slidev-card-hover-transform, translateY(-3px));
+  box-shadow: var(--slidev-card-hover-shadow, 0 8px 24px rgba(0, 0, 0, 0.12), 0 0 0 1px var(--ifm-color-primary-light));
   text-decoration: none;
 }
 
@@ -37,11 +50,11 @@
 .preview {
   width: 100%;
   aspect-ratio: 16 / 9;
-  background: linear-gradient(
+  background: var(--slidev-card-preview-bg, linear-gradient(
     135deg,
     var(--ifm-color-emphasis-200) 0%,
     var(--ifm-color-emphasis-300) 100%
-  );
+  ));
   position: relative;
   overflow: hidden;
   display: flex;
@@ -117,7 +130,7 @@
   margin: 0;
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--ifm-heading-color);
+  color: var(--slidev-card-title-color, var(--ifm-heading-color));
   line-height: 1.35;
   overflow: hidden;
   text-overflow: ellipsis;
