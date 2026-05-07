@@ -149,6 +149,15 @@ position: 4
 
 With this setup:
 
-- The `slidev:stats` command reports **Playlists: 1 — Onboarding Track (4 items)**.
-- The overview page shows an **Onboarding Track** filter chip.
+- The overview page shows an **Onboarding Track** filter chip in the filter bar and a matching entry in the sidebar Playlists section.
 - Each presentation page shows the playlist navigation bar with position indicators and previous/next links.
+- Clicking the chip on the overview page shows only the four presentations, sorted by their `position` values.
+
+## Modifying a Playlist
+
+There is no central playlist configuration file. All playlist membership is declared in each presentation's frontmatter. To modify a playlist:
+
+- **Change the order** — update the `position` value in the relevant presentation's frontmatter.
+- **Remove a presentation** — delete the `playlist` field (or remove the playlist name from the array) in that presentation's frontmatter.
+- **Rename a playlist** — update the `playlist` string in every presentation that references it. The old name disappears automatically once no presentation references it.
+- **Delete a playlist** — remove the `playlist` field from all presentations that belong to it.

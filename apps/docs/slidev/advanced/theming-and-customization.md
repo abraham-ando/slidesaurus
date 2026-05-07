@@ -3,13 +3,13 @@ title: Theming and Customization
 description: Customize the look and feel of your presentations and plugin components
 theme: seriph
 author: Training Team
-tags: [theming, customization, css]
+tags: [theming, customization, css, featured]
 date: 2026-02-01
 position: 1
 level: advanced
 owner: Documentation Team
 duration: 35
-lastReviewed: 2026-04-01
+lastReviewed: 2026-05-07
 playlist: Deep Dive Track
 ---
 
@@ -58,17 +58,34 @@ Browse the gallery: **sli.dev/themes/gallery**
 
 ---
 
+# UI Theme Option
+
+Control the overview page layout with `uiTheme`:
+
+```ts
+{ uiTheme: "compact" }
+```
+
+| Value | Layout |
+|---|---|
+| `"default"` | Full cards — thumbnail, title, description |
+| `"compact"` | Smaller cards, no description |
+| `"minimal"` | Text-only list, no thumbnails |
+| any string | Sets `data-slidev-ui-theme` — style with CSS |
+
+---
+
 # Docusaurus Component Styling
 
-The plugin ships theme components for the **Docusaurus site** (overview page, cards, etc.). These use **CSS Modules** and **CSS custom properties**.
-
-Override variables in your `custom.css`:
+Override design tokens in your `custom.css`:
 
 ```css
 :root {
-  --slidev-card-border-radius: 12px;
-  --slidev-card-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  --slidev-overview-gap: 2rem;
+  --slidev-card-bg: #ffffff;
+  --slidev-card-radius: 12px;
+  --slidev-card-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --slidev-card-title-color: #1a1a2e;
+  --slidev-card-preview-bg: linear-gradient(135deg, #e0e7ff, #c7d2fe);
 }
 ```
 
@@ -134,12 +151,11 @@ For slide content, fonts are controlled by the Slidev theme.
 
 # Custom Overview Layout
 
-Wrap `SlidevOverview` to add a custom header:
+Wrap `SlidevOverview` to inject a custom header (no `import React` needed with react-jsx transform):
 
 ```tsx
 // src/theme/SlidevOverview/index.tsx
-import React from "react";
-import SlidevOverview from "@theme-original/SlidevOverview";
+import OriginalSlidevOverview from "@theme-original/SlidevOverview";
 
 export default function SlidevOverviewWrapper(props) {
   return (
@@ -147,7 +163,7 @@ export default function SlidevOverviewWrapper(props) {
       <div className="custom-banner">
         <h2>Welcome to our presentations</h2>
       </div>
-      <SlidevOverview {...props} />
+      <OriginalSlidevOverview {...props} />
     </div>
   );
 }
@@ -159,10 +175,11 @@ export default function SlidevOverviewWrapper(props) {
 
 | What | How |
 |---|---|
-| Slide appearance | Slidev `theme` option |
-| Overview page look | CSS custom properties |
-| Full component control | Docusaurus swizzling |
-| Dark mode | Automatic, customizable |
-| Fonts | CSS `@import` or theme config |
+| Slide appearance | Slidev `theme` option (global or per-presentation) |
+| Overview page layout | `uiTheme` option (`default`, `compact`, `minimal`, custom) |
+| Design tokens | CSS custom properties in `custom.css` |
+| Full component control | Docusaurus swizzling (`--wrap` or `--eject`) |
+| Dark mode | Automatic via `[data-theme="dark"]` |
+| Fonts | CSS `@import` or Docusaurus theme config |
 
 Next: **Best Practices** →

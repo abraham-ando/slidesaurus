@@ -9,7 +9,7 @@ position: 2
 level: beginner
 owner: Documentation Team
 duration: 20
-lastReviewed: 2026-04-01
+lastReviewed: 2026-05-07
 playlist: Getting Started Track
 ---
 
@@ -112,10 +112,10 @@ It works!
 # Step 5: Build and Run
 
 ```bash
-# Development (presentations are placeholders)
+# Development (presentations are built via slidev build, then served statically)
 npm start
 
-# Production build (presentations are compiled)
+# Production build (same pipeline, output bundled into Docusaurus static site)
 npm run build
 npm run serve
 ```

@@ -48,11 +48,16 @@ You can also enable `verbose: true` to see where the build gets stuck.
 
 **Solution:**
 
-1. Ensure `autoInstall: true` (the default).
-2. Or install manually:
+1. Install the theme manually:
 
 ```bash
 npm install @slidev/theme-seriph
+```
+
+2. Or enable auto-install (disabled by default):
+
+```ts
+{ autoInstall: true }
 ```
 
 Check the theme name spelling. Official themes use `@slidev/theme-*`, community themes use `slidev-theme-*`.
@@ -135,6 +140,91 @@ Or configure it in your `package.json` scripts:
 ```json
 "start": "docusaurus start --port 3001"
 ```
+
+---
+
+## Presentation Does Not Appear After Adding It
+
+**Symptom:** A new `.md` file was added to the `slidev/` directory but the card never shows on the overview page.
+
+**Checklist:**
+
+1. The file has a YAML frontmatter block with at least a `title` field at the very top of the file.
+2. The file extension is `.md` (not `.mdx` or `.txt`).
+3. You ran `npm run build` or restarted `npm start` — the scanner only re-runs on a fresh `loadContent` cycle.
+4. The `path` option in `docusaurus.config.ts` points to the directory that **contains** the file. Run `slidesaurus list` to see what the plugin actually discovered.
+
+---
+
+## Frontmatter Validation Warning
+
+**Symptom:** A metadata field is ignored or missing from the card even though it is in frontmatter.
+
+**Cause:** The field value failed validation and was silently discarded.
+
+**Solution:** Check your terminal output for lines like:
+
+```
+[WARN] [Slidev Plugin] "level" is invalid for "intro/my-talk": expected one of beginner, intermediate, advanced — ignoring.
+```
+
+Common mistakes:
+
+| Field | Valid | Invalid |
+|---|---|---|
+| `level` | `beginner`, `intermediate`, `advanced` | `"hard"`, `"easy"` |
+| `date` | `2026-03-15` | `15/03/2026`, `"March 2026"` |
+| `deprecated` | `true`, `false` | `"yes"`, `1` |
+| `duration` | `45` | `"45 min"`, `-5` |
+
+Enable `verbose: true` to see full validation output during a build.
+
+---
+
+## Download / Export Not Generated
+
+**Symptom:** The download button is missing, or the PDF/PPTX file is not created.
+
+**Cause:** `download: true` requires `@playwright/test` to be installed.
+
+**Solution:**
+
+```bash
+npm install -D @playwright/test
+npx playwright install chromium
+```
+
+Then verify the setup with:
+
+```bash
+slidesaurus doctor
+```
+
+The doctor check will report `✗ Playwright browser not found` if the browser binary is missing.
+
+---
+
+## Custom Styles Not Applying
+
+**Symptom:** CSS overrides in `custom.css` have no visible effect on plugin components.
+
+**Possible causes and fixes:**
+
+1. **Wrong selector** — CSS custom properties must be on `:root` (or `[data-theme="dark"]` for dark mode), not on class names:
+
+```css
+/* ✅ Correct */
+:root { --slidev-card-radius: 12px; }
+
+/* ❌ Wrong — custom properties are consumed by the component, not applied here */
+.slidev-card { --slidev-card-radius: 12px; }
+```
+
+2. **Import order** — Ensure `custom.css` (or your theme file) is imported **after** any Docusaurus default stylesheets. Docusaurus automatically places `custom.css` last, so this is usually not an issue unless you are using `@import` chains.
+
+3. **Custom uiTheme not matching** — If you wrote CSS targeting `[data-slidev-ui-theme="glass"]` but the plugin option is `uiTheme: "default"`, no element will ever carry the `glass` attribute. Confirm the `uiTheme` option in `docusaurus.config.ts`.
+
+4. **SSR specificity** — Some CSS Module class names are hashed; they cannot be targeted from global CSS. Use CSS custom property tokens (`--slidev-card-*`) instead of trying to target internal class names. See [Custom Styling](./custom-styling.md).
 
 ---
 

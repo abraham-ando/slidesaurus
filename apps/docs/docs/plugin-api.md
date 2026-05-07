@@ -72,50 +72,13 @@ getThemePath(): string {
 
 ### `extendCli`
 
-Registers three CLI commands available via `npx docusaurus <command>`. These commands scan the configured `path` directory and operate without triggering a full Docusaurus build.
-
-#### `slidev:list`
-
-Lists all discovered presentations with their metadata.
+Registers a `slidev:list` command available via `npx docusaurus slidev:list`. This command scans the configured `path` directory and outputs a summary table without triggering a full Docusaurus build.
 
 ```bash
 npx docusaurus slidev:list
 ```
 
-Outputs a table with each presentation's title, author, level, duration, and whether it is deprecated.
-
-#### `slidev:validate`
-
-Scans presentations and reports metadata issues without building. Flagged conditions include missing description, missing author, and deprecated status.
-
-```bash
-npx docusaurus slidev:validate
-```
-
-Exits with code `0` when no critical errors are found, making it suitable for use in CI pipelines.
-
-#### `slidev:stats`
-
-Prints a statistics summary across all discovered presentations.
-
-```bash
-npx docusaurus slidev:stats
-```
-
-Example output:
-
-```
-Slidev presentations — "./slidev"
-  Total:       12
-  Authors:     Alice, Bob
-  Tags:        typescript, react, testing
-  Levels:      beginner, intermediate
-  Deprecated:  1
-  Incomplete:  2 (missing description or author)
-  Playlists:   2
-    • Onboarding Track (4 items)
-    • Advanced Series (3 items)
-```
+For the full developer CLI (`slidesaurus new`, `slidesaurus doctor`, `slidesaurus cache clear`, etc.) see the [CLI Reference](./cli.md).
 
 ### `getSwizzleComponentList`
 
@@ -129,6 +92,7 @@ getSwizzleComponentList(): string[] {
     "SlidevListItem",
     "SlidevCategoryCard",
     "SlidevPresentation",
+    "SlidevLink",
   ];
 }
 ```
@@ -138,8 +102,9 @@ getSwizzleComponentList(): string[] {
 | `SlidevOverview` | The overview page (search, filters, grid/list toggle, sidebar) |
 | `SlidevCard` | Card component used in the grid view |
 | `SlidevListItem` | Row component used in the list view |
-| `SlidevCategoryCard` | Section wrapper that groups presentations by category |
+| `SlidevCategoryCard` | Category card used in grid and list views |
 | `SlidevPresentation` | The individual presentation page with iframe and metadata |
+| `SlidevLink` | Embeddable inline preview component for MDX pages |
 
 Example swizzle command:
 
@@ -152,22 +117,55 @@ npx docusaurus swizzle slidesaurus SlidevCard --wrap
 ```
 packages/slidesaurus/
   src/
-    index.ts          # Plugin entry, lifecycle hooks
-    scanner.ts        # File discovery and frontmatter parsing
-    builder.ts        # Slidev CLI invocation, thumbnail/PDF generation
-    fileSystem.ts     # File system utilities
-    filterUtils.ts    # Pure filter functions (matchesSearch, applyFilters)
-    logger.ts         # Logging utilities
-    utils.ts          # Shared helpers
-    types.ts          # TypeScript interfaces
+    index.ts                        # Rollup entry — thin re-export
+    domain/
+      types.ts                      # All TypeScript types and interfaces
+      constants.ts                  # Plugin name, shared constants
+    application/
+      scanner.ts                    # File discovery and frontmatter parsing
+      builder.ts                    # Parallel build orchestration
+      buildCache.ts                 # SHA-256 hash manifest, cache hits
+      frontmatterValidator.ts       # Frontmatter validation and patching
+    infrastructure/
+      fs/
+        fileSystem.ts               # Cache directory management
+        outputManager.ts            # Copy built files to Docusaurus output
+        hashManifest.ts             # Read/write build-hashes.json
+        isolatedBuild.ts            # Isolated per-presentation build dirs
+      process/
+        buildRunner.ts              # Spawn `slidev build` child processes
+        assetGenerator.ts           # Thumbnail and PDF/PPTX generation
+      packages/
+        packageResolver.ts          # Theme/addon resolution and auto-install
+        env.ts                      # Environment variable allowlist (security)
+    presentation/
+      plugin.ts                     # Docusaurus plugin lifecycle hooks
+      routeBuilder.ts               # Route registration (overview + per-deck)
+      cliCommands.ts                # `slidev:list` Docusaurus CLI command
+      webpackConfig.ts              # Dev-mode static file serving config
+    shared/
+      logger.ts                     # Structured logger
+      utils.ts                      # Shared helpers
+      concurrentRunner.ts           # Bounded worker pool (runConcurrently)
+      filterUtils.ts                # Pure filter functions (matchesSearch, applyFilters)
+  cli/
+    index.ts                        # Standalone `slidesaurus` CLI entry
+    commands/
+      new.ts                        # `slidesaurus new`
+      list.ts                       # `slidesaurus list`
+      doctor.ts                     # `slidesaurus doctor`
+      cache.ts                      # `slidesaurus cache clear`
   theme/
-    SlidevOverview/      # Overview page component (search, filters, sidebar)
-    SlidevPresentation/  # Individual presentation component
-    SlidevCard/          # Card component for grid view
-    SlidevListItem/      # Row component for list view
-    SlidevCategoryCard/  # Category section wrapper
-    SlidevLink/          # Embeddable preview component
-    useFavorites.ts      # Favorites state hook (localStorage)
+    SlidevOverview/                 # Overview page (search, filters, grid/list, sidebar)
+    SlidevPresentation/             # Individual presentation page (iframe, resume bar)
+    SlidevCard/                     # Card for grid view
+    SlidevListItem/                 # Row for list view
+    SlidevCategoryCard/             # Category card
+    SlidevLink/                     # Embeddable inline preview
+    useFavorites.ts                 # Favorites state hook (localStorage)
+    useUITheme.ts                   # Reads active uiTheme from plugin data
+    filterUtils.ts                  # Shared filter functions for theme components
+    types.ts                        # Theme-facing type re-exports
 ```
 
 ## Extending the Plugin

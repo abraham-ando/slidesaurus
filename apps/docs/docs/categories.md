@@ -43,7 +43,7 @@ On the overview page, categories render as distinct sections, each with:
 - An optional `description` below the heading.
 - The presentations within that category, sorted by their frontmatter `position`.
 
-Uncategorized presentations (files directly in the `path` root) appear in a default section at the top or bottom (depending on sort order).
+Uncategorized presentations (files directly in the `path` root) are sorted by their frontmatter `position` value relative to each other and rendered in a default section. The position of that section among the categorized sections is determined by its effective `position` — uncategorized presentations with no explicit position default to `0`.
 
 ## Nested Categories
 
@@ -72,3 +72,16 @@ Within a category, presentations are sorted by:
 2. Frontmatter `title` (alphabetical) as a tiebreaker.
 
 Categories themselves are sorted by their `position` field, then alphabetically by `label`.
+
+## Empty Categories
+
+A category directory that contains a `_category_.yml` file but no `.md` presentations is silently skipped — it does not appear as an empty section on the overview page. The directory and its metadata are still valid; the category becomes visible as soon as at least one presentation is added to it.
+
+## Categories and Playlists
+
+The two systems are orthogonal and can be combined freely. A presentation can belong to a category (via its directory location) **and** to one or more playlists (via the `playlist` frontmatter field) at the same time.
+
+- **Category** controls where the presentation card appears on the overview page (which group heading it falls under).
+- **Playlist** controls sequential navigation between presentations (previous/next links on the presentation page) and adds filter chips to the overview page.
+
+There is no conflict: assigning a presentation to a playlist does not move it out of its category, and placing it in a category does not affect playlist order.

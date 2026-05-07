@@ -9,7 +9,7 @@ position: 1
 level: beginner
 owner: Documentation Team
 duration: 15
-lastReviewed: 2026-04-01
+lastReviewed: 2026-05-07
 playlist: Getting Started Track
 ---
 
@@ -72,11 +72,12 @@ That means:
 | Feature | Benefit |
 |---|---|
 | Auto-Discovery | No manual registration per file |
-| Parallel Builds | Fast builds even with many decks |
+| Parallel Builds | Fast builds with SHA-256 incremental cache |
 | Theme Support | Official and community Slidev themes |
-| Auto-Install | Missing themes are installed automatically |
 | Categories | Organize decks into logical groups |
-| Embeddable | Preview slides inside doc pages |
+| Playlists | Sequential navigation across presentations |
+| UI Themes | Built-in layouts + custom CSS theming |
+| Embeddable | Preview slides inside doc pages with `SlidevLink` |
 
 ---
 

@@ -19,7 +19,7 @@ Every Slidev Markdown file can include a YAML frontmatter block at the top. The 
 | `author` | `string` | No | `""` | Author name displayed on the card. |
 | `tags` | `string[]` | No | `[]` | Tags for categorization and filtering. Values are trimmed, lowercased, and deduplicated automatically. |
 | `date` | `string` | No | — | Publication or last-updated date in `YYYY-MM-DD` format. |
-| `position` | `number` | No | `0` | Sort order within a category. Lower values appear first. |
+| `position` | `number` | No | `0` | Sort order within a category. Lower values appear first. Presentations with the same `position` value are sorted alphabetically by `title` as a tiebreaker. |
 | `owner` | `string` | No | `""` | Team or person responsible for the presentation. Shown in search and filter interfaces. |
 | `level` | `string` | No | — | Difficulty level of the presentation. Must be one of `beginner`, `intermediate`, or `advanced`. Renders a color-coded badge on cards. Invalid values are ignored with a warning. |
 | `duration` | `number` | No | — | Estimated duration in minutes. Must be greater than `0`. Invalid values are ignored. |
@@ -77,6 +77,7 @@ The plugin validates certain frontmatter fields and normalizes others at scan ti
 - **`duration`** — Must be a number greater than `0`. Zero, negative values, and non-numeric values are ignored.
 - **`lastReviewed`** and **`date`** — Must be a valid ISO date string in `YYYY-MM-DD` format. Malformed values are ignored.
 - **`deprecated`** — Must be a boolean `true` or `false`. Using `deprecated: yes` or other non-boolean truthy strings is invalid; use `deprecated: true`.
+- **`position`** — Must be a number. Non-numeric values (e.g. `position: "first"`) are ignored and the default `0` is used instead. Two presentations with the same `position` are sorted alphabetically by `title`.
 
 ## Notes
 

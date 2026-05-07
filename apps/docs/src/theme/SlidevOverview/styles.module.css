@@ -1,0 +1,110 @@
+/**
+ * Swizzle wrapper styles — team banner injected above SlidevOverview.
+ */
+
+/* ── Banner container ────────────────────────────────────────────────────────── */
+
+.teamBanner {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.25rem 2rem;
+  margin: 0 0 0.5rem;
+  border-radius: 12px;
+  background: linear-gradient(
+    135deg,
+    var(--ifm-color-primary-lightest) 0%,
+    rgba(167, 139, 250, 0.15) 100%
+  );
+  border: 1px solid var(--ifm-color-primary-lightest);
+}
+
+[data-theme="dark"] .teamBanner {
+  background: linear-gradient(
+    135deg,
+    rgba(76, 29, 149, 0.25) 0%,
+    rgba(109, 40, 217, 0.12) 100%
+  );
+  border-color: rgba(167, 139, 250, 0.2);
+}
+
+/* ── Avatar / logo ───────────────────────────────────────────────────────────── */
+
+.teamAvatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid var(--ifm-color-primary-light);
+  flex-shrink: 0;
+  background: var(--ifm-color-primary-lightest);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  line-height: 1;
+  user-select: none;
+}
+
+/* ── Text block ──────────────────────────────────────────────────────────────── */
+
+.teamText {
+  flex: 1;
+  min-width: 0;
+}
+
+.teamName {
+  margin: 0 0 0.15rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ifm-color-primary-darkest);
+}
+
+[data-theme="dark"] .teamName {
+  color: var(--ifm-color-primary-lightest);
+}
+
+.teamTagline {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--ifm-color-emphasis-600);
+  line-height: 1.4;
+}
+
+/* ── Call-to-action link ─────────────────────────────────────────────────────── */
+
+.teamCta {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 1rem;
+  border-radius: 6px;
+  background: var(--ifm-color-primary);
+  color: #fff !important;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none !important;
+  transition: background 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+
+.teamCta:hover {
+  background: var(--ifm-color-primary-dark);
+  transform: translateY(-1px);
+  text-decoration: none;
+}
+
+/* ── Responsive — stack on small screens ────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .teamBanner {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+  }
+
+  .teamCta {
+    width: 100%;
+    justify-content: center;
+  }
+}

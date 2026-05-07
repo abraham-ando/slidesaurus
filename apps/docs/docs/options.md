@@ -28,21 +28,30 @@ plugins: [
 | `pageTitle` | `string` | `"Slidev Presentations"` | Title displayed on the overview page. |
 | `pageTagline` | `string` | `"Interactive presentation overview"` | Tagline displayed below the title on the overview page. |
 | `id` | `string` | `"default"` | Plugin instance ID. Use when registering multiple instances. |
-| `theme` | `string` | `"unicorn"` | Default Slidev theme applied to all presentations. Can be overridden per-presentation via frontmatter. |
-| `addons` | `string[]` | `[]` | Default Slidev addons applied to all presentations. |
-| `download` | `boolean` | `false` | Show a download button on presentation pages and cards. Requires Playwright for file generation at build time. |
-| `exportFormats` | `Array<"pdf" \| "pptx">` | `["pdf"]` | Output formats generated when `download` is enabled. Accepts `"pdf"` (Playwright PDF render) and/or `"pptx"` (PowerPoint export). |
-| `exportWithClicks` | `boolean` | `false` | When `true`, each click animation step is exported as a separate page in the PDF/PPTX. Only relevant when `exportFormats` is non-empty. |
+| `theme` | `string` | `"unicorn"` | Default Slidev theme applied to all presentations. Use a shorthand (`"seriph"`) or full package name (`"@slidev/theme-seriph"`). Can be overridden per-presentation via the `theme` frontmatter field. See [Themes & Addons](./themes-addons.md). |
+| `addons` | `string[]` | `[]` | Default Slidev addons applied to all presentations (e.g. `["slidev-addon-excalidraw"]`). Addons extend Slidev with extra components or functionality. Can be supplemented per-presentation via the `addons` frontmatter field (not replaced). See [Themes & Addons](./themes-addons.md). |
+| `download` | `boolean` | `false` | Show a download button that generates PDF and/or PPTX exports at build time. Requires `@playwright/test` to be installed (`npm install -D @playwright/test`). Configure output formats with `exportFormats`. |
+| `exportFormats` | `Array<"pdf" \| "pptx">` | `["pdf"]` | Output formats generated when `download: true`. `"pdf"` uses Playwright's headless browser; `"pptx"` uses Slidev's built-in PowerPoint export. |
+| `exportWithClicks` | `boolean` | `false` | When `true`, click-triggered animations are exported as separate pages instead of being flattened into one. Useful for presentations that rely heavily on step-by-step reveals. Only relevant when `exportFormats` is non-empty. |
 | `withoutNotes` | `boolean` | `false` | Strip presenter notes from the built presentation. Can also be set per-presentation via frontmatter (`withoutNotes: true`). |
 | `buildTimeout` | `number` | `120` | Maximum time in seconds allowed for building a single presentation. |
-| `maxParallelBuilds` | `number` | `4` | Number of presentations to build concurrently during `docusaurus build`. |
+| `maxParallelBuilds` | `number` | `os.cpus().length - 1` | Number of presentations to build concurrently during `docusaurus build`. Defaults to one fewer than your CPU count (minimum 1). |
 | `verbose` | `boolean` | `false` | Print detailed build output for each presentation. |
-| `autoInstall` | `boolean` | `true` | Automatically install missing npm packages for themes and addons. |
+| `autoInstall` | `boolean` | `false` | Automatically install missing npm packages for themes and addons. **Off by default** — opt-in explicitly to avoid unexpected installs in CI or production. |
 | `dryRun` | `boolean` | `false` | When `true`, scans and validates all presentations without building them. Useful in CI pipelines to catch configuration errors early. |
+| `uiTheme` | `string` | `"default"` | Visual layout variant applied to all plugin components. Built-in values: `"default"`, `"compact"`, `"minimal"`. Accepts any string — custom values are set as `data-slidev-ui-theme` on component roots for CSS targeting. See [Custom Styling](./custom-styling.md). |
+| `devServerBasePort` | `number` | `8600` | Base port for Slidev dev servers during `docusaurus start`. Each presentation gets `basePort + index`. Useful when running multiple plugin instances to avoid port collisions. |
+| `devServerTimeout` | `number` | `60000` | Maximum time in milliseconds to wait for a Slidev dev server to become ready. Increase this if your machine is slow or the first Vite start takes longer than 60 s. |
 
 ## Hooks
 
 Three optional hooks can be passed alongside the options above.
+
+| Hook | When to use |
+|---|---|
+| `onPresentationScanned` | Dynamically modify metadata before it reaches the UI — e.g. mark presentations `deprecated` based on tags, inject a default author, or override the category. |
+| `onBuildComplete` | React to build results — log failures to a monitoring system, post a Slack notification, or fail CI when more than N presentations failed. |
+| `transformFrontmatter` | Normalize raw YAML before the plugin processes it — e.g. remap legacy field names, fill in computed defaults, or sanitize user input. |
 
 ```ts title="docusaurus.config.ts"
 plugins: [
@@ -167,6 +176,39 @@ plugins: [
 :::caution Multiple Instances
 Each instance must have a unique `id` and `routeBasePath`.
 :::
+
+### UI Theme Variants
+
+```ts
+plugins: [
+  [
+    "slidesaurus",
+    {
+      // Built-in compact layout: smaller cards, no description text
+      uiTheme: "compact",
+
+      // Or: text-only minimal layout (no thumbnails, list view only)
+      // uiTheme: "minimal",
+
+      // Or: any string for a fully custom CSS theme
+      // uiTheme: "glass",
+    },
+  ],
+],
+```
+
+See [Custom Styling](./custom-styling.md) for how to implement custom `uiTheme` values.
+
+### Dev Server Port Range
+
+```ts
+plugins: [
+  ["slidesaurus", { id: "talks",    path: "./talks",    devServerBasePort: 8600 }],
+  ["slidesaurus", { id: "training", path: "./training", devServerBasePort: 8700 }],
+],
+```
+
+Each instance uses a distinct port range to avoid collisions during `docusaurus start`.
 
 ### Dry-Run in CI
 

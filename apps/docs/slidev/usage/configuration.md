@@ -9,7 +9,7 @@ position: 1
 level: intermediate
 owner: Documentation Team
 duration: 30
-lastReviewed: 2026-04-01
+lastReviewed: 2026-05-07
 playlist: Deep Dive Track
 ---
 
@@ -52,8 +52,8 @@ All options have sensible defaults — you only set what you need.
 |---|---|---|
 | `path` | `"./slidev"` | Source directory |
 | `routeBasePath` | `"/slidev"` | URL base |
-| `pageTitle` | `"Presentations"` | Page heading |
-| `pageTagline` | `""` | Page sub-heading |
+| `pageTitle` | `"Slidev Presentations"` | Page heading |
+| `pageTagline` | `"Interactive presentation overview"` | Page sub-heading |
 
 ---
 
@@ -76,16 +76,17 @@ All options have sensible defaults — you only set what you need.
 
 ```ts
 {
-  maxParallelBuilds: 4,  // Concurrent builds
-  buildTimeout: 120,     // Seconds per build
-  verbose: false,        // Quiet by default
+  // Defaults to os.cpus().length - 1 (one less than your CPU count)
+  maxParallelBuilds: 4,
+  buildTimeout: 120,  // Seconds per build
+  verbose: false,     // Quiet by default
 }
 ```
 
 **Tips:**
-- Increase `maxParallelBuilds` on powerful machines
-- Increase `buildTimeout` on slow CI
-- Enable `verbose` to debug slow builds
+- `maxParallelBuilds` auto-detects your CPU count — only override for CI
+- Increase `buildTimeout` on slow CI runners
+- Enable `verbose` to debug slow or failing builds
 
 ---
 
@@ -93,18 +94,16 @@ All options have sensible defaults — you only set what you need.
 
 ```ts
 {
-  autoInstall: true,  // Default: enabled
+  autoInstall: false,  // Default: disabled
 }
 ```
 
-When enabled, the plugin automatically runs `npm install` for any theme or addon package that isn't found in `node_modules`.
+`autoInstall` is **off by default**. You must explicitly opt in. When enabled, the plugin runs `npm install` for any missing theme or addon package.
 
-**Disable it** if you want strict control over dependencies:
+**Pre-install themes instead** — it is faster and safer for CI:
 
-```ts
-{
-  autoInstall: false,
-}
+```bash
+npm install @slidev/theme-seriph
 ```
 
 ---
@@ -120,6 +119,39 @@ When enabled, the plugin automatically runs `npm install` for any theme or addon
 Adds a download button to each presentation page. The button triggers `slidev export` to generate a PDF.
 
 Default: `false`
+
+---
+
+# UI Theme
+
+Control the visual layout of the overview page:
+
+```ts
+{
+  uiTheme: "default",   // Built-in: "default" | "compact" | "minimal"
+}
+```
+
+| Value | Effect |
+|---|---|
+| `"default"` | Full cards with thumbnail, title, description |
+| `"compact"` | Smaller cards, description hidden |
+| `"minimal"` | Text-only list, no thumbnails |
+| `"glass"` *(custom)* | Any string sets `data-slidev-ui-theme` for CSS targeting |
+
+---
+
+# Dev Server Options
+
+```ts
+{
+  devServerBasePort: 8600,  // Starting port for Slidev dev servers
+  devServerTimeout: 60000,  // ms to wait for a server to become ready
+}
+```
+
+Each presentation gets its own port: `basePort + index`.
+Use distinct ranges when running multiple plugin instances.
 
 ---
 
@@ -164,11 +196,14 @@ Each instance must have a unique `id`.
   pageTagline: "Browse all slide decks",
   theme: "seriph",
   addons: [],
+  uiTheme: "default",
   download: false,
   buildTimeout: 120,
-  maxParallelBuilds: 4,
+  maxParallelBuilds: 4,   // Defaults to os.cpus().length - 1
   verbose: false,
-  autoInstall: true,
+  autoInstall: false,     // Disabled by default — opt in explicitly
+  devServerBasePort: 8600,
+  devServerTimeout: 60000,
 }
 ```
 
@@ -178,7 +213,9 @@ Each instance must have a unique `id`.
 
 - **Minimal config** — just `path` and `routeBasePath`
 - **Themes/addons** — global defaults, per-file overrides
-- **Performance** — tune parallel builds and timeouts
+- **UI theme** — built-in layouts or custom CSS via `uiTheme`
+- **Performance** — parallel builds auto-sized to CPU count
+- **autoInstall** — disabled by default, opt in for CI-free setup
 - **Multiple instances** — separate collections with unique IDs
 
 Next: **Working with Presentations** →

@@ -23,6 +23,7 @@ This copies the component into your site's `src/theme/SlidevCard/` directory whe
 | `presentation` | `Presentation` | Yes | — | Full presentation object from `usePluginData()`. See [`Presentation` type](./types.md#theme-facing-types). |
 | `isDev` | `boolean` | Yes | — | When `true`, renders a placeholder icon instead of an iframe or thumbnail, and disables overlay actions. |
 | `horizontal` | `boolean` | No | `false` | When `true`, renders the image on the left and metadata on the right (list view layout). |
+| `uiTheme` | `UITheme` | No | `"default"` | Visual layout variant. Set automatically from the plugin's `uiTheme` option by `SlidevOverview`. Built-in values: `"default"` (full card), `"compact"` (smaller preview, no description), `"minimal"` (text-only row). Custom strings are applied as `data-slidev-ui-theme` for CSS targeting. |
 
 ## Behavior
 

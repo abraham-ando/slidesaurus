@@ -86,11 +86,11 @@ slidesaurus list --json
 ```
   Presentations — slidev (3)
 
-  ID                           TITLE                    CATEGORY   THEME   LEVEL
-  ────────────────────────────────────────────────────────────────────────────────
-  intro/getting-started        Getting Started          intro      seriph  —
-  advanced/deep-dive           Deep Dive                advanced   seriph  advanced
-  architecture                 Architecture Overview    —          seriph  —
+  ID                           TITLE                    CATEGORY   THEME   LEVEL     TAGS
+  ────────────────────────────────────────────────────────────────────────────────────────────
+  intro/getting-started        Getting Started          intro      seriph  —         intro, overview
+  advanced/deep-dive           Deep Dive                advanced   seriph  advanced  typescript
+  architecture                 Architecture Overview    —          seriph  —         —
 
   2 category(ies): Intro, Advanced
 ```
@@ -114,10 +114,12 @@ slidesaurus doctor --id secondary   # for a secondary plugin instance
 | 1 | **Config file found** | `docusaurus.config.ts/js` exists in cwd |
 | 2 | **Plugin registered** | `slidesaurus` plugin found with the correct `id` |
 | 3 | **Slidev directory exists** | The configured `path` directory exists and is readable |
-| 4 | **`@slidev/cli` installed** | Slidev CLI available in the monorepo tree |
-| 5 | **Themes & addons installed** | Global theme + per-slide themes + all addons resolvable |
-| 6 | **Dev server ports free** | `devServerBasePort` through `basePort + N` are available |
-| 7 | **Cache coherent** | Hash manifest entries have matching output directories |
+| 4 | **Node.js version** | Node.js ≥ 18 (required by `@slidev/cli`) |
+| 5 | **`@slidev/cli` installed** | Slidev CLI available in the monorepo tree |
+| 6 | **Themes & addons installed** | Global theme + per-slide themes + all addons resolvable |
+| 7 | **Playwright available** | Playwright browser is installed (optional — needed for thumbnails and PDF/PPTX exports) |
+| 8 | **Dev server ports free** | `devServerBasePort` through `basePort + N` are available |
+| 9 | **Cache coherent** | Hash manifest entries have matching output directories |
 
 ### Example output
 
@@ -127,12 +129,32 @@ slidesaurus doctor --id secondary   # for a secondary plugin instance
   ✓ docusaurus.config found — docusaurus.config.ts
   ✓ slidesaurus plugin found (id="default")
   ✓ Slidev directory exists — slidev
+  ✓ Node.js v22.3.0 (≥18 required)
   ✓ @slidev/cli installed
   ✓ Global theme "seriph" installed
+  ✓ Playwright browser available
   ✓ Dev server ports free (8600–8602)
   ✓ Cache manifest coherent (3 entries)
 
-  ✔ All 7 checks passed.
+  ✔ All 9 checks passed.
+```
+
+### Example failure output
+
+```
+  slidesaurus doctor
+
+  ✓ docusaurus.config found — docusaurus.config.ts
+  ✓ slidesaurus plugin found (id="default")
+  ✓ Slidev directory exists — slidev
+  ✓ Node.js v22.3.0 (≥18 required)
+  ✗ @slidev/cli not installed — run: pnpm add @slidev/cli
+  ✓ Global theme "seriph" installed
+  ✗ Playwright browser not found — run: pnpm exec playwright install chromium
+  ✓ Dev server ports free (8600–8602)
+  ✓ Cache manifest coherent (3 entries)
+
+  ✖ 2 check(s) failed.
 ```
 
 ---

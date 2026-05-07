@@ -162,7 +162,7 @@ SlidevOverview
 
 ### Plugin Config
 
-Control the title and tagline through your plugin options:
+Control the title, tagline, and layout variant through your plugin options:
 
 ```ts title="docusaurus.config.ts"
 [
@@ -171,9 +171,18 @@ Control the title and tagline through your plugin options:
     routeBasePath: "/presentations",
     pageTitle: "All Presentations",
     pageTagline: "Browse slide decks from the team",
+    uiTheme: "compact", // "default" | "compact" | "minimal" | any string
   },
 ]
 ```
+
+### Layout variants (`uiTheme`)
+
+| `uiTheme` | Effect on the overview page |
+|---|---|
+| `"default"` | Full cards, sidebar visible when categories exist, grid + list view toggle. |
+| `"compact"` | Smaller card previews (80 px), no description text. Grid and list toggle still present. |
+| `"minimal"` | Text-only rows, no thumbnails. **Sidebar hidden.** View toggle hidden (list only). |
 
 ### CSS Variables
 
@@ -181,9 +190,8 @@ Override the plugin's CSS custom properties to change the visual style without m
 
 ```css title="src/css/custom.css"
 :root {
-  --slidev-card-border-radius: 8px;
-  --slidev-overview-gap: 1.5rem;
-  --slidev-overview-columns: repeat(auto-fill, minmax(300px, 1fr));
+  --slidev-card-radius: 12px;
+  --slidev-card-hover-shadow: 0 8px 32px rgba(124, 58, 237, 0.2);
 }
 ```
 
@@ -195,4 +203,4 @@ Use Docusaurus component swizzling to replace or wrap any theme component:
 npx docusaurus swizzle slidesaurus SlidevOverview --wrap
 ```
 
-See [Custom Styling](./custom-styling.md) for the full list of swizzlable components.
+See [Custom Styling](./custom-styling.md) for the full guide including a custom `uiTheme` CSS example and complete swizzle wrapper patterns.

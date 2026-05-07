@@ -1,0 +1,95 @@
+/**
+ * Swizzle wrapper styles — overlays rendered on top of SlidevCard.
+ *
+ * The `.wrapper` wraps the original card with `position: relative` so ribbons
+ * can be positioned independently of the card's own CSS.
+ */
+
+.wrapper {
+  position: relative;
+  /* Inherits the card's block display — no layout impact. */
+  display: contents;
+}
+
+/* When the card is inside a grid, `display: contents` makes the wrapper
+   transparent so the grid item sizing applies to the card directly. */
+@supports not (display: contents) {
+  .wrapper {
+    display: block;
+  }
+}
+
+/* ── Corner ribbon — shared base ────────────────────────────────────────────── */
+
+.ribbon {
+  position: absolute;
+  top: 10px;
+  right: -6px;
+  z-index: 10;
+  padding: 0.2rem 0.6rem 0.2rem 0.5rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border-radius: 3px 0 0 3px;
+  pointer-events: none;
+  white-space: nowrap;
+  /* Folded-edge shadow */
+  box-shadow: -1px 1px 4px rgba(0, 0, 0, 0.2);
+  line-height: 1.4;
+}
+
+/* Small triangular tab on the right edge (fold effect) */
+.ribbon::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -5px;
+  border-width: 3px 6px 3px 0;
+  border-style: solid;
+  border-color: transparent;
+}
+
+/* ── "New" ribbon — violet ──────────────────────────────────────────────────── */
+
+.ribbonNew {
+  composes: ribbon;
+  background: var(--ifm-color-primary, #7c3aed);
+  color: #fff;
+}
+
+.ribbonNew::after {
+  border-right-color: var(--ifm-color-primary-dark, #6d28d9);
+}
+
+/* ── "Featured" ribbon — amber ──────────────────────────────────────────────── */
+
+.ribbonFeatured {
+  composes: ribbon;
+  background: #d97706;
+  color: #fff;
+}
+
+.ribbonFeatured::after {
+  border-right-color: #b45309;
+}
+
+/* ── Dark-mode adjustments ──────────────────────────────────────────────────── */
+
+[data-theme="dark"] .ribbonNew {
+  background: var(--ifm-color-primary, #a78bfa);
+  color: #1a0040;
+}
+
+[data-theme="dark"] .ribbonNew::after {
+  border-right-color: #8b5cf6;
+}
+
+[data-theme="dark"] .ribbonFeatured {
+  background: #fbbf24;
+  color: #1a0040;
+}
+
+[data-theme="dark"] .ribbonFeatured::after {
+  border-right-color: #d97706;
+}

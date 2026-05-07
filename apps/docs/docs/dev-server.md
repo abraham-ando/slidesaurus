@@ -33,7 +33,12 @@ The cache directory layout mirrors production exactly:
 
 ## Configuration
 
-No dev-specific options exist. The same options that control production builds apply:
+Most options that control production builds also apply in dev mode. In addition, two options are specific to the dev server:
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `devServerBasePort` | `number` | `8600` | Base port for Slidev dev servers. Each presentation gets `basePort + index`. |
+| `devServerTimeout` | `number` | `60000` | Max wait time (ms) for a dev server to become ready. Increase on slow machines. |
 
 ```ts title="docusaurus.config.ts"
 plugins: [
@@ -43,13 +48,27 @@ plugins: [
       path: "./slidev",
       maxParallelBuilds: 4,
       buildTimeout: 120,
-      dryRun: false,
+      devServerBasePort: 8700,   // avoid collision with another instance on 8600
+      devServerTimeout: 90000,   // allow 90 s on first Vite cold start
     },
   ],
 ],
 ```
 
 Setting `dryRun: true` skips builds in dev mode as well — presentations appear in the overview but their iframes will be empty.
+
+### Multiple instances — port allocation
+
+When two plugin instances run simultaneously during `docusaurus start`, their dev servers must use non-overlapping port ranges:
+
+```ts
+plugins: [
+  ["slidesaurus", { id: "talks",    path: "./talks",    devServerBasePort: 8600 }],
+  ["slidesaurus", { id: "training", path: "./training", devServerBasePort: 8700 }],
+],
+```
+
+Instance `talks` claims ports 8600–8699; instance `training` claims 8700–8799 (assuming fewer than 100 presentations each).
 
 ## Cache in dev mode
 

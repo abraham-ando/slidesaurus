@@ -27,12 +27,15 @@ Earlier versions of the plugin ran builds sequentially out of caution. The `EADD
 
 ```ts
 {
-  maxParallelBuilds: 4,   // Default: 4, capped at os.cpus().length
-  buildTimeout: 120,      // Default: 120 seconds per presentation
+  // Default: Math.max(1, os.cpus().length - 1)  — one less than your CPU count
+  maxParallelBuilds: 4,
+  buildTimeout: 120,  // Default: 120 seconds per presentation
 }
 ```
 
-The effective concurrency is `min(maxParallelBuilds, cpuCount)`. On a 2-vCPU CI runner with `maxParallelBuilds: 8`, you still only get 2 concurrent builds.
+The default is `Math.max(1, os.cpus().length - 1)` — one fewer than the number of logical CPUs, leaving one core free for Docusaurus and the OS. On an 8-core machine this is `7`; on a single-core machine it clamps to `1`.
+
+There is no automatic runtime cap — if you set `maxParallelBuilds: 64` on a 4-core machine the plugin will attempt to run 64 concurrent `slidev build` processes (memory exhaustion will follow). Set a value appropriate for your hardware.
 
 ### Choosing `maxParallelBuilds`
 
@@ -123,7 +126,7 @@ The Slidev CLI binary lookup (`resolveSlidevBin`) is similarly cached per `siteD
 2. **Pre-install themes** — set `autoInstall: false` and install themes once via `package.json`. This avoids any `npm install` during the build hot path.
 3. **Avoid heavy addons in many presentations** — addons increase per-deck startup time.
 4. **Increase `buildTimeout` for CI** — slower CI runners may need `buildTimeout: 300` for complex decks.
-5. **Tune `maxParallelBuilds` to your hardware** — too low underuses the machine; too high causes memory pressure and contention. The default `4` is a sane starting point on most laptops.
+5. **Tune `maxParallelBuilds` to your hardware** — too low underuses the machine; too high causes memory pressure and contention. The default (`os.cpus().length - 1`) is a sane starting point; only override it when you have a measured reason to.
 
 ## Build summary and speedup comparison
 

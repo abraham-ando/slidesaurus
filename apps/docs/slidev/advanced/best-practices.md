@@ -9,7 +9,7 @@ position: 2
 level: advanced
 owner: Documentation Team
 duration: 40
-lastReviewed: 2026-04-01
+lastReviewed: 2026-05-07
 playlist: Deep Dive Track
 ---
 
@@ -63,12 +63,13 @@ my-site/
 
 ```ts
 {
-  maxParallelBuilds: 4,   // Match your CPU cores
-  buildTimeout: 180,      // Allow for slow CI
+  // Default: os.cpus().length - 1. Lower this on memory-constrained CI runners.
+  maxParallelBuilds: 2,
+  buildTimeout: 180,  // Increase on slow CI
 }
 ```
 
-2. **Pre-install themes** instead of relying on auto-install:
+2. **Pre-install themes** — `autoInstall` is disabled by default:
 
 ```bash
 npm install @slidev/theme-seriph

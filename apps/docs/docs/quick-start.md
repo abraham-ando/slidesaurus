@@ -6,13 +6,18 @@ sidebar_position: 3
 
 Get a presentation running inside your Docusaurus site in under 5 minutes.
 
-## 1. Install
+:::note Prerequisites
+Node.js 18+, an existing Docusaurus v3 project, and `@slidev/cli` installed.
+Not set up yet? Follow the [Installation guide](./installation.md) first.
+:::
+
+## 1. Install and configure
 
 ```bash
 npm install slidesaurus
 ```
 
-## 2. Configure
+Add the plugin to `docusaurus.config.ts`:
 
 ```ts title="docusaurus.config.ts"
 plugins: [
@@ -29,7 +34,7 @@ plugins: [
 ],
 ```
 
-## 3. Create a Presentation
+## 2. Create a presentation
 
 ```bash
 mkdir -p slidev
@@ -41,7 +46,6 @@ Create `slidev/my-talk.md`:
 ---
 title: My First Talk
 description: A quick demo of slidesaurus
-theme: seriph
 author: Your Name
 tags: [demo, intro]
 date: 2026-01-15
@@ -62,44 +66,24 @@ Welcome to the presentation!
 
 ---
 
-# Code Example
-
-```ts
-plugins: [
-  ["slidesaurus", { path: "./slidev" }],
-];
-```
-
-Configuration is minimal.
-
----
-
-# Live Preview
-
-Embed a preview anywhere with `<SlidevLink>`:
-
-```tsx
-import { SlidevLink } from "slidesaurus/theme/SlidevLink";
-
-<SlidevLink title="My First Talk" route="/presentations/my-talk" />
-```
-
----
-
 # Thank You
 
 Questions?
 ```
 
-## 4. Start the Dev Server
+## 3. Start the dev server
 
 ```bash
 npm start
 ```
 
-Open your browser and navigate to `/presentations`. You will see the overview page with a card for **My First Talk**. Click it to view the full presentation.
+Navigate to `/presentations`. You will see the **overview page** showing a card for *My First Talk* — click it to view the full presentation in an iframe.
 
-## 5. Build for Production
+:::tip What you're seeing
+The **overview page** is the auto-generated index of all your presentations. It includes a search bar, tag/level filters, and switches between grid and list views. See [Overview Page](./overview-page.md) for the full feature list.
+:::
+
+## 4. Build for production
 
 ```bash
 npm run build
@@ -108,7 +92,19 @@ npm run serve
 
 The production build compiles every presentation with `slidev build` and bundles the output into the Docusaurus static site.
 
-## Adding Categories
+## 5. Embed a preview in a doc page
+
+Use `SlidevLink` to embed a scaled-down preview of any presentation inside an MDX page:
+
+```mdx title="docs/my-page.mdx"
+import SlidevLink from "@theme/SlidevLink";
+
+<SlidevLink link="/presentations/my-talk" />
+```
+
+`link` must match the URL of the presentation as it appears in your browser. See [SlidevLink](./slidev-link.md) for all props.
+
+## Adding categories
 
 Organize presentations into groups by creating subdirectories with a `_category_.yml` file:
 
@@ -129,8 +125,11 @@ position: 1
 description: Step-by-step tutorial decks
 ```
 
+See [Categories](./categories.md) for the complete reference.
+
 ## Next Steps
 
 - [Options](./options.md) — full configuration reference.
-- [Frontmatter](./frontmatter.md) — all available per-presentation fields.
+- [Frontmatter](./frontmatter.md) — all available per-presentation metadata fields.
 - [Categories](./categories.md) — deep dive into the category system.
+- [Playlists](./playlists.md) — define ordered sequences of presentations.

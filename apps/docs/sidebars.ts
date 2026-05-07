@@ -28,7 +28,9 @@ const sidebars: SidebarsConfig = {
       label: "Advanced",
       items: [
         "categories",
+        "playlists",
         "parallel-builds",
+        "dev-server",
         "custom-styling",
         "troubleshooting",
       ],

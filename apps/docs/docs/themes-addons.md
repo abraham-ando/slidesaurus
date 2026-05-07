@@ -52,15 +52,19 @@ This presentation uses apple-basic instead of the default theme.
 
 ## Auto-Install
 
-When `autoInstall` is enabled (the default), the plugin detects missing theme packages and installs them automatically before building. This means you can reference any published theme without manually running `npm install`.
+When `autoInstall` is enabled, the plugin detects missing theme packages and installs them automatically before building. This means you can reference any published theme without manually running `npm install`.
 
-To disable this behavior:
+`autoInstall` is **disabled by default** — you must opt in explicitly. This prevents unexpected package installations in CI or production environments (OWASP A05 — Principle of Least Privilege).
 
 ```ts
 {
-  autoInstall: false,
+  autoInstall: true,  // opt in: install missing themes/addons automatically
 }
 ```
+
+:::tip Pre-install for performance
+For faster and more predictable builds, add themes and addons to `package.json` and keep `autoInstall: false`. This avoids network requests during the build hot path.
+:::
 
 ## Addons
 

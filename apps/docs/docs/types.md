@@ -6,6 +6,21 @@ sidebar_position: 16
 
 All public types exported by `slidesaurus`.
 
+## `UITheme`
+
+```ts
+type UITheme = "default" | "compact" | "minimal" | (string & {});
+```
+
+Visual layout variant for plugin components. Set via the `uiTheme` plugin option.
+
+- `"default"` — full card with preview area, description, and all metadata badges.
+- `"compact"` — same DOM as `default`, CSS-only variant with a smaller preview and no description.
+- `"minimal"` — text-only rows; different DOM structure, no thumbnails, no sidebar.
+- Any other string — passed through as the `data-slidev-ui-theme` attribute on component roots; target it from `custom.css`.
+
+---
+
 ## `ExportFormat`
 
 ```ts
@@ -203,6 +218,8 @@ interface UIOptions {
   routeBasePath: string;
   pageTitle: string;
   pageTagline: string;
+  /** Visual layout variant. Default: "default". See {@link UITheme}. */
+  uiTheme: UITheme;
 }
 
 interface PluginOptions extends ScanOptions, BuildOptions, UIOptions {
@@ -247,6 +264,8 @@ interface PluginConfig {
   path?: string;
   pageTitle?: string;
   pageTagline?: string;
+  /** Active visual layout variant. Matches the `uiTheme` plugin option. */
+  uiTheme: UITheme;
 }
 
 /** Global data shape consumed by usePluginData() in theme components. */
@@ -257,6 +276,20 @@ interface PluginData {
   config: PluginConfig;
   isDev: boolean;
 }
+```
+
+---
+
+## `useUITheme` hook
+
+A convenience hook that reads the active `uiTheme` from plugin data. Useful when building custom swizzle wrappers that need to know the current theme variant.
+
+```ts
+import { useUITheme } from "@theme/useUITheme";
+
+// Returns the uiTheme value from the plugin data (defaults to "default")
+const uiTheme = useUITheme();           // uses pluginId "default"
+const uiTheme = useUITheme("training"); // named plugin instance
 ```
 
 ---
@@ -275,5 +308,6 @@ import type {
   ExportFormat,
   PresentationLevel,
   SlidevFrontmatter,
+  UITheme,
 } from "slidesaurus";
 ```

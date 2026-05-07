@@ -4,12 +4,12 @@ description: Creating presentations, using frontmatter, categories, and embeddin
 theme: seriph
 author: Training Team
 tags: [presentations, frontmatter, categories]
-date: 2026-01-20
+date: 2026-04-20
 position: 2
 level: intermediate
 owner: Documentation Team
 duration: 25
-lastReviewed: 2026-04-01
+lastReviewed: 2026-05-07
 playlist: Deep Dive Track
 ---
 
@@ -139,35 +139,27 @@ position: 1          ← Appears first
 Show a presentation preview inside any MDX doc page:
 
 ```tsx
-import { SlidevLink } from "slidesaurus/theme/SlidevLink";
+import SlidevLink from "@theme/SlidevLink";
 
-<SlidevLink
-  title="Getting Started"
-  route="/presentations/tutorials/basics"
-  description="Learn the fundamentals"
-/>
+<SlidevLink link="/presentations/tutorials/basics" />
 ```
 
-Renders a clickable card with a scaled iframe preview.
+The `link` prop must match the URL of the presentation as it appears in your browser. Renders a clickable card with a scaled iframe preview.
 
 ---
 
 # Embedding Multiple Previews
 
 ```tsx
+import SlidevLink from "@theme/SlidevLink";
+
 <div style={{
   display: "grid",
   gridTemplateColumns: "repeat(2, 1fr)",
   gap: "1rem"
 }}>
-  <SlidevLink
-    title="Basics"
-    route="/presentations/tutorials/basics"
-  />
-  <SlidevLink
-    title="Intermediate"
-    route="/presentations/tutorials/intermediate"
-  />
+  <SlidevLink link="/presentations/tutorials/basics" />
+  <SlidevLink link="/presentations/tutorials/intermediate" />
 </div>
 ```
 

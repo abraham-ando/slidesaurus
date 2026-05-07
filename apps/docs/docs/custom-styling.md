@@ -4,74 +4,274 @@ sidebar_position: 13
 
 # Custom Styling
 
-The plugin's theme components use CSS Modules and CSS custom properties, making them easy to customize without modifying source code.
+Slidesaurus offers three complementary customisation layers — from the simplest (a plugin option) to the most powerful (full component replacement).
 
-## CSS Custom Properties
+| Layer | Mechanism | Best for |
+|---|---|---|
+| 1 | `uiTheme` option | Switching between built-in layouts |
+| 2 | CSS custom properties | Restyling cards/components without touching code |
+| 3 | Component swizzling | Adding extra DOM elements or replacing layout entirely |
 
-Override these variables in your site's `custom.css` to change the look of the plugin's components:
+---
+
+## 1 · `uiTheme` Option
+
+Set `uiTheme` in `docusaurus.config.ts` to choose the layout variant for all plugin components:
+
+```ts title="docusaurus.config.ts"
+plugins: [
+  [
+    "slidesaurus",
+    {
+      uiTheme: "compact", // "default" | "compact" | "minimal" | any string
+    },
+  ],
+],
+```
+
+### Built-in variants
+
+| Value | Description |
+|---|---|
+| `"default"` | Full cards — 16:9 preview area, description, metadata, badges. |
+| `"compact"` | Narrower preview (80 px height), no description. Same DOM as `default`, pure CSS. |
+| `"minimal"` | Text-only rows, no thumbnails, no sidebar. Different DOM structure — grid view is disabled. |
+
+### How it works under the hood
+
+Every component root element receives the attribute `data-slidev-ui-theme="{value}"`. Built-in CSS Modules use attribute selectors to apply the variant:
+
+```css
+/* Inside SlidevCard/styles.module.css */
+.card[data-slidev-ui-theme="compact"] .preview { height: 80px; }
+.card[data-slidev-ui-theme="compact"] .description { display: none; }
+```
+
+This means **any string** you pass as `uiTheme` is set on the element — custom values are passed through as-is, giving you a CSS extension point without swizzling.
+
+---
+
+## 2 · CSS Custom Properties (Design Tokens)
+
+Override these CSS custom properties in your site's `src/css/custom.css` to restyle cards globally. They are consumed by the CSS Modules via `var(--token, fallback)`.
+
+### Card tokens
+
+| Token | Default | Controls |
+|---|---|---|
+| `--slidev-card-bg` | `var(--ifm-card-background-color)` | Card background |
+| `--slidev-card-shadow` | Subtle 1 px border + drop shadow | Card shadow at rest |
+| `--slidev-card-radius` | `8px` | Card corner radius |
+| `--slidev-card-hover-transform` | `translateY(-3px)` | Card lift animation on hover |
+| `--slidev-card-hover-shadow` | Elevated shadow | Card shadow on hover |
+| `--slidev-card-preview-bg` | Gradient using primary colour | Preview area background |
+| `--slidev-card-title-color` | `var(--ifm-heading-color)` | Card title colour |
+
+### Example: brand colour override
 
 ```css title="src/css/custom.css"
 :root {
-  --slidev-card-border-radius: 8px;
-  --slidev-card-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  --slidev-card-hover-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-  --slidev-card-padding: 1.5rem;
-  --slidev-overview-gap: 1.5rem;
-  --slidev-overview-columns: repeat(auto-fill, minmax(300px, 1fr));
+  --slidev-card-radius: 12px;
+  --slidev-card-bg: #f8f5ff;
+  --slidev-card-hover-shadow: 0 8px 32px rgba(124, 58, 237, 0.18);
+  --slidev-card-title-color: #3b0764;
+}
+
+[data-theme="dark"] {
+  --slidev-card-bg: #1a0a3a;
+  --slidev-card-title-color: #e9d5ff;
 }
 ```
 
-## Swizzling Components
+---
 
-Docusaurus supports [component swizzling](https://docusaurus.io/docs/swizzling) — replacing or wrapping theme components with your own implementations.
+## 3 · Custom `uiTheme` via CSS
 
-### Wrap (Recommended)
+Since every component root carries `data-slidev-ui-theme`, you can write a fully custom theme in plain CSS — no swizzling required.
 
-Wrapping keeps the original component and lets you add behavior around it:
+### Step 1 — Set the option
 
-```bash
-npx docusaurus swizzle slidesaurus SlidevOverview --wrap
+```ts title="docusaurus.config.ts"
+plugins: [["slidesaurus", { uiTheme: "glass" }]],
 ```
 
-This creates a wrapper component in `src/theme/SlidevOverview/index.tsx` that you can modify.
+### Step 2 — Create a theme CSS file
+
+```css title="src/css/themes/glass.css"
+/* Design tokens — light mode
+   Use the attribute selector without a tag so it matches <a>, <div>,
+   and any future root element type. */
+[data-slidev-ui-theme="glass"] {
+  --slidev-card-bg:              rgba(255, 255, 255, 0.55);
+  --slidev-card-shadow:          0 4px 24px rgba(124, 58, 237, 0.08),
+                                 inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+  --slidev-card-radius:          14px;
+  --slidev-card-hover-transform: translateY(-4px) scale(1.01);
+  --slidev-card-hover-shadow:    0 12px 40px rgba(124, 58, 237, 0.22),
+                                 inset 0 0 0 1.5px rgba(124, 58, 237, 0.5);
+  --slidev-card-preview-bg:      linear-gradient(
+                                   135deg,
+                                   rgba(196, 181, 253, 0.4) 0%,
+                                   rgba(167, 139, 250, 0.5) 100%
+                                 );
+  --slidev-card-title-color:     #3b0764;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* Dark mode overrides */
+[data-theme="dark"] a[data-slidev-ui-theme="glass"],
+[data-theme="dark"] div[data-slidev-ui-theme="glass"] {
+  --slidev-card-bg:           rgba(15, 10, 40, 0.55);
+  --slidev-card-shadow:       0 4px 24px rgba(0, 0, 0, 0.4),
+                              inset 0 0 0 1px rgba(167, 139, 250, 0.15);
+  --slidev-card-hover-shadow: 0 12px 40px rgba(124, 58, 237, 0.4),
+                              inset 0 0 0 1.5px rgba(167, 139, 250, 0.6);
+  --slidev-card-preview-bg:   linear-gradient(
+                                135deg,
+                                rgba(76, 29, 149, 0.5) 0%,
+                                rgba(109, 40, 217, 0.5) 100%
+                              );
+  --slidev-card-title-color:  #e9d5ff;
+}
+
+/* Gradient title on the overview banner */
+[data-slidev-ui-theme="glass"] .title {
+  background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+```
+
+### Step 3 — Import in `custom.css`
+
+```css title="src/css/custom.css"
+@import "./themes/glass.css";
+```
+
+:::tip
+The `glass` theme above is included in the documentation site's source code at [`apps/docs/src/css/themes/glass.css`](https://github.com/abraham-ando/slidesaurus/tree/main/apps/docs/src/css/themes/glass.css) as a ready-to-use reference.
+:::
+
+---
+
+## 4 · Component Swizzling
+
+Docusaurus supports [component swizzling](https://docusaurus.io/docs/swizzling) — replacing or wrapping theme components with custom implementations.
+
+### Wrap (recommended)
+
+Creates a thin wrapper around the original component; the original continues to render unchanged:
+
+```bash
+npx docusaurus swizzle slidesaurus SlidevCard --wrap
+```
+
+This generates `src/theme/SlidevCard/index.tsx`. Import the original via `@theme-original/SlidevCard` and add your behaviour:
+
+```tsx title="src/theme/SlidevCard/index.tsx"
+import OriginalSlidevCard from "@theme-original/SlidevCard";
+
+type Props = React.ComponentProps<typeof OriginalSlidevCard>;
+
+export default function SlidevCard(props: Props) {
+  const { presentation } = props;
+
+  // Example: add a "New" ribbon for presentations published in the last 30 days
+  const isNew = presentation.date
+    ? Date.now() - new Date(presentation.date).getTime() < 30 * 86_400_000
+    : false;
+
+  return (
+    <div style={{ position: "relative" }}>
+      {isNew && (
+        <span style={{ position: "absolute", top: 10, right: 0, zIndex: 10,
+                       background: "var(--ifm-color-primary)", color: "#fff",
+                       padding: "2px 8px", borderRadius: "3px 0 0 3px",
+                       fontSize: "0.65rem", fontWeight: 700 }}>
+          ✨ New
+        </span>
+      )}
+      <OriginalSlidevCard {...props} />
+    </div>
+  );
+}
+```
 
 ### Eject
 
-Ejecting gives you a full copy of the component to modify freely:
+Copies the full component source so you can modify its internals:
 
 ```bash
 npx docusaurus swizzle slidesaurus SlidevCard --eject
 ```
 
 :::warning
-Ejected components are not updated when the plugin is upgraded. Prefer wrapping when possible.
+Ejected components are **not updated** when the plugin is upgraded. Prefer wrapping when possible.
 :::
 
-## Available Components for Swizzling
+### Available components
 
 | Component | Description |
 |---|---|
-| `SlidevOverview` | The full overview page layout |
-| `SlidevCard` | Individual card in grid view |
-| `SlidevListItem` | Individual row in list view |
-| `SlidevCategoryCard` | Category section wrapper |
-| `SlidevPresentation` | The individual presentation page with iframe |
-| `SlidevLink` | The embeddable preview component |
+| `SlidevOverview` | Full overview page — search bar, filters, grid/list, sidebar, cards |
+| `SlidevCard` | Single presentation card (grid view + horizontal list mode) |
+| `SlidevCategoryCard` | Single category card (grid view + horizontal list mode) |
+| `SlidevListItem` | Single row in list view (presentations and categories) |
+| `SlidevPresentation` | Individual presentation page — iframe, presenter link, resume bar, playlist bar |
+| `SlidevLink` | Embeddable inline preview component for MDX pages |
 
-## CSS Modules
+### Wrap example — team banner above the overview
 
-Each component has a co-located `styles.module.css` file. When you swizzle a component, the CSS module is included. You can:
+```tsx title="src/theme/SlidevOverview/index.tsx"
+import Link from "@docusaurus/Link";
+import OriginalSlidevOverview from "@theme-original/SlidevOverview";
 
-1. Modify the CSS module directly (if ejected).
-2. Add global CSS overrides using more specific selectors.
+type Props = React.ComponentProps<typeof OriginalSlidevOverview>;
+
+export default function SlidevOverview(props: Props) {
+  return (
+    <>
+      {/* Custom banner injected above the original overview */}
+      <div style={{ background: "var(--ifm-color-primary-lightest)",
+                    borderRadius: 12, padding: "1rem 2rem", margin: "0 0 0.5rem",
+                    display: "flex", alignItems: "center", gap: "1rem" }}>
+        <span style={{ fontSize: "2rem" }}>🦕</span>
+        <div>
+          <strong>Engineering Learning Hub</strong>
+          <p style={{ margin: 0, fontSize: "0.85rem" }}>
+            Curated presentations from the team
+          </p>
+        </div>
+        <Link to="https://github.com/your-org/slidesaurus"
+              style={{ marginLeft: "auto" }}>
+          Contribute →
+        </Link>
+      </div>
+      {/* Original overview renders normally below */}
+      <OriginalSlidevOverview {...props} />
+    </>
+  );
+}
+```
+
+:::tip Full examples
+Complete swizzle wrapper implementations (with CSS modules, ribbon styles, and TypeScript declarations) are available in the documentation site's source at [`apps/docs/src/theme/`](https://github.com/abraham-ando/slidesaurus/tree/main/apps/docs/src/theme/).
+:::
+
+---
 
 ## Dark Mode
 
-All components respect Docusaurus dark mode. The CSS modules use `[data-theme="dark"]` selectors for dark-mode variants. If you override styles, remember to provide dark-mode equivalents.
+All built-in components use `[data-theme="dark"]` selectors for dark-mode variants. When overriding CSS custom properties, always provide a dark-mode counterpart:
 
 ```css
-[data-theme="dark"] .slidev-card {
-  background: var(--ifm-color-emphasis-100);
-  border-color: var(--ifm-color-emphasis-300);
+:root {
+  --slidev-card-bg: #f8f5ff;
+}
+
+[data-theme="dark"] {
+  --slidev-card-bg: #1a0a3a;
 }
 ```

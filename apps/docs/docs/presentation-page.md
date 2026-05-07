@@ -159,19 +159,20 @@ Full Slidev builds run for every discovered presentation. The iframe loads the c
 
 ### Dev Mode (`docusaurus start`)
 
-In dev mode, the plugin does not run `slidev build`. Instead, if `@slidev/cli` is installed and a `slidev` dev server is detected as running locally, the presentation page embeds the live dev server output in the iframe. This enables hot-reload while authoring slides.
+In dev mode the plugin uses the **same build pipeline as production**: `loadContent` calls `buildAllPresentations()` (incremental SHA-256 cache applies), and the built static files are served by webpack's devServer from the plugin cache directory. There are no external Slidev processes or port proxying involved.
 
-If `@slidev/cli` is **not installed**, the iframe area is replaced by a placeholder message:
+If `@slidev/cli` is **not installed**, the iframe area shows a "Build Required" placeholder instead of the presentation.
 
-> **Slidev CLI Not Installed**
-> Install `@slidev/cli` and run `slidev dev <file>` in a separate terminal to preview this presentation in development mode.
-
-:::tip
-Run the Slidev dev server in a separate terminal while `docusaurus start` is running:
+:::tip Fast slide editing loop
+The Docusaurus watch cycle (file change → `loadContent()` → rebuild → webpack picks up new files) is sufficient for reviewing content changes. For **Vite HMR** on a single deck while authoring, run Slidev's own dev server in a separate terminal:
 
 ```bash
-npx slidev dev slidev/my-talk.md --port 3030
+# Terminal 1 — full docs site
+pnpm dev:docs
+
+# Terminal 2 — live Slidev HMR for the deck you are editing
+cd slidev && slidev dev my-talk.md
 ```
 
-The presentation page will pick up the running server and display the live output.
+Open the Slidev window for instant feedback; refresh the Docusaurus tab to see the integrated result after the incremental rebuild completes.
 :::
