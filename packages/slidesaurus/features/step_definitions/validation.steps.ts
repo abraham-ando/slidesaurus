@@ -1,6 +1,6 @@
 import { Given, When, Then, Before } from "@cucumber/cucumber";
 import assert from "node:assert";
-import type { PluginOptions } from "../../src/types";
+import type { PluginOptions } from "../../src/domain/types";
 
 interface ValidationWorld {
   options: Record<string, unknown>;

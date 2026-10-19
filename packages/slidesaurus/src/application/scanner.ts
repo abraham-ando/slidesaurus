@@ -228,10 +228,7 @@ export class PresentationCollisionError extends Error {
 
   constructor(collisions: string[]) {
     super(
-      `Slidev presentation route collision(s):
-${collisions.map((c) => `  - ${c}`).join("
-")}
-` +
+      `Slidev presentation route collision(s):\n${collisions.map((c) => `  - ${c}`).join("\n")}\n` +
         `Rename the file or the directory so that each presentation has a unique route.`,
     );
     this.name = "PresentationCollisionError";

@@ -7,11 +7,8 @@ interface IconProps {
   style?: React.CSSProperties;
 }
 
-export function PresentationIcon({
-  className,
-  width = 24,
-  height = 24,
-}: IconProps) {
+// Fixed-artwork logo: sized by CSS through `className`, so width/height are ignored.
+export function PresentationIcon({ className }: IconProps) {
   return (
     // <svg xmlns="http://www.w3.org/2000/svg" width={width} height={height} className={className} viewBox="0 0 24 24" aria-hidden="true">
     //   <g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">

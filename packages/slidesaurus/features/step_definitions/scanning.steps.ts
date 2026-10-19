@@ -3,7 +3,7 @@ import assert from "node:assert";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { PluginOptions, ScanResult, BuildContext } from "../../src/types";
+import type { PluginOptions, ScanResult, BuildContext } from "../../src/domain/types";
 
 interface ScanWorld {
   tmpDir: string;
@@ -89,7 +89,7 @@ Given(
 );
 
 When("the plugin scans for presentations", async function () {
-  const { scanPresentations } = await import("../../src/scanner");
+  const { scanPresentations } = await import("../../src/application/scanner");
   const context: BuildContext = { siteDir: world.tmpDir, baseUrl: "/" };
   world.result = await scanPresentations(defaultOptions, context);
 });

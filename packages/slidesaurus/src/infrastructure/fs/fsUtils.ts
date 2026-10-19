@@ -5,6 +5,27 @@
 import fs from "node:fs";
 import path from "node:path";
 
+/**
+ * Remove a file or directory without ever throwing. On Windows, a Slidev /
+ * Chromium process killed on timeout can keep handles open for a moment
+ * (EPERM / EBUSY): retry a few times, then give up.
+ *
+ * @returns `undefined` on success, the error message otherwise.
+ */
+export function removeBestEffort(target: string): string | undefined {
+  try {
+    fs.rmSync(target, {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 200,
+    });
+    return undefined;
+  } catch (err) {
+    return err instanceof Error ? err.message : String(err);
+  }
+}
+
 /** Hard-link src to dest; fall back to copyFileSync on cross-device / FAT filesystems. */
 export function hardLinkOrCopy(src: string, dest: string): void {
   try {

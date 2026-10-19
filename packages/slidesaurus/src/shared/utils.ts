@@ -1,6 +1,7 @@
 /**
  * Shared utilities for the slidesaurus plugin
  */
+import os from "node:os";
 import path from "node:path";
 
 /** Remove trailing slash from a base URL. */
@@ -163,4 +164,12 @@ export function walkUpTree<T>(
     dir = parent;
   }
   return undefined;
+}
+
+/**
+ * Default build concurrency: one core is left free for Docusaurus itself.
+ * Lives here, not in domain/constants (also type-checked by theme/, no Node types).
+ */
+export function defaultMaxParallelBuilds(): number {
+  return Math.max(1, os.cpus().length - 1);
 }

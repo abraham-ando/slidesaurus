@@ -151,8 +151,7 @@ describe("runNew", () => {
 
     it("rejects an invalid theme name", async () => {
       await expect(
-        runNew("talk", { template: "basic", theme: "bad theme
-x: y", pluginId: "default" }),
+        runNew("talk", { template: "basic", theme: "bad theme\nx: y", pluginId: "default" }),
       ).rejects.toThrow("process.exit called");
       expect(fs.existsSync(path.join(slidevDir, "talk.md"))).toBe(false);
     });

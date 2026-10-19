@@ -12,12 +12,11 @@ import { log } from "../shared/logger";
 import { getSlidevCacheDir } from "../infrastructure/fs/fileSystem";
 import {
   createIsolatedBuild,
-  cleanupIsolatedBuildDir,
   purgeIsolatedBuilds,
   type IsolatedBuildDir,
 } from "../infrastructure/fs/isolatedBuild";
 import { isCompleteBuildOutput, purgeStaleOutputs } from "../infrastructure/fs/outputManager";
-import { isInside, normalizeThumbnailArtifact, replaceDir } from "../infrastructure/fs/fsUtils";
+import { isInside, normalizeThumbnailArtifact, removeBestEffort, replaceDir } from "../infrastructure/fs/fsUtils";
 import { BuildCache, FileHashMemo, computePresentationFingerprint } from "./buildCache";
 import {
   patchFrontmatterAddons,
@@ -31,8 +30,8 @@ import {
 } from "../infrastructure/packages/packageResolver";
 import { runSlidevBuild } from "../infrastructure/process/buildRunner";
 import { runConcurrently } from "../shared/concurrentRunner";
-import { walkUpTree } from "../shared/utils";
-import { TREE_WALK_MAX_DEPTH, DEFAULT_MAX_PARALLEL_BUILDS } from "../domain/constants";
+import { defaultMaxParallelBuilds, walkUpTree } from "../shared/utils";
+import { TREE_WALK_MAX_DEPTH } from "../domain/constants";
 
 // ── Failure aggregation ───────────────────────────────────────────────────────
 
@@ -234,8 +233,10 @@ async function buildPresentation(presentation: PresentationMetadata, env: BuildE
     log.error(`Error building ${log.code(presentation.id)}: ${error}`);
     return { id: presentation.id, success: false, error, duration: elapsed() };
   } finally {
-    if (isolated) cleanupIsolatedBuildDir(isolated.isolatedDir);
-    if (tmpOut) fs.rmSync(tmpOut, { recursive: true, force: true });
+    for (const leftover of [isolated?.isolatedDir, tmpOut]) {
+      const error = leftover ? removeBestEffort(leftover) : undefined;
+      if (error) log.warn(`Could not clean up ${log.path(leftover!)}: ${error}`);
+    }
   }
 }
 
@@ -267,7 +268,7 @@ export async function buildAllPresentations(
   const totalStart = Date.now();
   const total = presentations.length;
   const cpuCount = os.cpus().length;
-  const concurrency = Math.max(1, Math.min(options.maxParallelBuilds ?? DEFAULT_MAX_PARALLEL_BUILDS, cpuCount));
+  const concurrency = Math.max(1, Math.min(options.maxParallelBuilds ?? defaultMaxParallelBuilds(), cpuCount));
   const cacheDir = getSlidevCacheDir(context.siteDir, options.id, context.locale);
   const outputRoot = path.join(cacheDir, "output");
   const slidesRoot = path.resolve(context.siteDir, options.path);

@@ -17,7 +17,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { toSafeId } from "../../shared/utils";
 import { collectPresentationDependencies } from "./dependencies";
-import { hardLinkOrCopy, isInside } from "./fsUtils";
+import { hardLinkOrCopy, isInside, removeBestEffort } from "./fsUtils";
 
 /**
  * Files Slidev may (re)write at the root of its entry directory. They are
@@ -104,14 +104,16 @@ export function createIsolatedBuildDir(
  * Remove an isolated build directory entirely (sources, copied assets and
  * Slidev artifacts). Safe to call on a non-existent directory.
  */
-export function cleanupIsolatedBuildDir(isolatedDir: string): void {
-  fs.rmSync(isolatedDir, { recursive: true, force: true });
+export function cleanupIsolatedBuildDir(isolatedDir: string): string | undefined {
+  // Best effort: a leftover dir is purged by the next run (purgeIsolatedBuilds),
+  // whereas throwing here would fail an otherwise successful build.
+  return removeBestEffort(isolatedDir);
 }
 
 /**
  * Remove every leftover isolated directory under `{cacheDir}/builds/`
  * (e.g. after a crash or a killed process). Call before starting a build run.
  */
-export function purgeIsolatedBuilds(cacheDir: string): void {
-  fs.rmSync(path.join(cacheDir, "builds"), { recursive: true, force: true });
+export function purgeIsolatedBuilds(cacheDir: string): string | undefined {
+  return removeBestEffort(path.join(cacheDir, "builds"));
 }

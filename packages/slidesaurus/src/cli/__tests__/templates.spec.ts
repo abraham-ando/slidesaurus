@@ -45,8 +45,7 @@ describe("renderTemplate", () => {
 
   it("escapes YAML-special characters in title, theme and author", () => {
     const nasty = {
-      title: 'Intro: "quotes" # not a comment
-second: line',
+      title: 'Intro: "quotes" # not a comment\nsecond: line',
       theme: "@scope/slidev-theme-x",
       author: "Bob: the *builder*",
     };

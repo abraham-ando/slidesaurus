@@ -27,7 +27,18 @@ export default tseslint.config(
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
+      // @docusaurus/logger is used as tagged templates: logger.info`...`.
+      "@typescript-eslint/no-unused-expressions": [
+        "error",
+        { allowTaggedTemplates: true },
+      ],
     },
+  },
+  {
+    // CommonJS config files (cucumber.js, …).
+    files: ["**/*.{js,cjs}"],
+    languageOptions: { sourceType: "commonjs" },
+    rules: { "@typescript-eslint/no-require-imports": "off" },
   },
   {
     // React theme components (plugin theme + swizzled overrides in the apps).
@@ -45,6 +56,7 @@ export default tseslint.config(
     files: ["**/__tests__/**", "**/features/**"],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-require-imports": "off",
     },
   },
   // Must stay last: disables stylistic rules that Prettier owns.

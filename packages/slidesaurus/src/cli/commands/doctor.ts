@@ -69,14 +69,13 @@ export async function runDoctor(opts: DoctorOptions): Promise<void> {
   report(slidevInstalled, "@slidev/cli installed", slidevInstalled ? undefined : "Run: pnpm add @slidev/cli");
 
   // ── Check 4: Themes and addons resolvable ─────────────────────────────────
-  let presentations: Awaited<ReturnType<typeof scanPresentations>>["presentations"] = [];
   if (dirExists) {
     try {
       const result = await scanPresentations(
         options as Parameters<typeof scanPresentations>[0],
         { siteDir: cwd, baseUrl: "/" },
       );
-      presentations = result.presentations;
+      const { presentations } = result;
 
       // Themes are resolved with the same function as the build (packageResolver),
       // so doctor and `slidev build` agree on official vs community package names.
@@ -139,7 +138,7 @@ export async function runDoctor(opts: DoctorOptions): Promise<void> {
 
   // ── Check 7: Playwright (required for thumbnails and export) ─────────────
   // `slidev export` loads `playwright-chromium`, not the `playwright` package.
-  let playwrightOk = false;
+  let playwrightOk: boolean;
   try {
     require.resolve("playwright-chromium", { paths: [cwd] });
     playwrightOk = true;

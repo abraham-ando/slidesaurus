@@ -13,7 +13,7 @@ import path from "node:path";
 import type { LoadContext, Plugin } from "@docusaurus/types";
 import { Joi } from "@docusaurus/utils-validation";
 import type { PluginOptions, PluginContentData } from "../domain/types";
-import { DEFAULT_MAX_PARALLEL_BUILDS, PLUGIN_NAME } from "../domain/constants";
+import { PLUGIN_NAME } from "../domain/constants";
 import { scanPresentations } from "../application/scanner";
 import {
   assertBuildSucceeded,
@@ -29,7 +29,7 @@ import {
   createPresenterFallbacks,
   writeSearchIndex,
 } from "../infrastructure/fs/outputManager";
-import { stripSlashes } from "../shared/utils";
+import { defaultMaxParallelBuilds, stripSlashes } from "../shared/utils";
 import { registerRoutes } from "./routeBuilder";
 import { registerCliCommands } from "./cliCommands";
 import { buildWebpackDevServerConfig } from "./webpackConfig";
@@ -45,7 +45,7 @@ const DEFAULT_OPTIONS: PluginOptions = {
   addons: [],
   buildTimeout: 120,
   verbose: false,
-  maxParallelBuilds: DEFAULT_MAX_PARALLEL_BUILDS,
+  maxParallelBuilds: defaultMaxParallelBuilds(),
   // OWASP A05 — Principle of Least Privilege: auto-installing packages (pnpm add) must
   // be an explicit opt-in, not an invisible default that runs in CI/production environments.
   autoInstall: false,

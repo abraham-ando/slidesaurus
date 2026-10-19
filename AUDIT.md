@@ -14,7 +14,15 @@
 
 ## Suivi des corrections (mis à jour le 2026-10-19)
 
-> ⚠️ **Rien n'a été compilé, typé ni testé.** Toutes les corrections sont écrites mais restent **non vérifiées** tant que les commandes en fin de section n'ont pas été lancées.
+> ✅ **Vérifié le 2026-10-19 sous Windows, Node 25.9.0, pnpm 10.33.0.** `pnpm install` (lockfile régénéré), `pnpm typecheck`, `pnpm lint` (0 erreur, 4 avertissements `react-hooks/exhaustive-deps`), `pnpm build` (plugin + docs + sample, 9 présentations construites), `pnpm test` (433 tests sur 26 fichiers) et `test:integration` (6 scénarios Cucumber) passent tous.
+>
+> Ces vérifications ont révélé des problèmes, corrigés depuis :
+> - trois séquences d'échappement `\n` transformées en vrais retours à la ligne pendant l'édition, ce qui donnait des chaînes non terminées (`scanner.ts`, `new.spec.ts`, `templates.spec.ts`) ;
+> - sous Windows, la suppression d'un dossier isolé levait `EPERM` (fichiers encore verrouillés par le Chromium arrêté au timeout) et faisait échouer tout le build. Le nettoyage est maintenant tolérant : nouvelles tentatives, puis simple warning ;
+> - les step definitions Cucumber pointaient encore vers l'ancienne arborescence `src/` (problème antérieur à l'audit) ;
+> - quelques erreurs ESLint (imports inutilisés, affectations inutiles).
+>
+> **Toujours ouvert :** la génération des miniatures échoue en local sur tous les decks (`Slidev exited with code 1` ou timeout de 60 s). C'est non bloquant, comme prévu (warning), mais chaque échec coûte jusqu'à 60 s de build. Piste à creuser : navigateur Playwright non installé (`npx playwright install chromium`).
 
 Les corrections ont été faites par lots parallèles, puis fusionnées dans `claude/audit-complet-projet-51b81a` :
 
@@ -53,7 +61,6 @@ Les corrections ont été faites par lots parallèles, puis fusionnées dans `cl
 
 **Reste ouvert**
 
-- **À faire par toi (bloquant)** : régénérer `pnpm-lock.yaml`, sinon la CI échoue sur `--frozen-lockfile`.
 - **Montées de version majeures** : vitest passe de 3 à 4, à valider.
 - **Formatage** : Prettier n'a jamais été appliqué. Un premier `pnpm format` produira un gros diff, à commiter à part. Le lint n'est pas encore exécuté en CI.
 - **Points non traités** :

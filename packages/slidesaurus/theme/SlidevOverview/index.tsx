@@ -7,9 +7,9 @@ import useBaseUrl from "@docusaurus/useBaseUrl";
 import SlidevCard from "../SlidevCard";
 import SlidevCategoryCard from "../SlidevCategoryCard";
 import SlidevListItem from "../SlidevListItem";
-import type { PluginData, Presentation, PresentationLevel } from "../types";
+import type { PluginData, PresentationLevel } from "../types";
 import { PLUGIN_NAME, LEVEL_LABELS } from "../types";
-import { matchesSearch, applyFilters } from "../filterUtils";
+import { applyFilters } from "../filterUtils";
 import { useFavorites } from "../useFavorites";
 import {
   FolderIcon,

@@ -1,5 +1,3 @@
-import { cpus } from "node:os";
-
 /**
  * Stable identifier used for cache directory naming and plugin registration.
  * Intentionally NOT derived from package.json — renaming or forking the npm
@@ -21,5 +19,3 @@ export const EXPORT_GRACE_MS = 15_000;
 // Directory tree traversal — supports monorepos up to 10 levels deep
 export const TREE_WALK_MAX_DEPTH = 10;
 
-// Build concurrency — one core is left free for Docusaurus itself.
-export const DEFAULT_MAX_PARALLEL_BUILDS = Math.max(1, cpus().length - 1);
