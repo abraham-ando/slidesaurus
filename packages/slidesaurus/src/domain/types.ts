@@ -28,19 +28,15 @@ export interface BuildOptions {
   exportWithClicks: boolean;
 }
 
-/** Options related to the Slidev dev server (used during `docusaurus start`). */
+/**
+ * Legacy options of the removed per-presentation Slidev dev servers.
+ * `docusaurus start` now builds presentations and serves them statically.
+ */
 export interface DevServerOptions {
-  /**
-   * Base port for Slidev dev servers. Each presentation gets basePort+index.
-   * Useful to avoid collision when multiple plugin instances are configured.
-   * Defaults to 8600.
-   */
-  devServerBasePort: number;
-  /**
-   * Maximum time (ms) to wait for a Slidev dev server to become ready.
-   * Defaults to 60000 (60 s).
-   */
-  devServerTimeout: number;
+  /** @deprecated No effect — accepted for backward compatibility only. */
+  devServerBasePort?: number;
+  /** @deprecated No effect — accepted for backward compatibility only. */
+  devServerTimeout?: number;
 }
 
 /**
@@ -210,11 +206,19 @@ export interface BuildResult {
   duration?: number;
   /** True when the result was served from the incremental cache (no rebuild occurred). */
   cacheHit?: boolean;
+  /** Non-blocking problems (e.g. thumbnail / PDF export failed because Playwright is missing). */
+  warnings?: string[];
 }
 
 export interface BuildContext {
   siteDir: string;
   baseUrl: string;
+  /**
+   * Current Docusaurus locale, set ONLY for non-default locales. Selects a
+   * per-locale build cache (each locale has its own `baseUrl`, embedded in
+   * the built assets). Undefined → single, locale-less cache (historical layout).
+   */
+  locale?: string;
 }
 
 // ============================================

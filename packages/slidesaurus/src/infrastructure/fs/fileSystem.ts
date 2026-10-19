@@ -8,6 +8,7 @@
  *   - `hashManifest.ts`   — build-hashes.json read / write
  *   - `isolatedBuild.ts`  — per-presentation isolated build directories
  *   - `outputManager.ts`  — cache output detection and final-output copying
+ *   - `dependencies.ts`   — files a presentation depends on (copy + cache hash)
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -19,12 +20,15 @@ export const SLIDEV_CACHE_DIR = PLUGIN_NAME;
 /** Artifacts Slidev generates in source/build directories. */
 export const SLIDEV_BUILD_ARTIFACTS = ["index.html", ".slidev", "dist"] as const;
 
+/** Allowed characters for plugin ids and locale names used as path segments. */
+const SAFE_SEGMENT = /^[a-zA-Z0-9_-]+$/;
+
 /**
  * Validate a pluginId before using it as a filesystem path component.
  * Rejects any value that could enable path traversal (dots, slashes, etc.).
  */
 export function validatePluginId(pluginId: string): void {
-  if (!/^[a-zA-Z0-9_-]+$/.test(pluginId)) {
+  if (!SAFE_SEGMENT.test(pluginId)) {
     throw new Error(
       `[Security] Invalid pluginId "${pluginId}": must contain only letters, digits, underscores and dashes.`,
     );
@@ -33,22 +37,40 @@ export function validatePluginId(pluginId: string): void {
 
 /**
  * Resolve the root cache directory for a given plugin instance.
- * Layout: `{siteDir}/.docusaurus/{PLUGIN_NAME}/{pluginId}/`
+ * Layout:
+ *   `{siteDir}/.docusaurus/{PLUGIN_NAME}/{pluginId}/`                  (no locale)
+ *   `{siteDir}/.docusaurus/{PLUGIN_NAME}/{pluginId}/i18n/{locale}/`    (per-locale)
+ *
+ * Each Docusaurus locale has its own `baseUrl` (e.g. `/fr/`), embedded by Vite
+ * in every asset URL — so each locale needs its own build output and manifest.
+ * Callers pass `locale` only for non-default locales, which keeps the
+ * single-locale layout unchanged.
  */
-export function getSlidevCacheDir(siteDir: string, pluginId: string): string {
+export function getSlidevCacheDir(siteDir: string, pluginId: string, locale?: string): string {
   validatePluginId(pluginId);
-  return path.join(siteDir, ".docusaurus", SLIDEV_CACHE_DIR, pluginId);
+  const base = path.join(siteDir, ".docusaurus", SLIDEV_CACHE_DIR, pluginId);
+  if (!locale) return base;
+  if (!SAFE_SEGMENT.test(locale)) {
+    throw new Error(`[Security] Invalid locale "${locale}": must contain only letters, digits, underscores and dashes.`);
+  }
+  return path.join(base, "i18n", locale);
 }
 
 /**
- * Remove Slidev-generated artifacts from the source directory.
- * Prevents stale dist/ or .slidev/ from being committed alongside the sources.
+ * Remove artifacts left in the source directory by previous plugin versions.
+ *
+ * Only the zero-byte `index.html` sentinel the plugin used to write is removed:
+ * a non-empty `index.html`, a `dist/` or a `.slidev/` folder may be legitimate
+ * user content (custom HTML, Slidev drawings persistence…) and are never deleted.
+ * Builds now run in isolated directories, so nothing new is written here.
  */
 export function cleanupSourceDirectory(sourcePath: string): void {
-  if (!fs.existsSync(sourcePath)) return;
-  for (const name of SLIDEV_BUILD_ARTIFACTS) {
-    const fullPath = path.join(sourcePath, name);
-    if (fs.existsSync(fullPath)) fs.rmSync(fullPath, { recursive: true, force: true });
+  const sentinel = path.join(sourcePath, "index.html");
+  try {
+    const stat = fs.lstatSync(sentinel);
+    if (stat.isFile() && stat.size === 0) fs.rmSync(sentinel, { force: true });
+  } catch {
+    // absent — nothing to clean
   }
 }
 

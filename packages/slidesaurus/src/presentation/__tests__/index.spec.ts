@@ -23,7 +23,7 @@ describe("validateOptions", () => {
     expect(result.routeBasePath).toBe("/slidev");
     expect(result.buildTimeout).toBe(120);
     expect(result.verbose).toBe(false);
-    expect(result.theme).toBe("unicorn");
+    expect(result.theme).toBeUndefined();
     expect(result.maxParallelBuilds).toBe(Math.max(1, require("node:os").cpus().length - 1));
     expect(result.download).toBe(false);
     // OWASP A05 — autoInstall defaults to false (opt-in, not opt-out)
@@ -119,5 +119,58 @@ describe("validateOptions", () => {
         validate: noopValidate,
       }),
     ).toThrow();
+  });
+});
+
+describe("validateOptions — routeBasePath and id", () => {
+  it.each(["slidev", "/../outside", "/a/../b"])(
+    "rejects routeBasePath %j",
+    (routeBasePath) => {
+      expect(() =>
+        validateOptions({ options: { routeBasePath }, validate: noopValidate }),
+      ).toThrow();
+    },
+  );
+
+  it.each(["../x", "a/b", "with space"])("rejects id %j", (id) => {
+    expect(() =>
+      validateOptions({ options: { id }, validate: noopValidate }),
+    ).toThrow();
+  });
+
+  it("accepts a safe id", () => {
+    const result = validateOptions({
+      options: { id: "talks_2026-fr" },
+      validate: noopValidate,
+    });
+    expect(result.id).toBe("talks_2026-fr");
+  });
+});
+
+describe("validateOptions — deprecated options", () => {
+  it("maps a deprecated alias to its new name", () => {
+    const result = validateOptions({
+      options: { sourceDir: "./talks" },
+      validate: noopValidate,
+    });
+    expect(result.path).toBe("./talks");
+    expect(result).not.toHaveProperty("sourceDir");
+  });
+
+  it("keeps the new name when both the alias and the new name are set", () => {
+    const result = validateOptions({
+      options: { sourceDir: "./old", path: "./new" },
+      validate: noopValidate,
+    });
+    expect(result.path).toBe("./new");
+    expect(result).not.toHaveProperty("sourceDir");
+  });
+
+  it("still accepts the no-effect dev server options", () => {
+    const result = validateOptions({
+      options: { devServerBasePort: 8700, devServerTimeout: 60000 },
+      validate: noopValidate,
+    });
+    expect(result.devServerBasePort).toBe(8700);
   });
 });

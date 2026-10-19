@@ -159,10 +159,13 @@ export function registerCliCommands(
     return scanPromise;
   };
 
+  // Multi-instance: suffix non-default instances so names stay unique
+  // (e.g. `slidev:list` and `slidev:list:talks`).
+  const suffix = options.id === "default" ? "" : `:${options.id}`;
   const allCommands = [...BUILTIN_COMMANDS, ...extraCommands];
   for (const cmd of allCommands) {
     cli
-      .command(cmd.name)
+      .command(`${cmd.name}${suffix}`)
       .description(cmd.description)
       // Wrap to share the lazy scan across built-in commands; extra commands
       // manage their own scan via cmd.action(options, context).

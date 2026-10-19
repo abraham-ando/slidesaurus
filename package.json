@@ -9,20 +9,34 @@
     "clean": "turbo run clean",
     "build:plugin": "turbo run build --filter=slidesaurus",
     "dev:sample": "turbo run dev --filter=@slidesaurus/sample",
-    "dev:docs": "turbo run dev --filter=@slidesaurus/docs"
+    "dev:docs": "turbo run dev --filter=@slidesaurus/docs",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@slidev/cli": "^52.0.0",
     "@slidev/theme-seriph": "*",
-    "turbo": "^2.0.0"
+    "eslint": "^10.13.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.0.0",
+    "prettier": "^3.9.10",
+    "turbo": "^2.9.14",
+    "typescript-eslint": "^8.71.2"
   },
   "pnpm": {
     "overrides": {
       "webpack": "~5.104.1",
       "serialize-javascript": ">=7.0.5",
       "dompurify": ">=3.3.4",
-      "webpack-dev-server": ">=5.2.1",
-      "uuid": ">=14.0.0"
+      "webpack-dev-server": "^5.2.6",
+      "uuid": ">=14.0.0",
+      "js-yaml@3": "^3.15.2",
+      "js-yaml@4": "^4.3.2"
     },
     "onlyBuiltDependencies": [
       "core-js",
@@ -32,7 +46,7 @@
     ]
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.12.0"
   },
   "packageManager": "pnpm@10.33.0"
 }

@@ -72,7 +72,9 @@ interface SlidevFrontmatter {
 
 ## `PresentationMetadata`
 
-Internal representation of a discovered presentation, combining frontmatter with computed fields.
+Representation of a discovered presentation, combining frontmatter with computed fields. It is an alias of `EnrichedPresentationMetadata` (core fields + optional frontmatter-derived fields); `CorePresentationMetadata` and `EnrichedPresentationMetadata` are also exported for narrower typing.
+
+`url` and `previewUrl` include the site `baseUrl`. Hooks such as `onPresentationScanned` receive the full object, including the server-only `sourceAbsolutePath` and `outputPath`; theme components receive the [`Presentation`](#theme-facing-types) subset.
 
 ```ts
 interface PresentationMetadata {
@@ -99,6 +101,7 @@ interface PresentationMetadata {
   url: string;
   outputPath: string;
   previewUrl: string;
+  /** @deprecated No longer set — kept for backward compatibility. */
   devUrl?: string;
   thumbnailUrl?: string;
   /** URLs to pre-generated export files. Only set when options.download is true. */
@@ -169,8 +172,37 @@ interface BuildResult {
   duration?: number;
   /** True when the result was served from the incremental cache (no rebuild occurred). */
   cacheHit?: boolean;
+  /** Non-blocking problems (e.g. thumbnail / PDF export failed because Playwright is missing). */
+  warnings?: string[];
 }
 ```
+
+A result with `success: true` and `warnings` means the presentation itself built correctly but an optional asset could not be generated. Such failures never invalidate the cache and never fail the build.
+
+---
+
+## `PresentationBuildError`
+
+Thrown by `docusaurus build` when at least one presentation failed to build. `failures` carries every failed `BuildResult`; the message lists them all.
+
+```ts
+class PresentationBuildError extends Error {
+  readonly failures: BuildResult[];
+}
+
+/** Failed results of a build run (asset warnings are NOT failures). */
+function collectBuildFailures(results: BuildResult[]): BuildResult[];
+/** Throws a PresentationBuildError if any result failed. */
+function assertBuildSucceeded(results: BuildResult[]): void;
+```
+
+These helpers are internal to the plugin (not re-exported from the package entry point); they are documented here to explain the error you see in CI.
+
+---
+
+## `PresentationCollisionError`
+
+Thrown during scanning when two presentations would be served from the same route or nested in each other's build output — for example `foo.md` next to a `foo/` directory, or ids that only differ by case (`Intro.md` / `intro.md`). `collisions` lists a human-readable description of each conflict. Rename a file or directory to fix it.
 
 ---
 
@@ -182,6 +214,12 @@ Context passed to the builder, providing the Docusaurus site root and base URL.
 interface BuildContext {
   siteDir: string;
   baseUrl: string;
+  /**
+   * Current Docusaurus locale, set ONLY for non-default locales. Selects a
+   * per-locale build cache (each locale has its own baseUrl, embedded in the
+   * built assets). Undefined → single, locale-less cache.
+   */
+  locale?: string;
 }
 ```
 
@@ -189,7 +227,7 @@ interface BuildContext {
 
 ## `PluginOptions`
 
-Full plugin configuration. Extends `ScanOptions`, `BuildOptions`, and `UIOptions`.
+Full plugin configuration. Extends `ScanOptions`, `BuildOptions`, `UIOptions` and `DevServerOptions`.
 
 ```ts
 interface ScanOptions {
@@ -200,6 +238,7 @@ interface ScanOptions {
 }
 
 interface BuildOptions {
+  /** Default theme. No built-in default: decks fall back to their own frontmatter theme or Slidev's default. */
   theme?: string;
   addons?: string[];
   buildTimeout: number;
@@ -214,6 +253,12 @@ interface BuildOptions {
   exportWithClicks: boolean;
 }
 
+/** @deprecated Both options are accepted but have no effect (no Slidev dev server any more). */
+interface DevServerOptions {
+  devServerBasePort: number;
+  devServerTimeout: number;
+}
+
 interface UIOptions {
   routeBasePath: string;
   pageTitle: string;
@@ -222,7 +267,7 @@ interface UIOptions {
   uiTheme: UITheme;
 }
 
-interface PluginOptions extends ScanOptions, BuildOptions, UIOptions {
+interface PluginOptions extends ScanOptions, BuildOptions, UIOptions, DevServerOptions {
   onPresentationScanned?: (presentation: PresentationMetadata) => void | Promise<void>;
   onBuildComplete?: (results: BuildResult[]) => void | Promise<void>;
   transformFrontmatter?: (data: SlidevFrontmatter, filePath: string) => SlidevFrontmatter;
@@ -249,7 +294,7 @@ interface PluginContentData {
 
 ## Theme-facing types
 
-These types are exposed to React theme components via `usePluginData()`. They omit server-only fields (`sourceAbsolutePath`, `outputPath`).
+These types are exposed to React theme components via `usePluginData()`. They omit server-only fields (`sourceAbsolutePath`, `outputPath`), and the global data only carries the UI-relevant part of the config — absolute paths, hooks and build options are never sent to the browser.
 
 ```ts
 /** Presentation data exposed to theme components. */
@@ -296,18 +341,28 @@ const uiTheme = useUITheme("training"); // named plugin instance
 
 ## Usage
 
+The package entry point (`slidesaurus`) exports the plugin itself (default export), `validateOptions`, `getSwizzleComponentList`, the `SlidesaurusPluginOptions` type (`Partial<PluginOptions>`) and every public type on this page:
+
+```ts title="docusaurus.config.ts"
+import type { SlidesaurusPluginOptions } from "slidesaurus";
+
+const options: SlidesaurusPluginOptions = {
+  path: "./slidev",
+  onPresentationScanned(presentation) {
+    // `presentation` is inferred as PresentationMetadata
+  },
+};
+```
+
+Import the other types by name when you type hooks or swizzled components:
+
 ```ts
 import type {
-  PluginOptions,
-  PresentationMetadata,
-  CategoryMetadata,
-  PlaylistData,
-  ScanResult,
   BuildResult,
-  BuildContext,
-  ExportFormat,
-  PresentationLevel,
+  PresentationMetadata,
   SlidevFrontmatter,
-  UITheme,
+  PluginData,
 } from "slidesaurus";
 ```
+
+Exported types: `BuildResult`, `Category`, `CategoryMetadata`, `CorePresentationMetadata`, `EnrichedPresentationMetadata`, `ExportFormat`, `PlaylistData`, `PluginConfig`, `PluginData`, `PluginOptions`, `Presentation`, `PresentationLevel`, `PresentationMetadata`, `SlidevFrontmatter`, `UITheme`. Build helpers such as `assertBuildSucceeded` stay internal.

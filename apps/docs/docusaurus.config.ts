@@ -1,7 +1,7 @@
 import { themes as prismThemes } from "prism-react-renderer";
 import type { Config } from "@docusaurus/types";
 import type * as Preset from "@docusaurus/preset-classic";
-import { SlidesaurusPluginOptions } from "slidesaurus";
+import type { SlidesaurusPluginOptions } from "slidesaurus";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -15,10 +15,6 @@ const slidesaurusPluginOptions: SlidesaurusPluginOptions = {
   download: false,
   exportFormats: ["pdf", "pptx"],
   maxParallelBuilds: 4,
-  // Use port range 8700-8799 to avoid collision with @slidesaurus/sample (8600-8699)
-  devServerBasePort: 8700,
-  // Slidev dev server needs time for Vite + dependencies on first start
-  devServerTimeout: 60000,
 };
 
 const config: Config = {
@@ -27,8 +23,11 @@ const config: Config = {
     "Seamlessly integrate Slidev presentations into your Docusaurus site",
   favicon: "img/favicon.ico",
 
-  url: "http://localhost:3001",
-  baseUrl: "/",
+  // Public URL of the deployed site (used for canonical/og:url, sitemap, absolute links).
+  // Set SITE_URL (and SITE_BASE_URL when served from a sub-path) in the deployment
+  // environment; the fallbacks target the local dev server (port 3001).
+  url: process.env.SITE_URL ?? "http://localhost:3001",
+  baseUrl: process.env.SITE_BASE_URL ?? "/",
 
   onBrokenLinks: "throw",
 
@@ -46,7 +45,8 @@ const config: Config = {
   headTags: [
     // CSP is only applied in production: webpack dev server uses eval() for
     // source maps which violates script-src without 'unsafe-eval', causing a
-    // blank page in development mode.
+    // blank page in development mode. `frame-ancestors` is omitted: browsers
+    // ignore it in a <meta> CSP (it must be sent as an HTTP header).
     ...(isProd
       ? [
           {
@@ -54,7 +54,7 @@ const config: Config = {
             attributes: {
               "http-equiv": "Content-Security-Policy",
               content:
-                "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; frame-src 'self'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self' https: http: wss: ws:; upgrade-insecure-requests",
+                "default-src 'self'; base-uri 'self'; object-src 'none'; frame-src 'self'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self' https: http: wss: ws:; upgrade-insecure-requests",
             },
           },
         ]

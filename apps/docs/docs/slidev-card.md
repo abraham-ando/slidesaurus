@@ -21,15 +21,13 @@ This copies the component into your site's `src/theme/SlidevCard/` directory whe
 | Prop | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | `presentation` | `Presentation` | Yes | — | Full presentation object from `usePluginData()`. See [`Presentation` type](./types.md#theme-facing-types). |
-| `isDev` | `boolean` | Yes | — | When `true`, renders a placeholder icon instead of an iframe or thumbnail, and disables overlay actions. |
 | `horizontal` | `boolean` | No | `false` | When `true`, renders the image on the left and metadata on the right (list view layout). |
 | `uiTheme` | `UITheme` | No | `"default"` | Visual layout variant. Set automatically from the plugin's `uiTheme` option by `SlidevOverview`. Built-in values: `"default"` (full card), `"compact"` (smaller preview, no description), `"minimal"` (text-only row). Custom strings are applied as `data-slidev-ui-theme` for CSS targeting. |
 
 ## Behavior
 
-- **Production mode** (`isDev: false`): displays a thumbnail PNG (`presentation.thumbnailUrl`) when available. If the thumbnail fails to load, falls back to a scaled iframe preview of `presentation.url`.
-- **Dev mode** (`isDev: true`): displays a placeholder icon with a "Build Required" badge. No iframe or thumbnail is rendered.
-- **Presenter overlay**: a "Present" button linking to `{presentation.url}presenter/` appears on hover (production only).
+- **Preview**: displays the thumbnail PNG (`presentation.thumbnailUrl`) when available. If the thumbnail is missing or fails to load (for example when Playwright was not installed at build time), it falls back to a scaled, lazy-loaded iframe preview of `presentation.previewUrl` (see the sandbox note in [Presentation Page](./presentation-page.md)).
+- **Presenter overlay**: a "Present" button linking to `{presentation.url}presenter/` appears on hover or keyboard focus.
 - **Download overlay**: if `presentation.exportUrls` is set, download buttons appear for each format (PDF, PPTX).
 - **Favorites**: a star button in the top corner toggles the card in localStorage-backed favorites.
 - **Level badge**: color-coded (`beginner` → green, `intermediate` → orange, `advanced` → red).
@@ -38,7 +36,9 @@ This copies the component into your site's `src/theme/SlidevCard/` directory whe
 
 ## Styling
 
-The component uses CSS Modules ([styles.module.css](https://github.com/abraham-ando/slidesaurus/tree/main/packages/slidesaurus/theme/SlidevCard/styles.module.css)). Override styles by targeting the generated CSS classes or by swizzling the component.
+The component uses CSS Modules ([styles.module.css](https://github.com/abraham-ando/slidesaurus/tree/main/packages/slidesaurus/theme/SlidevCard/styles.module.css)). Override styles with the `--slidev-card-*` design tokens and the `data-slidev-ui-theme` attribute, or by swizzling the component.
+
+The root element is a `<div>` (not a link). The title `<a class="cardLink">` is stretched over the whole card with a `::after` pseudo-element, so the whole card is clickable while the favorite button and the presenter/download links stay independent siblings. If you wrote CSS targeting `a.card` or `a[data-slidev-ui-theme]` for cards, retarget it to `[data-slidev-ui-theme]` (no tag) or `.card`.
 
 ## SlidevCard vs SlidevLink
 

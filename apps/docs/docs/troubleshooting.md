@@ -10,7 +10,7 @@ Common issues and their solutions.
 
 **Error:** `slidev: command not found` or `Cannot find module '@slidev/cli'`
 
-**Cause:** The Slidev CLI is a peer dependency and must be installed in your project.
+**Cause:** `@slidev/cli` is an optional peer dependency — the plugin does not install it for you, and without it no presentation is built (a warning is logged).
 
 **Solution:**
 
@@ -70,9 +70,41 @@ Check the theme name spelling. Official themes use `@slidev/theme-*`, community 
 
 **Possible causes:**
 
-1. **Dev mode** — presentations are only built during `docusaurus build`, not `docusaurus start`. Run a full build first.
-2. **Build failed silently** — enable `verbose: true` to see build output.
-3. **Wrong base path** — ensure the `routeBasePath` matches the path configured in the plugin.
+1. **`@slidev/cli` not installed** — nothing is built. Check the terminal for the warning and run `slidesaurus doctor`.
+2. **Build failed** — in `docusaurus start` a failed build is only logged. Enable `verbose: true` to see the Slidev output.
+3. **`dryRun: true`** — builds are skipped, so there is nothing to show.
+4. **Wrong base URL** — presentations embed the site `baseUrl` at build time. If you changed `baseUrl` or `routeBasePath`, rebuild (the cache detects the change automatically).
+5. **Stale cache from CI** — see [CI caching warning](./parallel-builds.md#ci-caching-warning).
+
+Presentations are built in `docusaurus start` too (and served as static files) — see [Dev Server](./dev-server.md).
+
+---
+
+## Build Fails With "N Slidev presentation(s) failed to build"
+
+**Cause:** In `docusaurus build`, any presentation that fails makes the whole build fail, so a broken deck never ships as a missing page. The error lists every failed presentation with the first line of its error (timeout, missing theme or addon, Slidev error…).
+
+**Solution:** Fix the listed presentations (re-run with `verbose: true` for the complete Slidev output). In `docusaurus start`, the same failures are only logged.
+
+---
+
+## Route Collision
+
+**Error:** `Slidev presentation route collision(s)` (`PresentationCollisionError`)
+
+**Cause:** Two presentations would be served from the same place: `foo.md` next to a `foo/` directory that contains other decks, or file names that only differ by case (`Intro.md` and `intro.md`).
+
+**Solution:** Rename one of the files or directories.
+
+---
+
+## Thumbnails or Exports Missing
+
+**Symptom:** Cards show a live iframe instead of a thumbnail, or the download button leads to a missing file. The build log shows an "Asset warnings" line.
+
+**Cause:** Thumbnail and PDF/PPTX generation need Playwright. When it is missing, the plugin logs a warning and continues — the presentation itself is fine.
+
+**Solution:** `npm install -D playwright-chromium` then `npx playwright install chromium`.
 
 ---
 
@@ -119,9 +151,10 @@ webpack: {
 **Checklist:**
 
 1. Files are `.md` format and located in the `path` directory (default: `./slidev`).
-2. Files have valid frontmatter with at least a `title` field.
+2. Frontmatter is optional; without a `title`, the file name is used.
 3. The `path` option points to the correct directory relative to the site root.
-4. Files are not inside nested directories without a `_category_.yml` (they should still be discovered, but verify the directory structure).
+4. Files and directories starting with `.` or `_`, `node_modules` and `sections/` are ignored. Symlinks are not followed.
+5. Nested directories are fine without a `_category_.yml` — the label is derived from the directory name.
 
 ---
 
@@ -149,8 +182,8 @@ Or configure it in your `package.json` scripts:
 
 **Checklist:**
 
-1. The file has a YAML frontmatter block with at least a `title` field at the very top of the file.
-2. The file extension is `.md` (not `.mdx` or `.txt`).
+1. If you use frontmatter, it is valid YAML at the very top of the file (`---js` frontmatter is refused).
+2. The file extension is `.md` (not `.mdx` or `.txt`), and its path has no segment starting with `.` or `_`.
 3. You ran `npm run build` or restarted `npm start` — the scanner only re-runs on a fresh `loadContent` cycle.
 4. The `path` option in `docusaurus.config.ts` points to the directory that **contains** the file. Run `slidesaurus list` to see what the plugin actually discovered.
 
@@ -160,12 +193,12 @@ Or configure it in your `package.json` scripts:
 
 **Symptom:** A metadata field is ignored or missing from the card even though it is in frontmatter.
 
-**Cause:** The field value failed validation and was silently discarded.
+**Cause:** The field value failed validation and was discarded (with a warning).
 
 **Solution:** Check your terminal output for lines like:
 
 ```
-[WARN] [Slidev Plugin] "level" is invalid for "intro/my-talk": expected one of beginner, intermediate, advanced — ignoring.
+[WARN] Invalid "level": must be one of beginner, intermediate, advanced in intro/my-talk.md
 ```
 
 Common mistakes:
@@ -185,22 +218,16 @@ Enable `verbose: true` to see full validation output during a build.
 
 **Symptom:** The download button is missing, or the PDF/PPTX file is not created.
 
-**Cause:** `download: true` requires `@playwright/test` to be installed.
+**Cause:** `download: true` requires Playwright. When it is missing the export is skipped with a warning.
 
 **Solution:**
 
 ```bash
-npm install -D @playwright/test
+npm install -D playwright-chromium
 npx playwright install chromium
 ```
 
-Then verify the setup with:
-
-```bash
-slidesaurus doctor
-```
-
-The doctor check will report `✗ Playwright browser not found` if the browser binary is missing.
+Then verify the setup with `slidesaurus doctor`, which reports whether `playwright-chromium` is resolvable from your project.
 
 ---
 
@@ -224,7 +251,17 @@ The doctor check will report `✗ Playwright browser not found` if the browser b
 
 3. **Custom uiTheme not matching** — If you wrote CSS targeting `[data-slidev-ui-theme="glass"]` but the plugin option is `uiTheme: "default"`, no element will ever carry the `glass` attribute. Confirm the `uiTheme` option in `docusaurus.config.ts`.
 
-4. **SSR specificity** — Some CSS Module class names are hashed; they cannot be targeted from global CSS. Use CSS custom property tokens (`--slidev-card-*`) instead of trying to target internal class names. See [Custom Styling](./custom-styling.md).
+4. **SSR specificity** — Some CSS Module class names are hashed; they cannot be targeted from global CSS. Use CSS custom property tokens (`--slidev-card-*`) or the `data-slidev-ui-theme` attribute instead of trying to target internal class names. Do not rely on an `a` tag for card roots — they are `<div>` elements. See [Custom Styling](./custom-styling.md).
+
+---
+
+## Auto-Install Refuses a Package
+
+**Error:** `Invalid Slidev theme package …` / `Invalid Slidev addon package …`
+
+**Cause:** `autoInstall` only installs packages named like Slidev themes/addons (`slidev-theme-*`, `@slidev/theme-*`, `@scope/slidev-theme-*`, and the same for addons). Anything else — including `@org/some-addon` — is refused.
+
+**Solution:** Install the package yourself, or rename it to follow the convention. See [Themes & Addons](./themes-addons.md#auto-install).
 
 ---
 

@@ -49,6 +49,10 @@ Every component root element receives the attribute `data-slidev-ui-theme="{valu
 
 This means **any string** you pass as `uiTheme` is set on the element — custom values are passed through as-is, giving you a CSS extension point without swizzling.
 
+:::note Card structure
+`SlidevCard` and `SlidevListItem` roots are `<div>` elements, not links: the title `<a class="cardLink">` is stretched over the card with `.cardLink::after` (the "card link" pattern), and the favorite button, presenter and download links are siblings placed above it. CSS written for the former `a.card` root must target `[data-slidev-ui-theme]` or the `.card` class instead of an `a` selector. Category cards (`SlidevCategoryCard`, category rows in `SlidevListItem`) are still links.
+:::
+
 ---
 
 ## 2 · CSS Custom Properties (Design Tokens)
@@ -99,8 +103,8 @@ plugins: [["slidesaurus", { uiTheme: "glass" }]],
 
 ```css title="src/css/themes/glass.css"
 /* Design tokens — light mode
-   Use the attribute selector without a tag so it matches <a>, <div>,
-   and any future root element type. */
+   Use the attribute selector without a tag: card roots are <div> elements
+   (SlidevCard, SlidevListItem), while category cards are <a> links. */
 [data-slidev-ui-theme="glass"] {
   --slidev-card-bg:              rgba(255, 255, 255, 0.55);
   --slidev-card-shadow:          0 4px 24px rgba(124, 58, 237, 0.08),
@@ -120,8 +124,7 @@ plugins: [["slidesaurus", { uiTheme: "glass" }]],
 }
 
 /* Dark mode overrides */
-[data-theme="dark"] a[data-slidev-ui-theme="glass"],
-[data-theme="dark"] div[data-slidev-ui-theme="glass"] {
+[data-theme="dark"] [data-slidev-ui-theme="glass"] {
   --slidev-card-bg:           rgba(15, 10, 40, 0.55);
   --slidev-card-shadow:       0 4px 24px rgba(0, 0, 0, 0.4),
                               inset 0 0 0 1px rgba(167, 139, 250, 0.15);
@@ -220,7 +223,9 @@ Ejected components are **not updated** when the plugin is upgraded. Prefer wrapp
 | `SlidevCategoryCard` | Single category card (grid view + horizontal list mode) |
 | `SlidevListItem` | Single row in list view (presentations and categories) |
 | `SlidevPresentation` | Individual presentation page — iframe, presenter link, resume bar, playlist bar |
-| `SlidevLink` | Embeddable inline preview component for MDX pages |
+| `SlidevLink` | Embeddable inline preview component for MDX pages (importable via `@theme/SlidevLink`; not in the swizzle list) |
+
+All iframes go through the internal `SlidevIframe` component, which applies the single sandbox policy `SLIDEV_IFRAME_SANDBOX` (`allow-scripts allow-same-origin allow-popups allow-forms allow-presentation`). That combination is only safe for content you build and serve yourself; do not use it to embed third-party pages.
 
 ### Wrap example — team banner above the overview
 
@@ -232,7 +237,8 @@ type Props = React.ComponentProps<typeof OriginalSlidevOverview>;
 
 export default function SlidevOverview(props: Props) {
   return (
-    <>
+    // `children` are rendered inside the page layout, above the overview
+    <OriginalSlidevOverview {...props}>
       {/* Custom banner injected above the original overview */}
       <div style={{ background: "var(--ifm-color-primary-lightest)",
                     borderRadius: 12, padding: "1rem 2rem", margin: "0 0 0.5rem",
@@ -249,9 +255,7 @@ export default function SlidevOverview(props: Props) {
           Contribute →
         </Link>
       </div>
-      {/* Original overview renders normally below */}
-      <OriginalSlidevOverview {...props} />
-    </>
+    </OriginalSlidevOverview>
   );
 }
 ```

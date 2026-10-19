@@ -23,7 +23,7 @@ The resolution order is:
 
 ## Setting a Default Theme
 
-Set the `theme` option in your plugin configuration to apply a theme to all presentations:
+The `theme` option has **no built-in default**. Without it, each presentation uses the theme declared in its own frontmatter, or the built-in default theme of Slidev. Set the option to apply a theme to every presentation that does not declare one:
 
 ```ts title="docusaurus.config.ts"
 plugins: [
@@ -52,7 +52,7 @@ This presentation uses apple-basic instead of the default theme.
 
 ## Auto-Install
 
-When `autoInstall` is enabled, the plugin detects missing theme packages and installs them automatically before building. This means you can reference any published theme without manually running `npm install`.
+When `autoInstall` is enabled, the plugin detects missing theme packages and installs them automatically before building. This means you can reference a published theme without manually installing it first.
 
 `autoInstall` is **disabled by default** — you must opt in explicitly. This prevents unexpected package installations in CI or production environments (OWASP A05 — Principle of Least Privilege).
 
@@ -61,6 +61,12 @@ When `autoInstall` is enabled, the plugin detects missing theme packages and ins
   autoInstall: true,  // opt in: install missing themes/addons automatically
 }
 ```
+
+Auto-install is deliberately conservative:
+
+- Only packages that follow the Slidev naming convention are accepted: themes `slidev-theme-*`, `@slidev/theme-*` or `@scope/slidev-theme-*`; addons `slidev-addon-*`, `@slidev/addon-*` or `@scope/slidev-addon-*`. Anything else (including `@org/some-addon`) is refused.
+- The package manager (pnpm, yarn or npm, detected from your lockfile) is run **without a shell** and with lifecycle scripts disabled (`--ignore-scripts`), with a 5-minute timeout and a filtered environment.
+- Local paths (`./my-theme`) are never installed and must stay inside the project directory.
 
 :::tip Pre-install for performance
 For faster and more predictable builds, add themes and addons to `package.json` and keep `autoInstall: false`. This avoids network requests during the build hot path.
@@ -92,7 +98,7 @@ addons: [excalidraw]
 ---
 ```
 
-Addons follow the same shorthand resolution and auto-install behavior as themes.
+Addons follow the same shorthand resolution (`excalidraw` → `slidev-addon-excalidraw`; `@scope/…` names are kept as is) and auto-install behavior as themes. The addon list of a deck is the union of the global `addons` option and its frontmatter `addons`; the resolved list **replaces** the frontmatter value in the isolated build copy, so an addon is never loaded twice.
 
 ## Popular Themes
 

@@ -4,148 +4,116 @@
  * Single responsibility: create and clean up the per-presentation temporary
  * directory that Slidev builds in, ensuring each build is fully independent
  * with no shared state across parallel builds.
+ *
+ * Layout — the slides tree is mirrored below the isolated root so that
+ * relative references such as `../shared/logo.png` keep resolving:
+ *
+ *   builds/{safeId}/                         ← isolated root (removed after build)
+ *     {relative dir of the deck}/{safeId}.md ← patched copy of the entry
+ *     {relative dir of the deck}/…           ← co-located assets
+ *     shared/logo.png                        ← `../shared/logo.png` dependency
  */
 import fs from "node:fs";
 import path from "node:path";
-import { SLIDEV_BUILD_ARTIFACTS } from "./fileSystem";
-
-// ── Internal helpers ──────────────────────────────────────────────────────────
-
-/** Hard-link src to dest; fall back to copyFileSync on cross-device / FAT filesystems. */
-function hardLinkOrCopy(src: string, dest: string): void {
-  try {
-    fs.linkSync(src, dest);
-  } catch {
-    fs.copyFileSync(src, dest);
-  }
-}
-
-/** Recursively copy a directory, skipping symlinks to prevent traversal. */
-function copyDirRecursive(src: string, dest: string): void {
-  if (fs.lstatSync(src).isSymbolicLink()) return;
-  fs.mkdirSync(dest, { recursive: true });
-  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    if (entry.isSymbolicLink()) continue;
-    const srcPath = path.join(src, entry.name);
-    const destPath = path.join(dest, entry.name);
-    if (entry.isDirectory()) {
-      copyDirRecursive(srcPath, destPath);
-    } else {
-      fs.copyFileSync(srcPath, destPath);
-    }
-  }
-}
+import { toSafeId } from "../../shared/utils";
+import { collectPresentationDependencies } from "./dependencies";
+import { hardLinkOrCopy, isInside, removeBestEffort } from "./fsUtils";
 
 /**
- * Copy the source .md file to the isolated directory.
- * Hard links are intentionally NOT used here — patchFrontmatterAddons/Theme
- * writes to this path and hard-linked inodes share the same content, which
- * would silently corrupt the original presentation source.
+ * Files Slidev may (re)write at the root of its entry directory. They are
+ * always COPIED, never hard-linked: writing through a hard link would
+ * silently modify the user's source file.
  */
-function copySourceFile(src: string, dest: string): void {
-  fs.copyFileSync(src, dest);
-}
+const NEVER_LINK = new Set(["index.html"]);
 
-/**
- * Hard-link (or copy as fallback) all co-located non-.md assets from sourceDir
- * into isolatedDir. Hard links avoid I/O duplication across parallel builds.
- */
-function copyColocatedAssets(sourceDir: string, isolatedDir: string): void {
-  for (const entry of fs.readdirSync(sourceDir, { withFileTypes: true })) {
-    if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
-    if (entry.name.endsWith(".md") || entry.name.startsWith("_category_")) continue;
-    const srcPath = path.join(sourceDir, entry.name);
-    const destPath = path.join(isolatedDir, entry.name);
-    if (entry.isDirectory()) {
-      copyDirRecursive(srcPath, destPath);
-    } else {
-      hardLinkOrCopy(srcPath, destPath);
-    }
-  }
+/** Paths of a freshly created isolated build directory. */
+export interface IsolatedBuildDir {
+  /** Unique, injective filesystem-safe id (see `toSafeId`). */
+  safeId: string;
+  /** Root of the isolated tree — remove it to clean everything up. */
+  isolatedDir: string;
+  /** Patched copy of the presentation entry `.md`. */
+  isolatedSourcePath: string;
 }
-
-/**
- * Strip fenced code blocks, inline code, and HTML comments from Markdown.
- * Applied before extracting relative asset paths to avoid false positives
- * (e.g. example paths inside ``` code fences).
- */
-function stripCodeFences(md: string): string {
-  return md
-    .replace(/^```[\s\S]*?^```/gm, "") // fenced blocks (``` ... ```)
-    .replace(/`[^`\n]+`/g, "")         // inline code (`...`)
-    .replace(/<!--[\s\S]*?-->/g, "");  // HTML comments
-}
-
-/**
- * Parse a Slidev markdown source for relative asset references and copy any
- * files not already present in the isolated build directory. Handles:
- *   - Markdown images:   ![alt](./path/to/img.png)
- *   - HTML src/href:     src="./path" href="./path"
- *   - CSS background:    background: ./path / url(./path)
- */
-function copyRelativeAssets(mdContent: string, sourceDir: string, isolatedDir: string): void {
-  const cleanContent = stripCodeFences(mdContent);
-  const RE = /(?:!\[[^\]]*\]\(|src=["']?|href=["']?|background:\s*|url\(["']?)(\.\.?\/[^)"'\s>]+)/g;
-  const seen = new Set<string>();
-  let m: RegExpExecArray | null;
-  while ((m = RE.exec(cleanContent)) !== null) {
-    const relPath = m[1];
-    if (seen.has(relPath)) continue;
-    seen.add(relPath);
-    const srcAbs = path.resolve(sourceDir, relPath);
-    const relCheck = path.relative(sourceDir, srcAbs);
-    if (!relCheck || relCheck === "." || relCheck.startsWith("..")) continue;
-    if (!fs.existsSync(srcAbs) || !fs.statSync(srcAbs).isFile()) continue;
-    const destAbs = path.resolve(isolatedDir, relPath);
-    if (!relPath.startsWith("../")) continue;
-    fs.mkdirSync(path.dirname(destAbs), { recursive: true });
-    if (!fs.existsSync(destAbs)) hardLinkOrCopy(srcAbs, destAbs);
-  }
-}
-
-// ── Public API ────────────────────────────────────────────────────────────────
 
 /**
  * Create an isolated build directory for a single presentation.
- * Orchestrates: path-traversal guard → copy source file → co-located assets
- * → relative assets referenced in the markdown → dummy index.html sentinel.
+ * Orchestrates: path-traversal guard → fresh directory → copy source file →
+ * dependencies (co-located assets, `src:` imports, relative assets) mirrored
+ * relative to `slidesRoot` → dummy index.html sentinel.
  *
+ * @param slidesRoot - Root of all slides (plugin `path`). Relative references
+ *   may climb up to this directory but never above. Defaults to the deck's directory.
+ */
+export function createIsolatedBuild(
+  sourceAbsolutePath: string,
+  presentationId: string,
+  cacheDir: string,
+  slidesRoot?: string,
+): IsolatedBuildDir {
+  const safeId = toSafeId(presentationId);
+  const buildsRoot = path.resolve(cacheDir, "builds");
+  const isolatedDir = path.resolve(buildsRoot, safeId);
+  if (!isInside(buildsRoot, isolatedDir) || isolatedDir === buildsRoot) {
+    throw new Error(`[Security] Path traversal detected in presentationId: "${presentationId}"`);
+  }
+  // Start from a clean directory — leftovers of a crashed run must not leak in.
+  fs.rmSync(isolatedDir, { recursive: true, force: true });
+  fs.mkdirSync(isolatedDir, { recursive: true });
+
+  const entry = path.resolve(sourceAbsolutePath);
+  const sourceDir = path.dirname(entry);
+  const root = slidesRoot && isInside(path.resolve(slidesRoot), entry) ? path.resolve(slidesRoot) : sourceDir;
+  const mirror = (abs: string): string => path.join(isolatedDir, path.relative(root, abs));
+
+  const isolatedEntryDir = mirror(sourceDir);
+  fs.mkdirSync(isolatedEntryDir, { recursive: true });
+  // The entry is copied (never linked): frontmatter patching writes to it.
+  const isolatedSourcePath = path.join(isolatedEntryDir, `${safeId}.md`);
+  fs.copyFileSync(entry, isolatedSourcePath);
+
+  for (const dep of collectPresentationDependencies(entry, root)) {
+    const dest = mirror(dep);
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    if (fs.existsSync(dest)) continue;
+    if (NEVER_LINK.has(path.basename(dep))) fs.copyFileSync(dep, dest);
+    else hardLinkOrCopy(dep, dest);
+  }
+
+  // Create a dummy index.html to prevent Slidev CLI ENOENT when it tries to unlink it.
+  const indexHtml = path.join(isolatedEntryDir, "index.html");
+  if (!fs.existsSync(indexHtml)) fs.writeFileSync(indexHtml, "", "utf-8");
+
+  return { safeId, isolatedDir, isolatedSourcePath };
+}
+
+/**
+ * Backward-compatible wrapper around `createIsolatedBuild`.
  * @returns The absolute path to the isolated copy of the source `.md` file.
  */
 export function createIsolatedBuildDir(
   sourceAbsolutePath: string,
   presentationId: string,
   cacheDir: string,
+  slidesRoot?: string,
 ): string {
-  const safeId = presentationId.replaceAll(/[/\\]/g, "__");
-  const buildsRoot = path.resolve(cacheDir, "builds");
-  const isolatedDir = path.resolve(buildsRoot, safeId);
-  const rel = path.relative(buildsRoot, isolatedDir);
-  if (rel.startsWith("..")) {
-    throw new Error(`[Security] Path traversal detected in presentationId: "${presentationId}"`);
-  }
-  fs.mkdirSync(isolatedDir, { recursive: true });
-
-  const isolatedSourcePath = path.join(isolatedDir, `${safeId}.md`);
-  const sourceDir = path.dirname(sourceAbsolutePath);
-
-  copySourceFile(sourceAbsolutePath, isolatedSourcePath);
-  copyColocatedAssets(sourceDir, isolatedDir);
-  copyRelativeAssets(fs.readFileSync(sourceAbsolutePath, "utf-8"), sourceDir, isolatedDir);
-  // Create a dummy index.html to prevent Slidev CLI ENOENT when it tries to unlink it.
-  fs.writeFileSync(path.join(isolatedDir, "index.html"), "", "utf-8");
-
-  return isolatedSourcePath;
+  return createIsolatedBuild(sourceAbsolutePath, presentationId, cacheDir, slidesRoot).isolatedSourcePath;
 }
 
 /**
- * Clean up build artifacts inside an isolated build directory after a build.
- * Keeps the directory itself so Slidev's watcher (if any) doesn't break.
+ * Remove an isolated build directory entirely (sources, copied assets and
+ * Slidev artifacts). Safe to call on a non-existent directory.
  */
-export function cleanupIsolatedBuildDir(isolatedDir: string): void {
-  if (!fs.existsSync(isolatedDir)) return;
-  for (const artifact of [...SLIDEV_BUILD_ARTIFACTS, "node_modules"]) {
-    const p = path.join(isolatedDir, artifact);
-    if (fs.existsSync(p)) fs.rmSync(p, { recursive: true, force: true });
-  }
+export function cleanupIsolatedBuildDir(isolatedDir: string): string | undefined {
+  // Best effort: a leftover dir is purged by the next run (purgeIsolatedBuilds),
+  // whereas throwing here would fail an otherwise successful build.
+  return removeBestEffort(isolatedDir);
+}
+
+/**
+ * Remove every leftover isolated directory under `{cacheDir}/builds/`
+ * (e.g. after a crash or a killed process). Call before starting a build run.
+ */
+export function purgeIsolatedBuilds(cacheDir: string): string | undefined {
+  return removeBestEffort(path.join(cacheDir, "builds"));
 }

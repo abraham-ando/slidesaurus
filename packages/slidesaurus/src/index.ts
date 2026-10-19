@@ -1,7 +1,9 @@
 /**
  * Slidesaurus plugin — Rollup entry point.
  *
- * This file is the sole entry point compiled by Rollup to `lib/index.cjs` / `lib/index.mjs`.
+ * This file is the sole entry point compiled by Rollup to `lib/index.cjs` (require)
+ * and `lib/index.mjs` (import), with bundled types in `lib/index.d.cts` / `lib/index.d.mts`.
+ * The theme components are compiled separately to `lib/theme/` (scripts/build-theme.mjs).
  * It re-exports everything from the presentation layer so external callers
  * (`docusaurus.config.ts`, type consumers) continue to import from "slidesaurus".
  *
@@ -12,5 +14,25 @@ export {
   default,
   getSwizzleComponentList,
   validateOptions,
-  SlidesaurusPluginOptions,
 } from "./presentation/plugin";
+export type { SlidesaurusPluginOptions } from "./presentation/plugin";
+
+// Public types — hooks (`transformFrontmatter`, `onPresentationScanned`,
+// `onBuildComplete`) and swizzled theme components rely on these shapes.
+export type {
+  BuildResult,
+  Category,
+  CategoryMetadata,
+  CorePresentationMetadata,
+  EnrichedPresentationMetadata,
+  ExportFormat,
+  PlaylistData,
+  PluginConfig,
+  PluginData,
+  PluginOptions,
+  Presentation,
+  PresentationLevel,
+  PresentationMetadata,
+  SlidevFrontmatter,
+  UITheme,
+} from "./domain/types";

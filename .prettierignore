@@ -1,0 +1,9 @@
+node_modules
+lib
+build
+.docusaurus
+.turbo
+coverage
+pnpm-lock.yaml
+.claude
+apps/*/slidev/**/*.md

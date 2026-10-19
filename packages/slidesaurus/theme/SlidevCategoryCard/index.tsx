@@ -14,7 +14,7 @@ export default function SlidevCategoryCard({ category, uiTheme = "default" }: Pr
   // Minimal variant — simple text row
   if (uiTheme === "minimal") {
     return (
-      <Link to={category.url} className={styles.cardMinimal}>
+      <Link to={category.url} className={styles.cardMinimal} data-slidev-ui-theme={uiTheme}>
         <FolderIcon className={styles.minimalIcon} width={16} height={16} />
         <span className={styles.minimalTitle}>{category.label}</span>
         <span className={styles.badge}>

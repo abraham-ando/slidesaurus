@@ -18,7 +18,7 @@ Thank you for your interest in contributing! This guide covers everything you ne
 
 ## Code of Conduct
 
-This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). By participating, you agree to uphold these standards.
+This project follows the [Contributor Covenant](https://www.contributor-covenant.org/) Code of Conduct. By participating, you agree to uphold these standards.
 
 ---
 
@@ -26,8 +26,8 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 
 | Type | Description |
 |---|---|
-| Bug reports | Open a [bug report issue](.github/ISSUE_TEMPLATE/bug_report.yml) with reproduction steps |
-| Feature requests | Open a [feature request](.github/ISSUE_TEMPLATE/feature_request.yml) with use-case context |
+| Bug reports | Open an issue with reproduction steps |
+| Feature requests | Open an issue with use-case context |
 | Documentation | Fix typos, improve examples, add missing docs in `apps/docs/docs/` |
 | Code | Fix bugs or implement features — start by commenting on the issue |
 | Themes/addons | Share examples in Discussions |
@@ -40,8 +40,8 @@ For significant changes, open an issue first to align on the approach before wri
 
 ### Prerequisites
 
-- **Node.js** ≥ 18
-- **pnpm** ≥ 9 — `npm install -g pnpm`
+- **Node.js** ≥ 20.12 (CI runs Node 20 and 22)
+- **pnpm** 10 — the exact version is pinned in the root `package.json` (`packageManager`); `corepack enable` picks it up automatically
 - **Git**
 
 ### 1. Fork and clone
@@ -75,11 +75,13 @@ pnpm dev:sample
 pnpm dev:docs
 ```
 
+The dev apps build presentations and serve them as static files — there is no Slidev dev server or HMR inside `docusaurus start`.
+
 ### Watch mode for the plugin
 
 ```bash
 cd packages/slidesaurus
-pnpm dev  # Rollup watch — rebuilds on every save
+pnpm dev  # Rollup watch — rebuilds on every save (including the compiled theme)
 ```
 
 ---
@@ -88,26 +90,29 @@ pnpm dev  # Rollup watch — rebuilds on every save
 
 ```
 ├── packages/
-│   └── slidesaurus/          # The npm package
-│       ├── src/              # TypeScript source
-│       │   ├── index.ts      # Plugin entry point (Docusaurus lifecycle)
-│       │   ├── scanner.ts    # Slide file discovery
-│       │   ├── builder.ts    # Parallel build orchestration
-│       │   ├── buildRunner.ts# Slidev CLI wrapper
-│       │   ├── devServerManager.ts  # Dev server process manager
-│       │   ├── packageResolver.ts   # Theme/addon install
-│       │   ├── fileSystem.ts # Incremental cache management
-│       │   ├── env.ts        # Environment allowlist
-│       │   └── cli/          # slidesaurus CLI commands
-│       ├── theme/            # Swizzlable React components
-│       ├── src/__tests__/    # Vitest unit tests
-│       └── features/         # Cucumber BDD integration tests
+│   └── slidesaurus/             # The npm package
+│       ├── src/                 # TypeScript source, organised in layers
+│       │   ├── index.ts         # Rollup entry — thin re-export of the plugin
+│       │   ├── domain/          # Types, interfaces, constants
+│       │   ├── application/     # scanner, builder, buildCache, frontmatterValidator
+│       │   ├── infrastructure/
+│       │   │   ├── fs/          # cache dirs, hashing, isolated builds, output management
+│       │   │   ├── process/     # buildRunner (slidev build), assetGenerator (thumbnails/exports)
+│       │   │   └── packages/    # packageResolver (theme/addon install), env allowlist
+│       │   ├── presentation/    # Docusaurus plugin lifecycle, routes, CLI commands, webpack config
+│       │   ├── shared/          # logger, utils, concurrentRunner
+│       │   └── cli/             # standalone `slidesaurus` CLI (new, list, doctor, cache)
+│       ├── theme/               # Swizzlable React components (TSX sources)
+│       ├── scripts/             # build-theme.mjs — compiles theme/ to lib/theme/
+│       └── features/            # Cucumber BDD integration tests
 ├── apps/
-│   ├── docs/                 # Documentation site (Docusaurus)
-│   └── sample/              # Sample integration (Docusaurus)
+│   ├── docs/                    # Documentation site (Docusaurus)
+│   └── sample/                  # Sample integration (Docusaurus)
 └── .github/
-    └── workflows/            # CI/CD pipelines
+    └── workflows/               # CI (ci.yml)
 ```
+
+Unit tests live next to each layer in `src/**/__tests__/`. Dependencies point inwards (`presentation`/`cli` → `application` → `infrastructure` → `domain`); `shared` can be used by every layer. See [CLAUDE.md](CLAUDE.md) for the role of each module.
 
 ---
 
@@ -141,10 +146,10 @@ pnpm dev  # Rollup watch — rebuilds on every save
 cd packages/slidesaurus
 pnpm test                                         # All unit tests
 pnpm test -- scanner                              # Filter by name
-pnpm test -- --reporter=verbose src/__tests__/builder.spec.ts
+pnpm test -- --reporter=verbose src/application/__tests__/builder.spec.ts
 ```
 
-Tests live in `src/__tests__/*.spec.ts`. Import `describe`, `it`, `expect`, `vi` explicitly (globals are disabled).
+Tests live in `src/**/__tests__/*.spec.ts`, next to the layer they test. Import `describe`, `it`, `expect`, `vi` explicitly (globals are disabled). Mock the logger with `vi.mock("<relative path>/shared/logger", ...)`.
 
 ### Integration tests (Cucumber BDD)
 
@@ -154,17 +159,23 @@ pnpm test:integration                             # All features
 pnpm test:integration -- features/scanning.feature
 ```
 
-### Type checking
+### Lint, format and type checking
+
+From the repo root:
 
 ```bash
-cd packages/slidesaurus
-pnpm exec tsc --noEmit
+pnpm lint            # ESLint
+pnpm format          # Prettier (write)
+pnpm format:check    # Prettier (check only)
+pnpm typecheck       # tsc for the plugin sources and the theme
 ```
 
 ### Full CI check
 
+CI (`.github/workflows/ci.yml`) runs on ubuntu and windows with Node 20 and 22, plus a pack & smoke job that installs the packed tarball in a fresh project. To reproduce it locally:
+
 ```bash
-pnpm build && pnpm --filter slidesaurus test && pnpm --filter slidesaurus test:integration
+pnpm typecheck && pnpm build && pnpm --filter slidesaurus test && pnpm --filter slidesaurus test:integration
 ```
 
 ---
@@ -199,7 +210,7 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/):
 ```
 feat(scanner): support _index.md as presentation entry point
 
-fix(devServer): prevent ECONNRESET on first proxy request after Vite init
+fix(builder): keep the previous output when a rebuild fails
 
 docs(options): document autoInstall default value change
 
@@ -210,7 +221,7 @@ security(buildRunner): add "--" separator before user-supplied file paths
 
 ## Pull Request Process
 
-1. **Fill in the PR template** — describe the change, link the issue, tick the checklist.
+1. **Describe the change** — explain what and why, and link the issue.
 2. **Keep PRs focused** — one logical change per PR. Split unrelated fixes.
 3. **Update docs** — if you changed plugin behavior, update `apps/docs/docs/`. The CI will not enforce this but reviewers will.
 4. **All CI checks must pass** before merge.
@@ -221,16 +232,9 @@ security(buildRunner): add "--" separator before user-supplied file paths
 
 ## Release Process
 
-Releases are handled by maintainers via the GitHub Actions **release workflow**:
+Releases are currently cut manually by maintainers. An automated release workflow (version bump, changelog from conventional commits, tag, npm publish with provenance and GitHub Release) is **planned but does not exist yet** — the only workflow today is `ci.yml`.
 
-1. Maintainer runs the `release` workflow with the desired version bump (`patch` / `minor` / `major`)
-2. GitVersion computes the version; `package.json` is updated
-3. `CHANGELOG.md` is updated from conventional commits
-4. A git tag is created
-5. The package is published to npm with provenance
-6. A GitHub Release is created with the changelog
-
-Contributors do not need to manage versions or changelogs manually.
+Contributors do not need to manage versions or changelogs.
 
 ---
 

@@ -10,8 +10,14 @@ import type {
 import type { ICache, IAssetPostProcessor } from "../domain/interfaces";
 import { log } from "../shared/logger";
 import { getSlidevCacheDir } from "../infrastructure/fs/fileSystem";
-import { createIsolatedBuildDir, cleanupIsolatedBuildDir } from "../infrastructure/fs/isolatedBuild";
-import { BuildCache } from "./buildCache";
+import {
+  createIsolatedBuild,
+  purgeIsolatedBuilds,
+  type IsolatedBuildDir,
+} from "../infrastructure/fs/isolatedBuild";
+import { isCompleteBuildOutput, purgeStaleOutputs } from "../infrastructure/fs/outputManager";
+import { isInside, normalizeThumbnailArtifact, removeBestEffort, replaceDir } from "../infrastructure/fs/fsUtils";
+import { BuildCache, FileHashMemo, computePresentationFingerprint } from "./buildCache";
 import {
   patchFrontmatterAddons,
   patchFrontmatterTheme,
@@ -24,31 +30,65 @@ import {
 } from "../infrastructure/packages/packageResolver";
 import { runSlidevBuild } from "../infrastructure/process/buildRunner";
 import { runConcurrently } from "../shared/concurrentRunner";
-import { walkUpTree } from "../shared/utils";
-import { TREE_WALK_MAX_DEPTH, DEFAULT_MAX_PARALLEL_BUILDS } from "../domain/constants";
+import { defaultMaxParallelBuilds, walkUpTree } from "../shared/utils";
+import { TREE_WALK_MAX_DEPTH } from "../domain/constants";
+
+// ── Failure aggregation ───────────────────────────────────────────────────────
+
+/**
+ * Thrown by `assertBuildSucceeded` when at least one presentation failed to
+ * build. Carries every failed `BuildResult` so callers can report them all.
+ */
+export class PresentationBuildError extends Error {
+  readonly failures: BuildResult[];
+
+  constructor(failures: BuildResult[]) {
+    const list = failures.map((f) => `  - ${f.id}: ${(f.error ?? "unknown error").split("\n")[0]}`).join("\n");
+    super(`${failures.length} Slidev presentation(s) failed to build:\n${list}`);
+    this.name = "PresentationBuildError";
+    this.failures = failures;
+  }
+}
+
+/** Failed results of a build run (asset warnings are NOT failures). */
+export function collectBuildFailures(results: BuildResult[]): BuildResult[] {
+  return results.filter((r) => !r.success);
+}
+
+/**
+ * Throw a `PresentationBuildError` if any presentation failed to build.
+ * Intended for `docusaurus build`, so a broken deck fails the site build
+ * instead of shipping a missing page.
+ */
+export function assertBuildSucceeded(results: BuildResult[]): void {
+  const failures = collectBuildFailures(results);
+  if (failures.length > 0) throw new PresentationBuildError(failures);
+}
 
 // ── Logging ───────────────────────────────────────────────────────────────────
 
 function logBuildSummary(
   total: number,
   built: number,
-  successful: number,
-  failed: number,
+  results: BuildResult[],
   skippedCount: number,
   totalTime: number,
-  sequentialTime: number,
-  failedResults: BuildResult[],
 ): void {
+  const failedResults = collectBuildFailures(results);
+  const successful = built - failedResults.length;
+  const warned = results.filter((r) => r.warnings?.length);
+  const sequentialTime = results.reduce((sum, r) => sum + (r.duration ?? 0), 0);
   const speedup = totalTime > 0 && sequentialTime > totalTime
     ? ` (${(sequentialTime / totalTime).toFixed(1)}x faster than sequential ${sequentialTime.toFixed(1)}s)`
     : "";
   const lines = [
     `Slidev build complete — ${total} presentation(s)`,
-    `  Built:   ${built}  (${successful} ok, ${failed} failed)`,
+    `  Built:   ${built}  (${successful} ok, ${failedResults.length} failed)`,
     `  Cached:  ${skippedCount}`,
     `  Time:    ${totalTime.toFixed(2)}s${speedup}`,
   ];
-  if (failed > 0) {
+  if (warned.length > 0) lines.push(`  Asset warnings: ${warned.length} presentation(s)`);
+  if (failedResults.length > 0) {
     log.warn(lines.join("\n"));
     failedResults.forEach((r) => log.error(`  ✗ ${log.code(r.id)}: ${r.error}`));
   } else {
@@ -56,146 +96,148 @@ function logBuildSummary(
   }
 }
 
-// ── Thumbnail artifact cleanup ────────────────────────────────────────────────
+// ── Per-presentation pipeline ─────────────────────────────────────────────────
 
 /**
- * Slidev v52 creates thumbnail.png/ as a directory (regardless of export success).
- * Fix the artifact for the given presentations:
- *   - directory with 1.png inside → promote to real thumbnail.png file
- *   - empty directory              → remove (no broken <img> served)
- *
- * Caller decides which presentations to scan — typically only those that
- * just rebuilt; cached entries were sanitized on their original build.
+ * Resolve theme / addons and write them into the isolated copy of the deck.
+ * The values come from the presentation metadata (i.e. AFTER the
+ * `transformFrontmatter` / `onPresentationScanned` hooks) merged with the
+ * global options.
  */
-function sanitizeThumbnailArtifacts(presentations: PresentationMetadata[]): void {
-  for (const p of presentations) {
-    const thumbnailFile = path.join(p.outputPath, "thumbnail.png");
-    if (!fs.existsSync(thumbnailFile)) continue;
-    if (!fs.statSync(thumbnailFile).isDirectory()) continue;
-
-    const innerPng = path.join(thumbnailFile, "1.png");
-    if (fs.existsSync(innerPng)) {
-      const tmp = `${thumbnailFile}.tmp.png`;
-      fs.copyFileSync(innerPng, tmp);
-      fs.rmSync(thumbnailFile, { recursive: true, force: true });
-      fs.renameSync(tmp, thumbnailFile);
-      log.info(`Recovered thumbnail for ${log.code(p.id)}`);
-    } else {
-      fs.rmSync(thumbnailFile, { recursive: true, force: true });
-    }
-  }
-}
-
-// ── Per-presentation setup ────────────────────────────────────────────────────
-
-interface IsolatedPresentation {
-  presentation: PresentationMetadata;
-  isolatedSourcePath: string;
-  isolatedDir: string;
-  safeId: string;
-}
-
-/**
- * Prepare one isolated build directory: copy source + assets, patch frontmatter.
- * The isolated file is named {safeId}.md so each presentation has a unique
- * output folder name when Slidev builds multiple files in a single invocation.
- */
-async function prepareIsolatedBuild(
+async function patchIsolatedSource(
+  isolatedSourcePath: string,
   presentation: PresentationMetadata,
   options: PluginOptions,
   context: BuildContext,
-  cacheDir: string,
-): Promise<IsolatedPresentation> {
-  const safeId = presentation.id.replaceAll(/[/\\]/g, "__");
-
-  const isolatedSourcePath = createIsolatedBuildDir(
-    presentation.sourceAbsolutePath,
-    presentation.id,
-    cacheDir,
-  );
-  const isolatedDir = path.dirname(isolatedSourcePath);
-
-  if (options.verbose) log.info(`Isolated: ${log.path(isolatedDir)}`);
-
-  // Resolve and patch addons (Slidev reads addons from frontmatter, not CLI flags)
+): Promise<void> {
+  // Slidev reads addons from frontmatter, not CLI flags
   const mergedAddons = [...new Set([...(options.addons ?? []), ...(presentation.addons ?? [])])];
-  let resolvedAddons: string[] = [];
   if (mergedAddons.length > 0) {
-    resolvedAddons = await ensureAddonsAvailable(mergedAddons, context.siteDir, options.autoInstall);
+    const resolvedAddons = await ensureAddonsAvailable(mergedAddons, context.siteDir, options.autoInstall);
     patchFrontmatterAddons(isolatedSourcePath, resolvedAddons);
     if (options.verbose) log.info(`Patched addons (${resolvedAddons.length}) in ${log.code(presentation.id)}`);
   }
 
-  // Resolve and patch theme (each file's frontmatter takes precedence over the CLI flag
-  // so we write it directly — this enables per-presentation theme overrides in batch mode)
+  // Each file's theme takes precedence over the global option, so it is
+  // written directly — this enables per-presentation theme overrides.
   const themeRaw = presentation.theme || options.theme;
   if (themeRaw) {
     const resolvedTheme = await ensureThemeAvailable(themeRaw, context.siteDir, options.autoInstall);
-    patchFrontmatterTheme(isolatedSourcePath, resolvedTheme);
+    patchFrontmatterTheme(isolatedSourcePath, resolvedTheme, Boolean(presentation.theme));
     if (options.verbose && presentation.theme) {
       log.info(`Theme override ${log.code(resolvedTheme)} for ${log.code(presentation.id)}`);
     }
   }
-
-  return { presentation, isolatedSourcePath, isolatedDir, safeId };
 }
 
-// ── Parallel builds ───────────────────────────────────────────────────────────
-
-async function buildOne(
-  isolated: IsolatedPresentation,
+/** Run the post-build asset processors. Failures are collected as warnings. */
+async function runPostProcessors(
+  presentation: PresentationMetadata,
+  isolated: IsolatedBuildDir,
+  processors: IAssetPostProcessor[],
   options: PluginOptions,
   context: BuildContext,
-): Promise<BuildResult> {
-  const { presentation, isolatedSourcePath } = isolated;
-  const startTime = Date.now();
-  log.info(`Building ${log.code(presentation.id)} …`);
-
-  const base = `${presentation.url.endsWith("/") ? presentation.url : presentation.url + "/"}`;
-  const args = [
-    "build",
-    isolatedSourcePath,
-    "--out", presentation.outputPath,
-    "--base", base,
-  ];
-  if (options.download) args.push("--download");
-  if (presentation.withoutNotes ?? options.withoutNotes) args.push("--without-notes");
-
-  const result = await runSlidevBuild({
-    siteDir: context.siteDir,
-    args,
-    timeoutMs: options.buildTimeout * 1000,
-    verbose: options.verbose,
-    extraEnv: { SLIDEV_SITE_DIR: context.siteDir },
-  });
-
-  const duration = (Date.now() - startTime) / 1000;
-  if (result.success) {
-    return { id: presentation.id, success: true, duration };
+): Promise<string[]> {
+  const warnings: string[] = [];
+  for (const processor of processors) {
+    try {
+      const ok = await processor.process(presentation, options, context, {
+        sourcePath: isolated.isolatedSourcePath,
+        isolatedDir: isolated.isolatedDir,
+      });
+      if (!ok) warnings.push(`${processor.name}: asset not generated`);
+    } catch (err) {
+      const msg = `${processor.name} threw: ${err instanceof Error ? err.message : String(err)}`;
+      log.warn(`${msg} (${log.code(presentation.id)}, non-blocking)`);
+      warnings.push(msg);
+    }
   }
-  log.error(`Error building ${log.code(presentation.id)}: ${result.error}`);
-  return { id: presentation.id, success: false, error: result.error, duration };
+  // Slidev v52 may leave thumbnail.png/ as a directory — normalise it.
+  normalizeThumbnailArtifact(path.join(presentation.outputPath, "thumbnail.png"));
+  return warnings;
 }
 
-async function buildParallel(
-  isolated: IsolatedPresentation[],
-  options: PluginOptions,
-  context: BuildContext,
-  concurrency: number,
-): Promise<Map<string, BuildResult>> {
-  const total = isolated.length;
-  let completed = 0;
-  const results = await runConcurrently(isolated, concurrency, async (item) => {
-    const result = await buildOne(item, options, context);
-    // Increment AFTER build completes so the counter reflects finished presentations,
-    // not started ones (in a pool of N, the first N start simultaneously).
-    process.stdout.write(
-      `\r  Built [${++completed}/${total}] ${item.presentation.id}${result.success ? " ✓" : " ✗"}\x1b[K`,
-    );
-    return result;
-  });
-  if (total > 0) process.stdout.write("\n");
-  return new Map(results.map((r) => [r.id, r]));
+interface BuildEnv {
+  options: PluginOptions;
+  context: BuildContext;
+  cacheDir: string;
+  outputRoot: string;
+  slidesRoot: string;
+  processors: IAssetPostProcessor[];
+}
+
+/**
+ * Build one presentation end to end:
+ * isolate → patch → `slidev build` into a temporary dir → atomically replace
+ * the cached output → post-process assets → clean up.
+ *
+ * Never throws: any error (bad frontmatter, missing theme, Slidev failure…)
+ * is returned as a failed `BuildResult` so other presentations still build.
+ * On failure the previous output (if any) is left untouched.
+ */
+async function buildPresentation(presentation: PresentationMetadata, env: BuildEnv): Promise<BuildResult> {
+  const { options, context, cacheDir, outputRoot, slidesRoot, processors } = env;
+  const startTime = Date.now();
+  const elapsed = (): number => (Date.now() - startTime) / 1000;
+  let isolated: IsolatedBuildDir | undefined;
+  let tmpOut: string | undefined;
+
+  try {
+    // outputPath is replaced (rm -rf) below — it must stay inside the cache.
+    const outputPath = path.resolve(presentation.outputPath);
+    if (!isInside(outputRoot, outputPath) || outputPath === path.resolve(outputRoot)) {
+      throw new Error(`[Security] outputPath "${presentation.outputPath}" is outside the plugin cache`);
+    }
+
+    isolated = createIsolatedBuild(presentation.sourceAbsolutePath, presentation.id, cacheDir, slidesRoot);
+    if (options.verbose) log.info(`Isolated: ${log.path(isolated.isolatedDir)}`);
+    await patchIsolatedSource(isolated.isolatedSourcePath, presentation, options, context);
+
+    // `safeId` never contains a dot, so `{safeId}.out` cannot clash with another isolated dir.
+    tmpOut = path.join(cacheDir, "builds", `${isolated.safeId}.out`);
+    fs.rmSync(tmpOut, { recursive: true, force: true });
+
+    log.info(`Building ${log.code(presentation.id)} …`);
+    const base = presentation.url.endsWith("/") ? presentation.url : `${presentation.url}/`;
+    const args = ["build", isolated.isolatedSourcePath, "--out", tmpOut, "--base", base];
+    if (options.download) args.push("--download");
+    if (presentation.withoutNotes ?? options.withoutNotes) args.push("--without-notes");
+
+    const result = await runSlidevBuild({
+      siteDir: context.siteDir,
+      args,
+      timeoutMs: options.buildTimeout * 1000,
+      verbose: options.verbose,
+      extraEnv: { SLIDEV_SITE_DIR: context.siteDir },
+    });
+    if (!result.success) {
+      log.error(`Error building ${log.code(presentation.id)}: ${result.error}`);
+      return { id: presentation.id, success: false, error: result.error, duration: elapsed() };
+    }
+    if (!isCompleteBuildOutput(tmpOut)) {
+      const error = "Slidev reported success but produced no index.html";
+      log.error(`Error building ${log.code(presentation.id)}: ${error}`);
+      return { id: presentation.id, success: false, error, duration: elapsed() };
+    }
+    replaceDir(tmpOut, outputPath);
+
+    const warnings = await runPostProcessors(presentation, isolated, processors, options, context);
+    return {
+      id: presentation.id,
+      success: true,
+      duration: elapsed(),
+      ...(warnings.length > 0 ? { warnings } : {}),
+    };
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    log.error(`Error building ${log.code(presentation.id)}: ${error}`);
+    return { id: presentation.id, success: false, error, duration: elapsed() };
+  } finally {
+    for (const leftover of [isolated?.isolatedDir, tmpOut]) {
+      const error = leftover ? removeBestEffort(leftover) : undefined;
+      if (error) log.warn(`Could not clean up ${log.path(leftover!)}: ${error}`);
+    }
+  }
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -205,6 +247,9 @@ async function buildParallel(
  * Each presentation runs in its own isolated build directory with a
  * per-presentation --base, so concurrency is safe (no shared state, no
  * server port — `slidev build` is a one-shot Rollup compile).
+ *
+ * Never throws for a single failing presentation: inspect the returned
+ * results (or call `assertBuildSucceeded`) to fail the site build.
  */
 export async function buildAllPresentations(
   presentations: PresentationMetadata[],
@@ -223,107 +268,94 @@ export async function buildAllPresentations(
   const totalStart = Date.now();
   const total = presentations.length;
   const cpuCount = os.cpus().length;
-  const concurrency = Math.max(1, Math.min(options.maxParallelBuilds ?? DEFAULT_MAX_PARALLEL_BUILDS, cpuCount));
-  const cacheDir = getSlidevCacheDir(context.siteDir, options.id);
+  const concurrency = Math.max(1, Math.min(options.maxParallelBuilds ?? defaultMaxParallelBuilds(), cpuCount));
+  const cacheDir = getSlidevCacheDir(context.siteDir, options.id, context.locale);
+  const outputRoot = path.join(cacheDir, "output");
+  const slidesRoot = path.resolve(context.siteDir, options.path);
 
   const cache: ICache = injectedCache ?? new BuildCache(cacheDir);
   const optionsFingerprint = BuildCache.computeOptionsFingerprint(options, context.baseUrl);
+  const memo = new FileHashMemo();
 
   log.info(`Checking ${total} presentation(s) for changes…`);
 
-  // Hash files in parallel — each one is a synchronous sha256 of a small .md
-  // but on cold disk caches the I/O dominates; spreading it across workers
-  // measurably cuts the "checking" phase on large decks.
-  const hashes = await runConcurrently(presentations, concurrency, async (p) =>
-    cache.computeHash(p.sourceAbsolutePath, optionsFingerprint),
-  );
+  // A hashing failure (file deleted since the scan…) must not abort the run:
+  // the presentation is simply rebuilt — and its build reports the real error.
+  const hashes = await runConcurrently(presentations, concurrency, async (p) => {
+    try {
+      const fingerprint = computePresentationFingerprint(p, { options, context, slidesRoot, optionsFingerprint, memo });
+      return cache.computeHash(p.sourceAbsolutePath, fingerprint);
+    } catch {
+      return undefined;
+    }
+  });
 
   const toBuild: PresentationMetadata[] = [];
-  const skipped: string[] = [];
+  const skipped = new Set<string>();
 
   presentations.forEach((p, i) => {
     const hash = hashes[i];
+    if (hash === undefined) {
+      toBuild.push(p);
+      return;
+    }
     cache.recordHash(p.id, hash);
     if (cache.isCached(p.id, hash)) {
-      skipped.push(p.id);
+      skipped.add(p.id);
     } else {
       toBuild.push(p);
     }
   });
 
-  if (skipped.length > 0) {
-    log.info(`Skipping ${skipped.length} unchanged presentation(s) (cached)`);
+  if (skipped.size > 0) {
+    log.info(`Skipping ${skipped.size} unchanged presentation(s) (cached)`);
   }
 
-  if (toBuild.length === 0) {
+  // Leftovers of a crashed / killed run are never reused.
+  purgeIsolatedBuilds(cacheDir);
+
+  let buildResults = new Map<string, BuildResult>();
+  if (toBuild.length > 0) {
+    // Each presentation requires its own --base /route/category/id/ so that Vite
+    // embeds the correct absolute asset paths. Each invocation is isolated
+    // (separate dir, no shared port) so up to `concurrency` builds run in parallel.
+    log.info(`Building ${toBuild.length}/${total} presentation(s) — concurrency: ${concurrency}`);
+    const env: BuildEnv = {
+      options,
+      context,
+      cacheDir,
+      outputRoot,
+      slidesRoot,
+      processors: postProcessors ?? DEFAULT_POST_PROCESSORS,
+    };
+    let completed = 0;
+    const results = await runConcurrently(toBuild, concurrency, async (p) => {
+      const result = await buildPresentation(p, env);
+      // Increment AFTER build completes so the counter reflects finished presentations.
+      process.stdout.write(
+        `\r  Built [${++completed}/${toBuild.length}] ${p.id}${result.success ? " ✓" : " ✗"}\x1b[K`,
+      );
+      return result;
+    });
+    process.stdout.write("\n");
+    buildResults = new Map(results.map((r) => [r.id, r]));
+    for (const r of results) {
+      if (!r.success) cache.invalidate(r.id);
+    }
+  } else {
     log.success(`All ${total} presentations are up-to-date — nothing to build!`);
-    cache.persist();
-    return presentations.map((p) => ({ id: p.id, success: true, duration: 0 }));
   }
 
-  // Each presentation requires its own --base /route/category/id/ so that Vite
-  // embeds the correct absolute asset paths. A single batch invocation would
-  // share one --base for all files → wrong asset paths → blank slides.
-  // Each invocation is isolated (separate CWD, no shared port) so we run up to
-  // `concurrency` builds in parallel.
-  log.info(`Building ${toBuild.length}/${total} presentation(s) — concurrency: ${concurrency}`);
+  // Outputs of deleted / renamed decks and partial builds are never published.
+  purgeStaleOutputs(outputRoot, presentations.map((p) => p.id));
+  cache.persist();
 
-  // ── Prepare isolated build dirs (frontmatter patching, safeId rename) ──────
-  const isolated = await runConcurrently(toBuild, concurrency, (p) =>
-    prepareIsolatedBuild(p, options, context, cacheDir),
-  );
-
-  // ── Guarantee cleanup even if builds or asset generation throw ────────────
-  let buildResults: Map<string, BuildResult> = new Map();
-  try {
-    // ── Parallel builds with per-presentation --base ─────────────────────────
-    buildResults = await buildParallel(isolated, options, context, concurrency);
-    for (const [id, result] of buildResults) {
-      if (!result.success) cache.invalidate(id);
-    }
-
-    // ── Post-build asset pipeline (thumbnails, exports, …) ───────────────────
-    // Each IAssetPostProcessor runs for every successfully-built presentation.
-    // Failures invalidate the cache entry so the next build retries the asset.
-    // Bounded by the same concurrency as builds to avoid Playwright OOM.
-    const processors = postProcessors ?? DEFAULT_POST_PROCESSORS;
-    const successful = toBuild.filter((p) => buildResults.get(p.id)?.success);
-    const assetFailures = new Set<string>();
-    const assetTasks: Array<() => Promise<void>> = [];
-    for (const p of successful) {
-      for (const processor of processors) {
-        assetTasks.push(async () => {
-          const ok = await processor.process(p, options, context);
-          if (!ok) assetFailures.add(p.id);
-        });
-      }
-    }
-    await runConcurrently(assetTasks, concurrency, (run) => run());
-    for (const id of assetFailures) cache.invalidate(id);
-
-    sanitizeThumbnailArtifacts(successful);
-    cache.persist();
-    log.info(`Cache manifest updated (${toBuild.length + skipped.length} entries)`);
-
-    const successCount = [...buildResults.values()].filter((r) => r.success).length;
-    const failCount = toBuild.length - successCount;
-    const totalTime = (Date.now() - totalStart) / 1000;
-    const sequentialTime = [...buildResults.values()].reduce((sum, r) => sum + (r.duration ?? 0), 0);
-
-    logBuildSummary(
-      total, toBuild.length, successCount, failCount, skipped.length, totalTime, sequentialTime,
-      [...buildResults.values()].filter((r) => !r.success),
-    );
-  } finally {
-    // ── Cleanup isolated dirs — bounded to same concurrency as builds ─────────
-    await runConcurrently(isolated, concurrency, ({ isolatedDir }) =>
-      Promise.resolve().then(() => cleanupIsolatedBuildDir(isolatedDir)),
-    );
+  if (toBuild.length > 0) {
+    logBuildSummary(total, toBuild.length, [...buildResults.values()], skipped.size, (Date.now() - totalStart) / 1000);
   }
 
-  // ── Merge with skipped ─────────────────────────────────────────────────────
   const allResults: BuildResult[] = presentations.map((p) => {
-    if (skipped.includes(p.id)) return { id: p.id, success: true, duration: 0, cacheHit: true };
+    if (skipped.has(p.id)) return { id: p.id, success: true, duration: 0, cacheHit: true };
     return buildResults.get(p.id) ?? { id: p.id, success: false, error: "Not built" };
   });
 

@@ -1,7 +1,15 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { runConcurrently } from "../concurrentRunner";
 
 describe("runConcurrently", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("returns empty array for empty input", async () => {
     const results = await runConcurrently([], 4, async (x) => x);
     expect(results).toEqual([]);
@@ -10,10 +18,12 @@ describe("runConcurrently", () => {
   it("returns results in input order regardless of completion order", async () => {
     // Items with higher index resolve faster (reverse order)
     const items = [0, 1, 2, 3, 4];
-    const results = await runConcurrently(items, 5, async (item) => {
+    const promise = runConcurrently(items, 5, async (item) => {
       await new Promise<void>((r) => setTimeout(r, (items.length - item) * 5));
       return item * 10;
     });
+    await vi.advanceTimersByTimeAsync(25);
+    const results = await promise;
     expect(results).toEqual([0, 10, 20, 30, 40]);
   });
 
@@ -22,12 +32,14 @@ describe("runConcurrently", () => {
     let maxActive = 0;
     const concurrency = 2;
 
-    await runConcurrently([1, 2, 3, 4, 5, 6], concurrency, async () => {
+    const promise = runConcurrently([1, 2, 3, 4, 5, 6], concurrency, async () => {
       active++;
       maxActive = Math.max(maxActive, active);
       await new Promise<void>((r) => setTimeout(r, 10));
       active--;
     });
+    await vi.advanceTimersByTimeAsync(100);
+    await promise;
 
     expect(maxActive).toBeLessThanOrEqual(concurrency);
   });

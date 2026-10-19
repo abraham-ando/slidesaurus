@@ -1,0 +1,40 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "dependencyDashboard": true,
+  "packageManager": "pnpm",
+  "rangeStrategy": "bump",
+  "schedule": ["before 6am on monday"],
+  "timezone": "Europe/Paris",
+  "prConcurrentLimit": 5,
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "Group Docusaurus packages",
+      "matchPackageNames": ["@docusaurus/{/,}**"],
+      "groupName": "docusaurus"
+    },
+    {
+      "description": "Group Slidev packages",
+      "matchPackageNames": ["@slidev/{/,}**", "slidev"],
+      "groupName": "slidev"
+    },
+    {
+      "description": "Group Vitest packages",
+      "matchPackageNames": ["vitest", "@vitest/{/,}**"],
+      "groupName": "vitest"
+    },
+    {
+      "description": "Minor and patch devDependencies: grouped, no automerge",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "dev dependencies (minor and patch)",
+      "automerge": false
+    },
+    {
+      "description": "Never automerge",
+      "matchPackageNames": ["*"],
+      "automerge": false
+    }
+  ]
+}

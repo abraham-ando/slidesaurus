@@ -1,12 +1,15 @@
 import path from "node:path";
 import fs from "node:fs";
-import http from "node:http";
 import pc from "picocolors";
 import { loadPluginOptions, resolveOptions, findConfigFile } from "../config";
 import { cliLogger } from "../output";
 const { ok, fail, warn, heading, info } = cliLogger;
 import { scanPresentations } from "../../application/scanner";
-import { isPackageInstalled, checkPackageAvailable } from "../../infrastructure/packages/packageResolver";
+import {
+  checkPackageAvailable,
+  resolveThemePackageName,
+  resolveAddonPackageName,
+} from "../../infrastructure/packages/packageResolver";
 import { getSlidevCacheDir } from "../../infrastructure/fs/fileSystem";
 import { loadHashManifest } from "../../infrastructure/fs/hashManifest";
 import { hasCachedOutput } from "../../infrastructure/fs/outputManager";
@@ -16,15 +19,13 @@ interface DoctorOptions {
   pluginId: string;
 }
 
-function checkPort(port: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    const req = http.get({ host: "127.0.0.1", port, timeout: 300 }, (res) => {
-      res.resume();
-      resolve(false); // port in use
-    });
-    req.on("error", () => resolve(true)); // port free
-    req.on("timeout", () => { req.destroy(); resolve(true); });
-  });
+/** Minimum supported Node.js version (major.minor). */
+const MIN_NODE = { major: 20, minor: 12 };
+
+export function isSupportedNodeVersion(version: string): boolean {
+  const [major, minor] = version.split(".").map((n) => parseInt(n, 10));
+  if (Number.isNaN(major)) return false;
+  return major > MIN_NODE.major || (major === MIN_NODE.major && (minor ?? 0) >= MIN_NODE.minor);
 }
 
 export async function runDoctor(opts: DoctorOptions): Promise<void> {
@@ -68,36 +69,31 @@ export async function runDoctor(opts: DoctorOptions): Promise<void> {
   report(slidevInstalled, "@slidev/cli installed", slidevInstalled ? undefined : "Run: pnpm add @slidev/cli");
 
   // ── Check 4: Themes and addons resolvable ─────────────────────────────────
-  let presentations: Awaited<ReturnType<typeof scanPresentations>>["presentations"] = [];
   if (dirExists) {
     try {
       const result = await scanPresentations(
         options as Parameters<typeof scanPresentations>[0],
         { siteDir: cwd, baseUrl: "/" },
       );
-      presentations = result.presentations;
+      const { presentations } = result;
+
+      // Themes are resolved with the same function as the build (packageResolver),
+      // so doctor and `slidev build` agree on official vs community package names.
+      const checkTheme = (theme: string, label: string) => {
+        const resolved = resolveThemePackageName(theme, cwd);
+        const check = checkPackageAvailable(resolved, cwd);
+        report(check.installed, `${label} "${theme}" installed`, check.installed ? undefined : check.error);
+      };
 
       // Check global theme
       const globalTheme = options.theme;
-      if (globalTheme) {
-        const themeCheck = checkPackageAvailable(
-          globalTheme.startsWith("@") || globalTheme.startsWith("slidev-theme-")
-            ? globalTheme
-            : `@slidev/theme-${globalTheme}`,
-          cwd,
-        );
-        report(themeCheck.installed, `Global theme "${globalTheme}" installed`, themeCheck.error);
-      }
+      if (globalTheme) checkTheme(globalTheme, "Global theme");
 
       // Check per-presentation themes
-      const perSlideThemes = [...new Set(presentations.map((p) => p.theme).filter(Boolean))];
+      const perSlideThemes = [...new Set(presentations.map((p) => p.theme).filter((t): t is string => Boolean(t)))];
       for (const t of perSlideThemes) {
         if (t === globalTheme) continue;
-        const check = checkPackageAvailable(
-          t!.startsWith("@") || t!.startsWith("slidev-theme-") ? t! : `@slidev/theme-${t!}`,
-          cwd,
-        );
-        report(check.installed, `Per-slide theme "${t}" installed`, check.error);
+        checkTheme(t, "Per-slide theme");
       }
 
       // Check addons
@@ -106,11 +102,9 @@ export async function runDoctor(opts: DoctorOptions): Promise<void> {
         ...presentations.flatMap((p) => p.addons ?? []),
       ])];
       for (const addon of allAddons) {
-        const addonName = addon.startsWith("@") || addon.startsWith("slidev-addon-")
-          ? addon
-          : `slidev-addon-${addon}`;
-        const check = isPackageInstalled(addonName, cwd);
-        report(check, `Addon "${addon}" installed`, check ? undefined : `Run: pnpm add ${addonName}`);
+        const addonName = resolveAddonPackageName(addon);
+        const check = checkPackageAvailable(addonName, cwd);
+        report(check.installed, `Addon "${addon}" installed`, check.installed ? undefined : `Run: pnpm add ${addonName}`);
       }
     } catch {
       warn("Could not scan presentations — skipping theme/addon checks");
@@ -136,39 +130,27 @@ export async function runDoctor(opts: DoctorOptions): Promise<void> {
   }
 
   // ── Check 6: Node.js version ──────────────────────────────────────────────
-  const nodeMajor = parseInt(process.versions.node.split(".")[0], 10);
-  report(nodeMajor >= 18, `Node.js version ≥ 18`, `v${process.versions.node}`);
+  report(
+    isSupportedNodeVersion(process.versions.node),
+    `Node.js version ≥ ${MIN_NODE.major}.${MIN_NODE.minor}`,
+    `v${process.versions.node}`,
+  );
 
   // ── Check 7: Playwright (required for thumbnails and export) ─────────────
-  let playwrightOk = false;
+  // `slidev export` loads `playwright-chromium`, not the `playwright` package.
+  let playwrightOk: boolean;
   try {
-    require.resolve("playwright", { paths: [cwd] });
+    require.resolve("playwright-chromium", { paths: [cwd] });
     playwrightOk = true;
   } catch {
     playwrightOk = false;
   }
   if (!playwrightOk) {
-    info(`playwright not found — thumbnail and export generation will be skipped (optional: pnpm add playwright)`);
+    info(`playwright-chromium not found — thumbnail and export generation will be skipped (optional: pnpm add -D playwright-chromium)`);
   } else {
-    ok("playwright installed (thumbnails/exports)");
+    ok("playwright-chromium installed (thumbnails/exports)");
     passed++;
   }
-
-  // ── Check 8: Dev server ports available ───────────────────────────────────
-  const basePort = options.devServerBasePort ?? 8600;
-  const portCount = Math.min(presentations.length || 3, 5);
-  const portResults = await Promise.all(
-    Array.from({ length: portCount }, (_, i) => basePort + i).map(async (p) => ({
-      port: p,
-      free: await checkPort(p),
-    })),
-  );
-  const occupiedPorts = portResults.filter((r) => !r.free);
-  report(
-    occupiedPorts.length === 0,
-    `Dev server ports available (${basePort}–${basePort + portCount - 1})`,
-    occupiedPorts.length > 0 ? `Occupied: ${occupiedPorts.map((r) => r.port).join(", ")}` : undefined,
-  );
 
   // ── Summary ───────────────────────────────────────────────────────────────
   console.log();

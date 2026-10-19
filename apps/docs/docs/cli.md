@@ -30,7 +30,7 @@ slidesaurus new intro/getting-started
 slidesaurus new my-talk --template talk --theme seriph --category engineering
 ```
 
-If `name` is omitted, the CLI prompts interactively.
+If `name` is omitted, the CLI prompts for it. The template and theme are also asked interactively when `--template` / `--theme` are not given. Cancelling a prompt (Ctrl+C) exits with code `130`.
 
 ### Arguments
 
@@ -43,9 +43,11 @@ If `name` is omitted, the CLI prompts interactively.
 | Option | Description | Default |
 |--------|-------------|---------|
 | `-c, --category <category>` | Category sub-folder | |
-| `-t, --theme <theme>` | Slidev theme | Plugin default |
-| `--template <template>` | Template: `basic`, `tutorial`, or `talk` | `basic` |
+| `-t, --theme <theme>` | Slidev theme | Asked interactively (default: the plugin `theme`, else `seriph`) |
+| `--template <template>` | Template: `basic`, `tutorial`, or `talk` | Asked interactively (default `basic`) |
 | `--force` | Overwrite if the file already exists | |
+
+Names are slugified (`My Talk` → `my-talk`) and a trailing `.md` is ignored. A name or category that reduces to nothing, an unknown template or an invalid theme package name is rejected with a clear error. Values written to the frontmatter (title, theme) are YAML-escaped.
 
 ### Templates
 
@@ -111,15 +113,14 @@ slidesaurus doctor --id secondary   # for a secondary plugin instance
 
 | # | Check | Pass condition |
 |---|-------|----------------|
-| 1 | **Config file found** | `docusaurus.config.ts/js` exists in cwd |
+| 1 | **Config file found** | `docusaurus.config.ts`, `.js` or `.mjs` exists in cwd |
 | 2 | **Plugin registered** | `slidesaurus` plugin found with the correct `id` |
-| 3 | **Slidev directory exists** | The configured `path` directory exists and is readable |
-| 4 | **Node.js version** | Node.js ≥ 18 (required by `@slidev/cli`) |
-| 5 | **`@slidev/cli` installed** | Slidev CLI available in the monorepo tree |
-| 6 | **Themes & addons installed** | Global theme + per-slide themes + all addons resolvable |
-| 7 | **Playwright available** | Playwright browser is installed (optional — needed for thumbnails and PDF/PPTX exports) |
-| 8 | **Dev server ports free** | `devServerBasePort` through `basePort + N` are available |
-| 9 | **Cache coherent** | Hash manifest entries have matching output directories |
+| 3 | **Slidev directory exists** | The configured `path` directory exists |
+| 4 | **`@slidev/cli` installed** | Slidev CLI available in `node_modules` (searched up the monorepo tree) |
+| 5 | **Themes & addons installed** | Global `theme`, per-slide themes and all addons are resolvable (same resolution as the build) |
+| 6 | **Cache coherent** | Hash manifest entries have matching output directories (only checked if a cache exists) |
+| 7 | **Node.js version** | Node.js ≥ 20.12 |
+| 8 | **Playwright** | Informational only, never a failure — `playwright-chromium` (the package `slidev export` loads) is optional and only needed for thumbnails and PDF/PPTX exports |
 
 ### Example output
 
@@ -129,14 +130,13 @@ slidesaurus doctor --id secondary   # for a secondary plugin instance
   ✓ docusaurus.config found — docusaurus.config.ts
   ✓ slidesaurus plugin found (id="default")
   ✓ Slidev directory exists — slidev
-  ✓ Node.js v22.3.0 (≥18 required)
   ✓ @slidev/cli installed
   ✓ Global theme "seriph" installed
-  ✓ Playwright browser available
-  ✓ Dev server ports free (8600–8602)
   ✓ Cache manifest coherent (3 entries)
+  ✓ Node.js version ≥ 20.12 — v22.3.0
+  ✓ playwright-chromium installed (thumbnails/exports)
 
-  ✔ All 9 checks passed.
+  ✔ All 8 checks passed.
 ```
 
 ### Example failure output
@@ -147,14 +147,11 @@ slidesaurus doctor --id secondary   # for a secondary plugin instance
   ✓ docusaurus.config found — docusaurus.config.ts
   ✓ slidesaurus plugin found (id="default")
   ✓ Slidev directory exists — slidev
-  ✓ Node.js v22.3.0 (≥18 required)
-  ✗ @slidev/cli not installed — run: pnpm add @slidev/cli
+  ✗ @slidev/cli installed — Run: pnpm add @slidev/cli
   ✓ Global theme "seriph" installed
-  ✗ Playwright browser not found — run: pnpm exec playwright install chromium
-  ✓ Dev server ports free (8600–8602)
-  ✓ Cache manifest coherent (3 entries)
+  ✓ Node.js version ≥ 20.12 — v22.3.0
 
-  ✖ 2 check(s) failed.
+  5 passed  1 failed
 ```
 
 ---
@@ -166,15 +163,17 @@ Clear the incremental build cache — either all presentations or a single one.
 ```bash
 slidesaurus cache clear               # clears everything (with confirmation)
 slidesaurus cache clear --yes         # no confirmation prompt
-slidesaurus cache clear --id intro/getting-started   # single presentation
+slidesaurus cache clear --presentation intro/getting-started   # single presentation
 ```
 
 ### Options
 
 | Option | Description |
 |--------|-------------|
-| `--id <presentationId>` | Clear cache for a specific presentation only |
+| `-p, --presentation <id>` | Clear cache for a specific presentation only (`--id` is the plugin instance and stays a global option) |
 | `-y, --yes` | Skip the confirmation prompt |
+
+The target must name a presentation inside the cache: an empty value, `.`, `..` or an absolute path is rejected, so a typo can never wipe the whole cache. Cancelling a confirmation prompt (Ctrl+C) exits with code `130`.
 
 ### When to use
 
@@ -198,7 +197,11 @@ slidesaurus cache clear --id demos
 
 ## Config auto-discovery
 
-The CLI reads `docusaurus.config.ts` (or `.js`/`.mjs`) from the current working directory.  
-Run all commands from your project root (the directory containing `docusaurus.config.ts`).
+The CLI reads `docusaurus.config.ts` (or `.js` / `.mjs`) from the current working directory and evaluates it with [jiti](https://github.com/unjs/jiti) (the loader Docusaurus itself uses) in a child process with a 15 s timeout. TypeScript configs work out of the box — no `ts-node` needed — and configs exporting an (async) function are supported.
+Run all commands from your project root (the directory containing the config file).
 
-If the config cannot be loaded (e.g. missing TypeScript support), the CLI falls back to sensible defaults and prints a warning. Install `ts-node` in your project to enable TypeScript config loading.
+:::caution
+Loading the config **executes** your `docusaurus.config` file, like Docusaurus does. Only run the CLI in projects you trust.
+:::
+
+If the config cannot be loaded, the CLI prints a warning with the reason and falls back to default plugin options (`path: "./slidev"`, `routeBasePath: "/slidev"`).
