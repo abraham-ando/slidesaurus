@@ -23,6 +23,8 @@ export type {
   BuildResult,
   Category,
   CategoryMetadata,
+  CorePresentationMetadata,
+  EnrichedPresentationMetadata,
   ExportFormat,
   PlaylistData,
   PluginConfig,

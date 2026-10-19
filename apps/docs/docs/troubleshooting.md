@@ -227,7 +227,7 @@ npm install -D playwright-chromium
 npx playwright install chromium
 ```
 
-Then verify the setup with `slidesaurus doctor`, which reports whether `playwright` is resolvable from your project.
+Then verify the setup with `slidesaurus doctor`, which reports whether `playwright-chromium` is resolvable from your project.
 
 ---
 

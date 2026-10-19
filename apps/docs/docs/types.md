@@ -341,7 +341,7 @@ const uiTheme = useUITheme("training"); // named plugin instance
 
 ## Usage
 
-The package entry point (`slidesaurus`) currently exports the plugin itself (default export), `validateOptions`, `getSwizzleComponentList` and the `SlidesaurusPluginOptions` type (`Partial<PluginOptions>`):
+The package entry point (`slidesaurus`) exports the plugin itself (default export), `validateOptions`, `getSwizzleComponentList`, the `SlidesaurusPluginOptions` type (`Partial<PluginOptions>`) and every public type on this page:
 
 ```ts title="docusaurus.config.ts"
 import type { SlidesaurusPluginOptions } from "slidesaurus";
@@ -354,4 +354,15 @@ const options: SlidesaurusPluginOptions = {
 };
 ```
 
-The other types on this page describe the shapes you receive in hooks and theme components. They are not currently importable by name from `slidesaurus`.
+Import the other types by name when you type hooks or swizzled components:
+
+```ts
+import type {
+  BuildResult,
+  PresentationMetadata,
+  SlidevFrontmatter,
+  PluginData,
+} from "slidesaurus";
+```
+
+Exported types: `BuildResult`, `Category`, `CategoryMetadata`, `CorePresentationMetadata`, `EnrichedPresentationMetadata`, `ExportFormat`, `PlaylistData`, `PluginConfig`, `PluginData`, `PluginOptions`, `Presentation`, `PresentationLevel`, `PresentationMetadata`, `SlidevFrontmatter`, `UITheme`. Build helpers such as `assertBuildSucceeded` stay internal.
