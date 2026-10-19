@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Slidesaurus** is a Docusaurus v3 plugin that integrates [Slidev](https://sli.dev) presentations into Docusaurus sites. It auto-discovers `.md` slide decks, builds them in parallel with incremental caching, serves them via iframe, and provides embeddable React components.
 
-This is a **pnpm monorepo** managed with **Turbo**:
+This is a **pnpm monorepo** (pnpm 10, Node >= 20.12) managed with **Turbo**:
 - `packages/slidesaurus` — the `slidesaurus` npm package (TypeScript, built with Rollup)
 - `apps/docs` — documentation site (Docusaurus, port 3001)
 - `apps/sample` — sample integration site (Docusaurus, port 3000)
@@ -22,14 +22,20 @@ pnpm build              # Build all packages in dependency order
 pnpm build:plugin       # Build only the plugin package
 pnpm dev:sample         # Dev server for sample app (port 3000)
 pnpm dev:docs           # Dev server for docs site (port 3001)
+pnpm lint               # ESLint
+pnpm format             # Prettier (write)
+pnpm format:check       # Prettier (check only)
+pnpm typecheck          # tsc for the plugin (src) and the theme
+pnpm test               # Unit tests
 pnpm clean              # Remove all build artifacts
 ```
 
 ### Plugin package (`packages/slidesaurus`)
 
 ```bash
-pnpm build              # Rollup build → lib/ (CJS + ESM + .d.ts)
+pnpm build              # Rollup build → lib/ (CJS + ESM + .d.ts + compiled theme)
 pnpm dev                # Rollup watch mode
+pnpm typecheck          # tsc --noEmit (src) + tsc (theme)
 pnpm test               # Vitest unit tests
 pnpm test:integration   # Cucumber BDD integration tests
 pnpm clean              # Remove lib/
@@ -40,7 +46,7 @@ pnpm clean              # Remove lib/
 ```bash
 # From packages/slidesaurus — filter by filename
 pnpm test -- scanner
-pnpm test -- --reporter=verbose src/__tests__/builder.spec.ts
+pnpm test -- --reporter=verbose src/application/__tests__/builder.spec.ts
 
 # Single Cucumber feature
 pnpm test:integration -- features/scanning.feature
@@ -54,50 +60,57 @@ pnpm test:integration -- features/scanning.feature
 
 ### Plugin lifecycle
 
-The plugin implements the standard Docusaurus plugin interface (`packages/slidesaurus/src/index.ts`):
+The plugin implements the standard Docusaurus plugin interface (`src/presentation/plugin.ts`, re-exported by `src/index.ts`):
 
-1. **`validateOptions`** — Joi schema validation; maps deprecated option aliases (e.g. `sourceDir` → `path`).
-2. **`loadContent`** — Scans slides, then either builds (production) or starts dev servers.
-3. **`contentLoaded`** — Creates Docusaurus routes (overview, category pages, presentation pages) and injects global data for theme components.
-4. **`postBuild`** — Copies built presentations from the incremental cache into the final static output.
+1. **`validateOptions`** — Joi schema validation; maps deprecated aliases (`sourceDir` → `path`, `overviewPath` → `routeBasePath`, …); rejects unsafe `path`, `routeBasePath` and `id`.
+2. **`loadContent`** — Scans slides, then **builds** them (incremental, parallel). Runs in both `docusaurus build` and `docusaurus start`. A failed presentation fails `docusaurus build` (`PresentationBuildError`); in dev it is only logged.
+3. **`contentLoaded`** — Registers routes (overview, category pages, presentation pages) and a reduced public global-data DTO for theme components (no absolute paths).
+4. **`postBuild`** — Copies built presentations from the cache into the final static output, writes presenter fallbacks and `presentations-index.json`.
 
-### Core modules (`packages/slidesaurus/src/`)
+In `docusaurus start` there are no Slidev dev servers: `configureWebpack` serves the cache output as static files and `getPathsToWatch` triggers rebuilds. `getThemePath()` points to the compiled theme (`lib/theme`); `getTypeScriptThemePath()` to the TSX sources (swizzle `--typescript`).
 
-| Module | Responsibility |
+### Source layers (`packages/slidesaurus/src/`)
+
+Dependencies point inwards: `presentation`/`cli` → `application` → `infrastructure` → `domain`; `shared` is usable by all.
+
+| Layer | Key modules |
 |---|---|
-| `scanner.ts` | Recursively discovers `.md` files in the configured `path`, reads `_category_.yml` for category metadata, extracts frontmatter via `gray-matter`, applies `transformFrontmatter` / `onPresentationScanned` hooks |
-| `builder.ts` | Parallel build orchestration; SHA-256 hashes each file + options fingerprint for incremental caching; skips unchanged presentations; calls `buildRunner` per presentation |
-| `buildRunner.ts` | Spawns `slidev build` CLI as a child process, handles timeouts, captures stdout/stderr |
-| `devServer.ts` | Spawns one `slidev dev` process per presentation; allocates ports from `devServerBasePort` (default 8600); returns webpack proxy config to route `/slidev/{id}/*` to the right port |
-| `packageResolver.ts` | Resolves theme shorthand (e.g. `"seriph"` → `"@slidev/theme-seriph"`), validates package names, auto-installs missing themes/addons |
-| `fileSystem.ts` | Manages the incremental cache under `.docusaurus/slidesaurus/{pluginId}/`: hash manifest (`build-hashes.json`), per-presentation output dirs, isolated build dirs |
-| `env.ts` | Filters environment variables passed to child processes — blocks secrets/tokens by allowlist |
-| `types.ts` | All shared TypeScript types: `PluginOptions`, `PresentationMetadata`, `ScanResult`, `BuildContext` |
+| `domain/` | `types.ts` (`PluginOptions`, `PresentationMetadata`, `BuildResult`, `BuildContext`…), `interfaces.ts` (`ICache`, `IAssetPostProcessor`, `ICliCommand`), `constants.ts` |
+| `application/` | `scanner.ts` (discovery, `_category_.*`, frontmatter, `PresentationCollisionError`), `builder.ts` (parallel orchestration, atomic output replace, `PresentationBuildError`), `buildCache.ts` (incremental fingerprint), `frontmatterValidator.ts` (validation, `---js` refused, addon/theme patching) |
+| `infrastructure/fs/` | `fileSystem.ts` (cache dirs, hashing), `dependencies.ts` (files a deck depends on — drives both the isolated copy and the hash), `isolatedBuild.ts`, `hashManifest.ts`, `outputManager.ts` (cache output, orphan purge, final copy), `fsUtils.ts` |
+| `infrastructure/process/` | `buildRunner.ts` (spawn `slidev build` without shell, kill process tree on timeout), `assetGenerator.ts` (thumbnails, PDF/PPTX via Playwright; failures are warnings) |
+| `infrastructure/packages/` | `packageResolver.ts` (theme/addon shorthand, strict name validation, shell-free `--ignore-scripts` auto-install), `env.ts` (env allowlist for child processes) |
+| `presentation/` | `plugin.ts` (lifecycle), `routeBuilder.ts`, `cliCommands.ts` (`slidev:list|stats|validate`), `webpackConfig.ts` (dev static serving) |
+| `shared/` | `logger.ts`, `utils.ts`, `concurrentRunner.ts` |
+| `cli/` | Standalone `slidesaurus` binary (`lib/cli.cjs`): `new`, `list`, `doctor`, `cache clear`; `config.ts` loads `docusaurus.config.{ts,js,mjs}` through jiti in a child process |
 
 ### Theme components (`packages/slidesaurus/theme/`)
 
-React components exposed for Docusaurus swizzling:
-- `SlidevOverview` — landing page listing all presentations and categories
-- `SlidevPresentation` — individual presentation viewer (iframe)
-- `SlidevCard` / `SlidevCategoryCard` — thumbnail cards
-- `SlidevLink` / `SlidevListItem` — embeddable preview utilities
+React components (TSX sources; compiled to `lib/theme` by `scripts/build-theme.mjs` during the Rollup build):
+- `SlidevOverview` — landing page (accepts `children` rendered inside the Layout)
+- `SlidevPresentation` — presentation viewer (iframe, resume bar, playlist bar, SEO tags)
+- `SlidevCard` / `SlidevCategoryCard` / `SlidevListItem` — cards and rows (root `div` + stretched `.cardLink::after`)
+- `SlidevLink` — embeddable inline preview (`link` is given without `baseUrl`)
+- `SlidevIframe` — shared iframe wrapper owning the single sandbox policy `SLIDEV_IFRAME_SANDBOX`
+
+Swizzlable list (`getSwizzleComponentList`): `SlidevOverview`, `SlidevCard`, `SlidevListItem`, `SlidevCategoryCard`, `SlidevPresentation`.
 
 ### Incremental cache
 
-Stored in `.docusaurus/slidesaurus/{pluginId}/`:
+Stored in `.docusaurus/slidesaurus/{id}/` (non-default locales: `.../{id}/i18n/{locale}/`):
 ```
 output/{presentationId}/   ← Slidev static build (index.html, assets/)
 builds/                    ← Temporary isolated build dirs (cleaned after build)
-build-hashes.json          ← SHA-256 hash manifest
+build-hashes.json          ← Hash manifest
 ```
 
-A presentation is rebuilt only when its hash (file content + relevant options) changes.
+A presentation is rebuilt only when its fingerprint changes: `.md` content, dependency files (co-located Slidev folders, `src:` sections, referenced assets), `@slidev/cli`/theme/addon versions, build options + `baseUrl`, URL, and metadata after hooks.
 
 ### Build output (`packages/slidesaurus/lib/`)
 
-Rollup produces two passes:
-- **Pass 1:** CJS (`index.cjs`) + ESM (`index.mjs`) with source maps
-- **Pass 2:** Bundled type declarations (`index.d.ts`, `index.d.mts`)
+Rollup produces two passes plus the compiled theme:
+- **Pass 1:** `index.cjs` + `index.mjs` (with source maps) and `cli.cjs`; the theme is compiled to `lib/theme/`
+- **Pass 2:** bundled type declarations (`index.d.cts`, `index.d.mts`)
 
 External dependencies (not bundled): Node built-ins, `@docusaurus/*`, `gray-matter`, `js-yaml`.
 
@@ -105,9 +118,10 @@ External dependencies (not bundled): Node built-ins, `@docusaurus/*`, `gray-matt
 
 ## Tests
 
-- **Unit tests:** Vitest, in `packages/slidesaurus/src/__tests__/*.spec.ts`. Globals disabled — import `describe`, `it`, `expect`, `vi` explicitly. Logger is mocked via `vi.mock("../logger", ...)`.
+- **Unit tests:** Vitest, in `packages/slidesaurus/src/**/__tests__/*.spec.ts`. Globals disabled — import `describe`, `it`, `expect`, `vi` explicitly. The logger is mocked by mocking the `shared/logger` module (`vi.mock("../../shared/logger", ...)`).
 - **Integration tests:** Cucumber BDD, in `packages/slidesaurus/features/`. Feature files + step definitions test presentation discovery, category handling, and option validation end-to-end.
 - Vitest config: `packages/slidesaurus/vitest.config.ts` — root `./src`, timeout 15 s.
+- CI (`.github/workflows/ci.yml`): ubuntu + windows × Node 20/22 (typecheck, build, unit + integration tests), plus a pack & smoke job (tarball contents, `require`/`import`, CLI binary).
 
 ---
 
@@ -122,19 +136,25 @@ Key doc files to update depending on what changed:
 | Plugin options (`PluginOptions`) | `options.md` |
 | Frontmatter fields | `frontmatter.md` |
 | Categories / `_category_.yml` | `categories.md` |
+| Playlists | `playlists.md` |
 | Theme components (`SlidevCard`, `SlidevLink`, …) | `slidev-card.md`, `slidev-link.md` |
 | Overview / presentation pages | `overview-page.md`, `presentation-page.md` |
-| Hooks (`transformFrontmatter`, `onBuildComplete`, …) | `plugin-api.md` |
+| CSS tokens, `uiTheme`, swizzling | `custom-styling.md` |
+| Hooks (`transformFrontmatter`, `onBuildComplete`, …) / lifecycle | `plugin-api.md` |
 | TypeScript types | `types.md` |
 | Parallel builds / caching | `parallel-builds.md` |
 | Themes & addons | `themes-addons.md` |
+| `slidesaurus` CLI | `cli.md` |
+| `docusaurus start` behaviour | `dev-server.md` |
 
 ---
 
 ## Key conventions
 
 - **TypeScript strict mode** throughout the plugin package.
-- **Plugin ID** (`pluginId` option, defaults to `"default"`) namespaces the cache and supports multi-instance setups.
-- **Environment filtering** (`env.ts`) is intentional security: only an explicit allowlist of env vars is passed to child Slidev processes.
-- **Package name validation** rejects non-scoped names that don't start with `slidev-theme-` or `slidev-addon-` and scoped names that don't match `@*/slidev-theme-*` / `@*/slidev-addon-*`.
-- **Dev server proxy:** in `docusaurus start`, each presentation gets its own Slidev dev server; webpack proxies `/slidev/{id}/*` to the correct localhost port.
+- **Plugin instance ID** (`id` option, defaults to `"default"`) namespaces the cache and supports multi-instance setups. It is used as a directory name, so it is validated (letters, digits, `_`, `-`).
+- **Environment filtering** (`infrastructure/packages/env.ts`) is intentional security: only an explicit allowlist of env vars is passed to child processes.
+- **No shell**: Slidev and the package manager are spawned with `execFile`/`spawn` without a shell; timeouts kill the whole process tree.
+- **Package name validation** only accepts `slidev-theme-*`, `@slidev/theme-*`, `@scope/slidev-theme-*` (and the `addon` equivalents); auto-install is opt-in (`autoInstall`, default `false`) and runs with `--ignore-scripts`.
+- **Public data only**: never put absolute paths, hooks or build options in Docusaurus global data (see `toPublicPluginData` in `routeBuilder.ts`).
+- **Never evaluate user JS in frontmatter**: always parse through `parseFrontmatter` (refuses `---js`).

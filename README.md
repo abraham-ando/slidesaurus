@@ -20,9 +20,9 @@ Vous avez de la doc. Vous avez des slides. Aujourd'hui, ils vivent sur deux mond
 | Builder chaque deck avec `slidev build` | Drop un `.md`, c'est en ligne |
 | Copier les outputs dans `static/` à la main | Pipeline auto, cache SHA-256, builds parallèles |
 | Liens en dur entre docs et slides | Routing unifié, recherche commune |
-| Iframe maison pour embarquer une preview | `<SlidevLink id="intro" />` en MDX |
+| Iframe maison pour embarquer une preview | `<SlidevLink link="/slidev/intro" />` en MDX |
 | Rebuild complet à chaque changement | Cache incrémental — seul le modifié se rebuild |
-| Lancer `slidev dev` à part, port à port | `docusaurus start` lance tout, HMR inclus |
+| Lancer `slidev dev` à part, port à port | `docusaurus start` construit les decks (cache incrémental) et les sert en statique |
 
 ---
 
@@ -31,8 +31,8 @@ Vous avez de la doc. Vous avez des slides. Aujourd'hui, ils vivent sur deux mond
 ### Productivité maximale
 - **Auto-discovery** — déposez un `.md` Slidev, il apparaît dans le site. Pas de config, pas de boilerplate.
 - **Builds parallèles + cache incrémental** — un build complet de 10 présentations en quelques secondes sur incrémental.
-- **HMR intégré** — un seul `docusaurus start` lance Docusaurus + un Slidev dev server par présentation, avec proxy webpack automatique.
-- **Auto-install** des thèmes Slidev manquants — fini les "module not found".
+- **Dev simple** — `docusaurus start` construit les présentations avec le même pipeline que la prod (cache incrémental) et les sert en statique : pas de serveur Slidev, pas de port, pas de proxy (donc pas de HMR Slidev ; lancez `slidev` à côté pour éditer un deck en direct).
+- **Auto-install optionnel** des thèmes/addons Slidev manquants (`autoInstall: true`, désactivé par défaut).
 
 ### Doc vivante
 Embarquez une présentation dans n'importe quelle page MDX :
@@ -40,18 +40,18 @@ Embarquez une présentation dans n'importe quelle page MDX :
 ```mdx
 import SlidevLink from '@theme/SlidevLink';
 
-<SlidevLink id="intro-to-rust" />
+<SlidevLink link="/slidev/intro-to-rust" />
 ```
 
 Vos slides deviennent des **objets de première classe** du contenu : citables, embarquables, indexables.
 
 ### À l'échelle
 - **Catégories** par sous-dossier (`_category_.yml`) pour organiser les decks par thème, équipe ou cours.
-- **Multi-instance** (`pluginId`) — plusieurs collections distinctes (`talks/`, `trainings/`, `internal/`) sur le même site.
+- **Multi-instance** (option `id`) — plusieurs collections distinctes (`talks/`, `trainings/`, `internal/`) sur le même site.
 - **Frontmatter structuré** (`tags`, `author`, `date`, `position`) — base pour filtrer, trier, rechercher.
 
 ### Cohérence visuelle
-Thème Slidev par défaut au niveau du projet → tous les decks alignés sur votre branding. Composants `SlidevOverview`, `SlidevCard`, `SlidevCategoryCard` swizzlables pour matcher votre design system.
+Thème Slidev par défaut au niveau du projet (option `theme`, sinon chaque deck garde son thème ou celui par défaut de Slidev) → tous les decks alignés sur votre branding. Composants `SlidevOverview`, `SlidevCard`, `SlidevCategoryCard`, `SlidevListItem`, `SlidevPresentation` swizzlables pour matcher votre design system.
 
 ---
 
@@ -81,7 +81,7 @@ pnpm add slidesaurus @slidev/cli
 yarn add slidesaurus @slidev/cli
 ```
 
-> **Prérequis** : Docusaurus v3, Node.js ≥ 18.
+> **Prérequis** : Docusaurus v3, Node.js ≥ 20.12. `@slidev/cli` est une peer dependency **optionnelle** : installez-la dans votre projet, sinon aucune présentation n'est construite.
 
 ---
 
@@ -130,7 +130,7 @@ Press space to advance.
 - 🎨 Auto-themed
 ```
 
-Lancez le dev server :
+Lancez le serveur de dev (les présentations sont construites puis servies en statique) :
 
 ```bash
 npx docusaurus start
@@ -148,7 +148,7 @@ Visitez **http://localhost:3000/presentations** — votre talk est là. C'est to
 | `SlidevPresentation` | Visionneuse iframe individuelle |
 | `SlidevCard` | Carte miniature cliquable |
 | `SlidevCategoryCard` | Carte de catégorie |
-| `SlidevLink` | Aperçu inline pour MDX |
+| `SlidevLink` | Aperçu inline pour MDX (`@theme/SlidevLink`, non swizzlable) |
 | `SlidevListItem` | Item de liste compact |
 
 Tous **swizzlables** :
@@ -165,13 +165,13 @@ npx docusaurus swizzle slidesaurus SlidevCard --wrap
 |---|---|---|---|
 | `path` | `string` | `"./slidev"` | Dossier des fichiers `.md` Slidev |
 | `routeBasePath` | `string` | `"/slidev"` | URL de base des présentations |
-| `theme` | `string` | `"unicorn"` | Thème Slidev par défaut |
+| `theme` | `string` | _(aucun)_ | Thème Slidev par défaut (sinon : thème du deck ou thème par défaut de Slidev) |
 | `addons` | `string[]` | `[]` | Addons Slidev globaux |
-| `download` | `boolean` | `false` | Activer le téléchargement PDF |
+| `download` | `boolean` | `false` | Générer les exports PDF/PPTX et afficher les boutons de téléchargement (nécessite Playwright) |
 | `pageTitle` | `string` | `"Slidev Presentations"` | Titre de la page d'overview |
-| `maxParallelBuilds` | `number` | `4` | Builds en parallèle max |
+| `maxParallelBuilds` | `number` | `CPU − 1` (min. 1) | Builds en parallèle max (plafonné au nombre de CPU) |
 | `buildTimeout` | `number` | `120` | Timeout par build (s) |
-| `autoInstall` | `boolean` | `true` | Auto-installer les thèmes manquants |
+| `autoInstall` | `boolean` | `false` | Auto-installer les thèmes/addons manquants (noms `slidev-theme-*` / `slidev-addon-*` uniquement, sans scripts d'installation) |
 
 → [Documentation complète des options](./apps/docs/docs/options.md)
 
@@ -215,6 +215,8 @@ Documentation complète : **[apps/docs](./apps/docs/docs/)**
 - [Builds parallèles & cache](./apps/docs/docs/parallel-builds.md)
 - [Themes & Addons](./apps/docs/docs/themes-addons.md)
 - [Troubleshooting](./apps/docs/docs/troubleshooting.md)
+- [CLI `slidesaurus`](./apps/docs/docs/cli.md)
+- [Dev server](./apps/docs/docs/dev-server.md)
 
 ---
 
@@ -230,6 +232,8 @@ pnpm install
 pnpm build:plugin
 pnpm dev:sample
 ```
+
+Qualité : `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, `pnpm test`. Voir [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 → Voir [CLAUDE.md](./CLAUDE.md) pour l'architecture détaillée.
 

@@ -31,12 +31,12 @@ Drop un `.md` Slidev dans `./slidev/`. Lancez `docusaurus start`. **C'est en lig
 |---|---|
 | 🔍 **Auto-discovery** | Drop un `.md`, il apparaît. Pas de config par présentation. |
 | ⚡ **Builds parallèles + cache** | Hash SHA-256 par fichier, seul le modifié se rebuild. |
-| 🔄 **HMR intégré** | `docusaurus start` lance Docusaurus + un dev server Slidev par deck, proxifié automatiquement. |
+| 🔄 **Dev sans serveur Slidev** | `docusaurus start` construit les decks (cache incrémental) et les sert en statique — ni port, ni proxy, ni HMR Slidev. |
 | 🎨 **Composants embarquables** | `<SlidevLink>`, `<SlidevCard>` directement utilisables en MDX. |
-| 📦 **Auto-install** | Thèmes/addons Slidev manquants installés automatiquement. |
+| 📦 **Auto-install (opt-in)** | `autoInstall: true` installe les thèmes/addons manquants (noms Slidev stricts, sans scripts). Désactivé par défaut. |
 | 🗂️ **Catégories** | Organisation par sous-dossiers + `_category_.yml`. |
 | 🔌 **Hooks** | `transformFrontmatter`, `onPresentationScanned`, `onBuildComplete`. |
-| 🧩 **Multi-instance** | Plusieurs collections (`talks/`, `trainings/`) via `pluginId`. |
+| 🧩 **Multi-instance** | Plusieurs collections (`talks/`, `trainings/`) via l'option `id`. |
 
 ---
 
@@ -53,9 +53,11 @@ pnpm add slidesaurus @slidev/cli
 yarn add slidesaurus @slidev/cli
 ```
 
-**Prérequis** : Docusaurus v3, Node.js ≥ 18.
+**Prérequis** : Docusaurus v3, Node.js ≥ 20.12.
 
-`@slidev/cli` est une **peer dependency** — Slidev compile les présentations, le plugin orchestre.
+`@slidev/cli` est une **peer dependency optionnelle** — Slidev compile les présentations, le plugin orchestre. Installez-le dans votre projet : sans lui, aucune présentation n'est construite (un avertissement est affiché).
+
+Le package fournit aussi la CLI `slidesaurus` (`new`, `list`, `doctor`, `cache clear`) — voir la [doc CLI](../../apps/docs/docs/cli.md).
 
 ---
 
@@ -79,17 +81,18 @@ const config: Config = {
         // URL de base (défaut: "/slidev")
         routeBasePath: "/presentations",
 
-        // Thème Slidev global (résolution courte: "seriph" → "@slidev/theme-seriph")
+        // Thème Slidev global, optionnel (résolution courte: "seriph" → "@slidev/theme-seriph")
+        // Sans valeur : thème du frontmatter de chaque deck, sinon thème par défaut de Slidev
         theme: "seriph",
 
         // Addons globaux
         addons: [],
 
-        // Builds parallèles (défaut: 4)
+        // Builds parallèles (défaut: nombre de CPU − 1, min. 1)
         maxParallelBuilds: 4,
 
-        // Auto-installer les thèmes manquants (défaut: true)
-        autoInstall: true,
+        // Auto-installer les thèmes/addons manquants (défaut: false — opt-in)
+        autoInstall: false,
 
         // Page d'overview
         pageTitle: "Mes présentations",
@@ -143,29 +146,24 @@ npx docusaurus start
 
 ```mdx title="docs/chapter-1.mdx"
 import SlidevLink from '@theme/SlidevLink';
-import SlidevCard from '@theme/SlidevCard';
 
 # Chapitre 1
 
 Pour aller plus loin, voici la présentation associée :
 
-<SlidevLink id="intro" />
-
-Ou en mode carte :
-
-<SlidevCard id="intro" />
+<SlidevLink link="/presentations/intro" />
 ```
 
 | Composant | Usage |
 |---|---|
 | `SlidevOverview` | Page de listing |
 | `SlidevPresentation` | Iframe d'une présentation |
-| `SlidevCard` | Miniature cliquable |
+| `SlidevCard` | Carte miniature cliquable (utilisée par l'overview) |
 | `SlidevCategoryCard` | Carte de catégorie |
 | `SlidevLink` | Preview inline MDX |
-| `SlidevListItem` | Item compact |
+| `SlidevListItem` | Item compact (vue liste) |
 
-**Tous swizzlables** :
+**Swizzlables** (sauf `SlidevLink`) :
 ```bash
 npx docusaurus swizzle slidesaurus SlidevCard --wrap
 ```
@@ -251,6 +249,8 @@ Chaque instance a son propre cache (`.docusaurus/slidesaurus/{id}/`) et ses prop
 - [Builds parallèles & cache](../../apps/docs/docs/parallel-builds.md)
 - [Themes & Addons](../../apps/docs/docs/themes-addons.md)
 - [Troubleshooting](../../apps/docs/docs/troubleshooting.md)
+- [CLI `slidesaurus`](../../apps/docs/docs/cli.md)
+- [Dev server](../../apps/docs/docs/dev-server.md)
 
 ---
 

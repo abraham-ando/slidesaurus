@@ -24,24 +24,41 @@ plugins: [
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `path` | `string` | `"./slidev"` | Directory containing Slidev Markdown files, relative to the site directory. |
-| `routeBasePath` | `string` | `"/slidev"` | URL base path where presentations are served. |
+| `routeBasePath` | `string` | `"/slidev"` | URL base path where presentations are served. Must start with `/` and must not contain `..` (validated at startup). The site `baseUrl` is prepended automatically. |
 | `pageTitle` | `string` | `"Slidev Presentations"` | Title displayed on the overview page. |
 | `pageTagline` | `string` | `"Interactive presentation overview"` | Tagline displayed below the title on the overview page. |
-| `id` | `string` | `"default"` | Plugin instance ID. Use when registering multiple instances. |
-| `theme` | `string` | `"unicorn"` | Default Slidev theme applied to all presentations. Use a shorthand (`"seriph"`) or full package name (`"@slidev/theme-seriph"`). Can be overridden per-presentation via the `theme` frontmatter field. See [Themes & Addons](./themes-addons.md). |
+| `id` | `string` | `"default"` | Plugin instance ID. Use when registering multiple instances. Used as a directory name in the cache, so it may only contain letters, digits, `_` and `-` (validated at startup). |
+| `theme` | `string` | _(none)_ | Default Slidev theme applied to presentations that do not declare one. Use a shorthand (`"seriph"`) or full package name (`"@slidev/theme-seriph"`). When omitted, each deck uses the theme from its own frontmatter, or Slidev's built-in default theme. Can be overridden per-presentation via the `theme` frontmatter field. See [Themes & Addons](./themes-addons.md). |
 | `addons` | `string[]` | `[]` | Default Slidev addons applied to all presentations (e.g. `["slidev-addon-excalidraw"]`). Addons extend Slidev with extra components or functionality. Can be supplemented per-presentation via the `addons` frontmatter field (not replaced). See [Themes & Addons](./themes-addons.md). |
-| `download` | `boolean` | `false` | Show a download button that generates PDF and/or PPTX exports at build time. Requires `@playwright/test` to be installed (`npm install -D @playwright/test`). Configure output formats with `exportFormats`. |
+| `download` | `boolean` | `false` | Show a download button that generates PDF and/or PPTX exports at build time. Requires Playwright (`npm install -D playwright-chromium`, then `npx playwright install chromium`). If Playwright is missing, the export is skipped with a warning and the build still succeeds. Configure output formats with `exportFormats`. |
 | `exportFormats` | `Array<"pdf" \| "pptx">` | `["pdf"]` | Output formats generated when `download: true`. `"pdf"` uses Playwright's headless browser; `"pptx"` uses Slidev's built-in PowerPoint export. |
 | `exportWithClicks` | `boolean` | `false` | When `true`, click-triggered animations are exported as separate pages instead of being flattened into one. Useful for presentations that rely heavily on step-by-step reveals. Only relevant when `exportFormats` is non-empty. |
 | `withoutNotes` | `boolean` | `false` | Strip presenter notes from the built presentation. Can also be set per-presentation via frontmatter (`withoutNotes: true`). |
-| `buildTimeout` | `number` | `120` | Maximum time in seconds allowed for building a single presentation. |
-| `maxParallelBuilds` | `number` | `os.cpus().length - 1` | Number of presentations to build concurrently during `docusaurus build`. Defaults to one fewer than your CPU count (minimum 1). |
+| `buildTimeout` | `number` | `120` | Maximum time in seconds allowed for building a single presentation (10–600). On timeout the Slidev process and its child processes are killed. |
+| `maxParallelBuilds` | `number` | `os.cpus().length - 1` | Number of presentations to build concurrently. Defaults to one fewer than your CPU count (minimum 1); accepted range is 1–64, and the effective value is capped at your CPU count. |
 | `verbose` | `boolean` | `false` | Print detailed build output for each presentation. |
-| `autoInstall` | `boolean` | `false` | Automatically install missing npm packages for themes and addons. **Off by default** — opt-in explicitly to avoid unexpected installs in CI or production. |
+| `autoInstall` | `boolean` | `false` | Automatically install missing npm packages for themes and addons. **Off by default** — opt-in explicitly to avoid unexpected installs in CI or production. Only packages that follow the Slidev naming convention are installed, and install scripts are disabled (see [Themes & Addons](./themes-addons.md#auto-install)). |
 | `dryRun` | `boolean` | `false` | When `true`, scans and validates all presentations without building them. Useful in CI pipelines to catch configuration errors early. |
 | `uiTheme` | `string` | `"default"` | Visual layout variant applied to all plugin components. Built-in values: `"default"`, `"compact"`, `"minimal"`. Accepts any string — custom values are set as `data-slidev-ui-theme` on component roots for CSS targeting. See [Custom Styling](./custom-styling.md). |
-| `devServerBasePort` | `number` | `8600` | Base port for Slidev dev servers during `docusaurus start`. Each presentation gets `basePort + index`. Useful when running multiple plugin instances to avoid port collisions. |
-| `devServerTimeout` | `number` | `60000` | Maximum time in milliseconds to wait for a Slidev dev server to become ready. Increase this if your machine is slow or the first Vite start takes longer than 60 s. |
+| `devServerBasePort` | `number` | `8600` | **Deprecated — no effect.** Accepted for backward compatibility; a warning is logged. `docusaurus start` no longer spawns Slidev dev servers. See [Dev Server](./dev-server.md). |
+| `devServerTimeout` | `number` | `60000` | **Deprecated — no effect.** Same as above. |
+
+## Deprecated option aliases
+
+Older option names are still accepted but log a warning:
+
+| Deprecated | Use instead |
+| --- | --- |
+| `sourceDir` | `path` |
+| `overviewPath` | `routeBasePath` |
+| `overviewTitle` | `pageTitle` |
+| `overviewTagline` | `pageTagline` |
+
+If both the old and the new name are provided, the new name wins (with a warning).
+
+## Failing builds
+
+During `docusaurus build`, a presentation that fails to build **fails the whole site build**; the error message lists every failed presentation with the first line of its error. During `docusaurus start`, a failure is only logged so you can keep editing. Failures of optional assets (thumbnail, PDF/PPTX export — typically a missing Playwright) are reported as warnings (`BuildResult.warnings`) and never fail the build.
 
 ## Hooks
 
@@ -85,9 +102,9 @@ plugins: [
 
 | Hook | Signature | Description |
 | --- | --- | --- |
-| `onPresentationScanned` | `(presentation: PresentationMetadata) => void \| Promise<void>` | Called once per presentation after scanning. Mutate the object in-place to override any field. |
-| `onBuildComplete` | `(results: BuildResult[]) => void \| Promise<void>` | Called once after all presentations are built. Use `result.cacheHit` to distinguish rebuilt from cached. |
-| `transformFrontmatter` | `(data: SlidevFrontmatter, filePath: string) => SlidevFrontmatter` | Called before the plugin processes frontmatter. Return the modified data. |
+| `onPresentationScanned` | `(presentation: PresentationMetadata) => void \| Promise<void>` | Called once per presentation after scanning, after `transformFrontmatter`. Mutate the object in-place to override any field. If it throws, a warning is logged and the build continues. |
+| `onBuildComplete` | `(results: BuildResult[]) => void \| Promise<void>` | Called once after all presentations are built (successes and failures). Use `result.cacheHit` to distinguish rebuilt from cached and `result.warnings` for non-blocking asset problems. Errors thrown by the hook are logged and ignored. |
+| `transformFrontmatter` | `(data: SlidevFrontmatter, filePath: string) => SlidevFrontmatter` | Called before the plugin processes frontmatter. Return the modified data (`filePath` is relative to `path`, never absolute). Returning a non-object is ignored with a warning. |
 
 See [Plugin API](./plugin-api.md) for the full hook reference.
 
@@ -101,7 +118,7 @@ plugins: [
 ],
 ```
 
-Uses all defaults: discovers presentations in `./slidev`, serves at `/slidev`.
+Uses all defaults: discovers presentations in `./slidev`, serves at `/slidev`. Without a `theme` option, each deck uses its own frontmatter theme or Slidev's default theme.
 
 ### Custom Path and Route
 
@@ -198,17 +215,6 @@ plugins: [
 ```
 
 See [Custom Styling](./custom-styling.md) for how to implement custom `uiTheme` values.
-
-### Dev Server Port Range
-
-```ts
-plugins: [
-  ["slidesaurus", { id: "talks",    path: "./talks",    devServerBasePort: 8600 }],
-  ["slidesaurus", { id: "training", path: "./training", devServerBasePort: 8700 }],
-],
-```
-
-Each instance uses a distinct port range to avoid collisions during `docusaurus start`.
 
 ### Dry-Run in CI
 

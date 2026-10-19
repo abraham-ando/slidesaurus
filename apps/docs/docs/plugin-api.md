@@ -8,18 +8,24 @@ sidebar_position: 15
 
 ## Lifecycle Hooks
 
+### `validateOptions`
+
+Runs first. Validates the options with a Joi schema, maps deprecated aliases (`sourceDir` → `path`, `overviewPath` → `routeBasePath`, `overviewTitle` → `pageTitle`, `overviewTagline` → `pageTagline`; the new name wins if both are given, with a warning) and rejects unsafe values: an absolute `path` or one escaping the site directory, a `routeBasePath` that does not start with `/` or contains `..`, and an `id` containing anything other than letters, digits, `_` and `-`. The deprecated `devServerBasePort` / `devServerTimeout` are accepted but ignored (warning).
+
 ### `loadContent`
 
-Runs during the content-loading phase. The plugin:
+Runs during the content-loading phase, in both `docusaurus build` and `docusaurus start`. The plugin:
 
-1. Invokes the **Scanner** to walk the configured `path` directory.
-2. Reads each `.md` file's frontmatter using gray-matter.
-3. Reads `_category_.yml` files for category metadata.
-4. Returns an array of presentation objects with metadata, file paths, and category assignments.
+1. Invokes the **Scanner** to walk the configured `path` directory (skipping dotfiles, `_*` entries, `node_modules`, `sections/` and symlinks).
+2. Reads each `.md` file's frontmatter with gray-matter (`---js` frontmatter is refused), validates it, and applies `transformFrontmatter` and `onPresentationScanned`.
+3. Reads `_category_.yml` / `.yaml` / `.json` files for category metadata.
+4. Throws a `PresentationCollisionError` when two presentations would share a route (e.g. `foo.md` next to a `foo/` directory, or ids differing only by case).
+5. **Builds the presentations** (unless `dryRun` is set or `@slidev/cli` is missing): hashes each deck, skips unchanged ones, builds the rest with up to `maxParallelBuilds` concurrent `slidev build` processes, generates thumbnails and optional PDF/PPTX exports, and calls `onBuildComplete`.
+6. In `docusaurus build`, throws a `PresentationBuildError` listing every presentation that failed; in `docusaurus start` it only logs the errors.
 
 ```ts
 async loadContent(): Promise<PluginContentData> {
-  // Scan directory, parse frontmatter, build category tree
+  // Scan → build (incremental, parallel) → return presentations, categories, playlists
 }
 ```
 
@@ -27,62 +33,60 @@ async loadContent(): Promise<PluginContentData> {
 
 Receives the content from `loadContent` and registers Docusaurus routes:
 
-1. **Overview route** — at `routeBasePath`, rendering the `SlidevOverview` component with all presentation metadata.
-2. **Presentation routes** — one route per presentation, rendering the `SlidevPresentation` component.
-
-```ts
-async contentLoaded({ content, actions }): Promise<void> {
-  const { createData, addRoute } = actions;
-  // Create JSON data files for each presentation
-  // Register overview and individual routes
-}
-```
+1. **Overview route** — at `{baseUrl}{routeBasePath}`, rendering `SlidevOverview`; plus one route per category.
+2. **Presentation routes** — one route per presentation, rendering `SlidevPresentation`. Ids are percent-encoded in the URL.
+3. **Global data** — a reduced, public DTO (presentations without `sourceAbsolutePath` / `outputPath`, categories, playlists, and only the UI-relevant config). Absolute filesystem paths, hooks and build options are never serialised into the client bundle.
 
 ### `postBuild`
 
-Runs after the Docusaurus build is complete. The plugin:
+Runs after the Docusaurus build (production only). The builds already happened in `loadContent`; this step only publishes their output:
 
-1. Creates a build queue from all discovered presentations.
-2. Builds up to `maxParallelBuilds` presentations concurrently.
-3. Each build invokes `slidev build <file>` with the appropriate theme and addons.
-4. Copies the build output (static HTML/JS) into the Docusaurus build directory.
-5. Generates static thumbnail PNGs (`thumbnail.png`) for each presentation.
-6. Generates PDF exports (`export.pdf`) when `download: true` is set in frontmatter (requires Playwright).
-7. Writes a `presentations-index.json` search index at `{routeBasePath}/presentations-index.json` containing title, description, tags, author, category, level, duration, deprecated, and playlist for each presentation.
-8. Prints a build telemetry summary: total built, cache hits, failures, and total duration.
+1. Copies the built presentations from the cache (`.docusaurus/slidesaurus/{id}/output/`) into `{outDir}{routeBasePath}`.
+2. Creates a `presenter/index.html` fallback per presentation so static hosts can serve the presenter view.
+3. Writes a `presentations-index.json` search index at `{routeBasePath}/presentations-index.json` containing id, title, description, url, tags, author, owner, category, level, duration, deprecated and playlist for each presentation.
 
-```ts
-async postBuild({ outDir }): Promise<void> {
-  // Parallel Slidev CLI builds
-  // Thumbnail and PDF generation
-  // Search index generation
-  // Copy output to outDir
-}
-```
+### `getPathsToWatch`
 
-### `getThemePath`
+Tells Docusaurus which files trigger a `loadContent()` reload in dev mode: `.md`, `_category_.yml` / `_category_.json`, `.vue`, `.ts`, `.js`, `.json`, styles, images and everything under `public/` in the `path` directory.
 
-Returns the path to the plugin's theme components directory. This is how Docusaurus knows where `SlidevOverview`, `SlidevPresentation`, and other components live.
+### `configureWebpack`
+
+In dev mode only, serves the cache output directory as static files under `{baseUrl}{routeBasePath}`. See [Dev Server](./dev-server.md).
+
+### `getThemePath` / `getTypeScriptThemePath`
+
+`getThemePath()` returns the **compiled** JavaScript theme (`lib/theme/`) — Docusaurus does not transpile TSX coming from `node_modules`. `getTypeScriptThemePath()` returns the raw TSX sources (`theme/`), used by `docusaurus swizzle --typescript`.
 
 ```ts
 getThemePath(): string {
-  return path.resolve(__dirname, "../theme");
+  return path.resolve(__dirname, "theme");        // lib/theme (compiled)
+}
+getTypeScriptThemePath(): string {
+  return path.resolve(__dirname, "../theme");     // theme/ (TSX sources)
 }
 ```
 
 ### `extendCli`
 
-Registers a `slidev:list` command available via `npx docusaurus slidev:list`. This command scans the configured `path` directory and outputs a summary table without triggering a full Docusaurus build.
+Registers three commands, available via `npx docusaurus`. They scan the configured `path` directory without triggering a build:
+
+| Command | Description |
+| --- | --- |
+| `slidev:list` | Lists discovered presentations (category/file → title, author, level, duration, deprecation) |
+| `slidev:stats` | Prints totals: authors, tags, levels, deprecated and incomplete presentations, playlists |
+| `slidev:validate` | Reports metadata issues (missing description or author, deprecated decks) |
 
 ```bash
 npx docusaurus slidev:list
+npx docusaurus slidev:stats
+npx docusaurus slidev:validate
 ```
 
-For the full developer CLI (`slidesaurus new`, `slidesaurus doctor`, `slidesaurus cache clear`, etc.) see the [CLI Reference](./cli.md).
+For the standalone developer CLI (`slidesaurus new`, `slidesaurus doctor`, `slidesaurus cache clear`, etc.) see the [CLI Reference](./cli.md).
 
 ### `getSwizzleComponentList`
 
-Exposes theme components that users can safely swizzle. Docusaurus uses this list to enable the `swizzle` command for the plugin.
+Exposes the theme components that users can swizzle. Docusaurus uses this list to enable the `swizzle` command for the plugin.
 
 ```ts
 getSwizzleComponentList(): string[] {
@@ -92,7 +96,6 @@ getSwizzleComponentList(): string[] {
     "SlidevListItem",
     "SlidevCategoryCard",
     "SlidevPresentation",
-    "SlidevLink",
   ];
 }
 ```
@@ -104,7 +107,8 @@ getSwizzleComponentList(): string[] {
 | `SlidevListItem` | Row component used in the list view |
 | `SlidevCategoryCard` | Category card used in grid and list views |
 | `SlidevPresentation` | The individual presentation page with iframe and metadata |
-| `SlidevLink` | Embeddable inline preview component for MDX pages |
+
+`SlidevLink` and `SlidevIframe` ship in the theme and can be imported via `@theme/SlidevLink` / `@theme/SlidevIframe`, but are not in the swizzle list.
 
 Example swizzle command:
 
@@ -120,41 +124,40 @@ packages/slidesaurus/
     index.ts                        # Rollup entry — thin re-export
     domain/
       types.ts                      # All TypeScript types and interfaces
-      constants.ts                  # Plugin name, shared constants
+      interfaces.ts                 # ICache, IAssetPostProcessor, ICliCommand…
+      constants.ts                  # Plugin name, timeouts, shared constants
     application/
-      scanner.ts                    # File discovery and frontmatter parsing
-      builder.ts                    # Parallel build orchestration
-      buildCache.ts                 # SHA-256 hash manifest, cache hits
+      scanner.ts                    # File discovery, frontmatter, collision detection
+      builder.ts                    # Parallel build orchestration, failure aggregation
+      buildCache.ts                 # Incremental fingerprint + hash manifest checks
       frontmatterValidator.ts       # Frontmatter validation and patching
     infrastructure/
       fs/
-        fileSystem.ts               # Cache directory management
-        outputManager.ts            # Copy built files to Docusaurus output
+        fileSystem.ts               # Cache directory resolution, file hashing
+        fsUtils.ts                  # Containment checks, atomic directory replace
+        dependencies.ts             # Files a deck depends on (copy + cache hash)
         hashManifest.ts             # Read/write build-hashes.json
         isolatedBuild.ts            # Isolated per-presentation build dirs
+        outputManager.ts            # Cache output, orphan purge, final copy, search index
       process/
-        buildRunner.ts              # Spawn `slidev build` child processes
+        buildRunner.ts              # Spawn `slidev build` (no shell, kills process tree)
         assetGenerator.ts           # Thumbnail and PDF/PPTX generation
       packages/
         packageResolver.ts          # Theme/addon resolution and auto-install
         env.ts                      # Environment variable allowlist (security)
     presentation/
       plugin.ts                     # Docusaurus plugin lifecycle hooks
-      routeBuilder.ts               # Route registration (overview + per-deck)
-      cliCommands.ts                # `slidev:list` Docusaurus CLI command
+      routeBuilder.ts               # Route registration + public global data
+      cliCommands.ts                # `slidev:list|stats|validate` Docusaurus commands
       webpackConfig.ts              # Dev-mode static file serving config
     shared/
       logger.ts                     # Structured logger
-      utils.ts                      # Shared helpers
+      utils.ts                      # Shared helpers (route paths, name validation)
       concurrentRunner.ts           # Bounded worker pool (runConcurrently)
-      filterUtils.ts                # Pure filter functions (matchesSearch, applyFilters)
-  cli/
-    index.ts                        # Standalone `slidesaurus` CLI entry
-    commands/
-      new.ts                        # `slidesaurus new`
-      list.ts                       # `slidesaurus list`
-      doctor.ts                     # `slidesaurus doctor`
-      cache.ts                      # `slidesaurus cache clear`
+    cli/
+      index.ts                      # Standalone `slidesaurus` CLI entry
+      config.ts                     # Loads docusaurus.config.{ts,js,mjs} via jiti
+      commands/                     # new, list, doctor, cache
   theme/
     SlidevOverview/                 # Overview page (search, filters, grid/list, sidebar)
     SlidevPresentation/             # Individual presentation page (iframe, resume bar)
@@ -162,11 +165,15 @@ packages/slidesaurus/
     SlidevListItem/                 # Row for list view
     SlidevCategoryCard/             # Category card
     SlidevLink/                     # Embeddable inline preview
+    SlidevIframe/                   # Shared sandboxed iframe wrapper
     useFavorites.ts                 # Favorites state hook (localStorage)
     useUITheme.ts                   # Reads active uiTheme from plugin data
     filterUtils.ts                  # Shared filter functions for theme components
     types.ts                        # Theme-facing type re-exports
+  scripts/build-theme.mjs           # Compiles theme/ → lib/theme/
 ```
+
+The published package contains `lib/` (`index.cjs`, `index.mjs`, `index.d.cts`, `index.d.mts`, `cli.cjs`, and the compiled `lib/theme/`) and `theme/` (TSX sources).
 
 ## Extending the Plugin
 

@@ -28,13 +28,13 @@ npx docusaurus swizzle slidesaurus SlidevLink --wrap
 
 | Prop | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| `link` | `string` | Yes | — | URL of a registered presentation (e.g. `/training/getting-started/introduction`). Must match the `url` field of a scanned presentation exactly. |
+| `link` | `string` | Yes | — | Route of a registered presentation **without the site `baseUrl`** (e.g. `/training/getting-started/introduction`); the `baseUrl` is added automatically. Must match the presentation URL (trailing slash and letter case are ignored). |
 | `width` | `string` | No | `"550px"` | CSS width of the card component. |
 | `pluginId` | `string` | No | `"default"` | Plugin instance ID. Set this when using multiple `slidesaurus` instances in `docusaurus.config.ts`. |
 
 ## How `link` resolution works
 
-The component calls `usePluginData()` to retrieve all presentations registered by the plugin. It normalizes `link` (strips trailing slash, lowercases) and finds the presentation whose `url` matches. If no match is found, the component renders an error card.
+The component calls `usePluginData()` to retrieve all presentations registered by the plugin. It prefixes `link` with the site `baseUrl`, normalizes it (strips trailing slash, lowercases) and finds the presentation whose `url` matches. If no match is found, the component renders an error card.
 
 ```tsx
 // This link must correspond to a real presentation URL
@@ -55,8 +55,9 @@ If the presentation is not found, check that the `link` value matches the route 
 
 ## Preview behavior
 
-- **Production mode**: renders a scaled iframe pointing to `presentation.previewUrl`.
-- **Dev mode** (`isDev: true`): renders a placeholder icon — no iframe is shown because presentations may not be built yet.
+The card renders a scaled, lazy-loaded iframe pointing to `presentation.previewUrl`, with a spinner while it loads (in both dev mode and production, since both serve the built output). If the presentation has no preview URL, a placeholder icon is shown. The iframe uses the shared `SLIDEV_IFRAME_SANDBOX` policy (see [Presentation Page](./presentation-page.md)).
+
+The card is a `<div>` whose title link is stretched over the card, so the iframe is never nested in an anchor.
 
 The iframe is scaled via a `ResizeObserver`-driven CSS variable so the preview stays proportional at any card width.
 

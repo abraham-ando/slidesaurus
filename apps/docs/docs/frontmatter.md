@@ -10,17 +10,17 @@ Every Slidev Markdown file can include a YAML frontmatter block at the top. The 
 
 | Field | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| `title` | `string` | Yes | — | Display title of the presentation. |
-| `description` | `string` | No | `""` | Short description shown on the overview card. |
-| `theme` | `string` | No | Plugin default | Slidev theme for this presentation. Overrides the global `theme` option. |
+| `title` | `string` | No | File name | Display title of the presentation. Falls back to the file name (without `.md`) when missing or invalid. |
+| `description` | `string` | No | — | Short description shown on the overview card. |
+| `theme` | `string` | No | Plugin `theme` option | Slidev theme for this presentation (non-empty string). Overrides the global `theme` option. If neither is set, Slidev's default theme is used. |
 | `colorSchema` | `"dark" \| "light" \| "auto"` | No | — | Color scheme passed to Slidev during build. Exposed to theme components for iframe styling. |
 | `withoutNotes` | `boolean` | No | Plugin default | When `true`, excludes presenter notes from the build for this presentation only. Overrides the global `withoutNotes` option. |
-| `addons` | `string[]` | No | Plugin default | Slidev addons for this presentation. Merged with global `addons`. |
-| `author` | `string` | No | `""` | Author name displayed on the card. |
+| `addons` | `string[]` | No | Plugin `addons` option | Slidev addons for this presentation (non-empty strings, deduplicated). Merged with global `addons`. |
+| `author` | `string` | No | — | Author name displayed on the card. |
 | `tags` | `string[]` | No | `[]` | Tags for categorization and filtering. Values are trimmed, lowercased, and deduplicated automatically. |
 | `date` | `string` | No | — | Publication or last-updated date in `YYYY-MM-DD` format. |
-| `position` | `number` | No | `0` | Sort order within a category. Lower values appear first. Presentations with the same `position` value are sorted alphabetically by `title` as a tiebreaker. |
-| `owner` | `string` | No | `""` | Team or person responsible for the presentation. Shown in search and filter interfaces. |
+| `position` | `number` | No | — | Sort order. Must be a non-negative number; lower values appear first, and presentations without a `position` come after those that have one. Ties are broken by source path, then by `title`. |
+| `owner` | `string` | No | — | Team or person responsible for the presentation. Shown in search and filter interfaces. |
 | `level` | `string` | No | — | Difficulty level of the presentation. Must be one of `beginner`, `intermediate`, or `advanced`. Renders a color-coded badge on cards. Invalid values are ignored with a warning. |
 | `duration` | `number` | No | — | Estimated duration in minutes. Must be greater than `0`. Invalid values are ignored. |
 | `lastReviewed` | `string` | No | — | ISO date (`YYYY-MM-DD`) of the last content review. |
@@ -77,10 +77,14 @@ The plugin validates certain frontmatter fields and normalizes others at scan ti
 - **`duration`** — Must be a number greater than `0`. Zero, negative values, and non-numeric values are ignored.
 - **`lastReviewed`** and **`date`** — Must be a valid ISO date string in `YYYY-MM-DD` format. Malformed values are ignored.
 - **`deprecated`** — Must be a boolean `true` or `false`. Using `deprecated: yes` or other non-boolean truthy strings is invalid; use `deprecated: true`.
-- **`position`** — Must be a number. Non-numeric values (e.g. `position: "first"`) are ignored and the default `0` is used instead. Two presentations with the same `position` are sorted alphabetically by `title`.
+- **`position`** — Must be a non-negative number. Other values (e.g. `position: "first"`) are ignored, and the presentation sorts after those that have a `position`. Ties are broken by source path, then by `title`.
+- **`title`, `theme`** — Must be non-empty strings. **`description`, `author`, `owner`** — Must be strings. **`addons`** — Must be an array of non-empty strings (invalid items are dropped, duplicates removed). **`playlist`** — A non-empty string or an array of them. **`colorSchema`** — One of `dark`, `light`, `auto`. **`withoutNotes`** — A boolean. A value of the wrong type is ignored and a warning naming the file is printed.
 
 ## Notes
 
+- Files and directories whose name starts with `.` or `_`, as well as `node_modules` and `sections/` folders (used for `src:` imports), are not scanned for presentations.
+- Frontmatter written in JavaScript (`---js`) is **refused** for security reasons — the file is reported with a warning and treated as having no metadata. Use YAML.
+- The `transformFrontmatter` hook sees the raw frontmatter before validation (see [Plugin Options](./options.md#hooks)).
 - The first `---` must be on line 1 of the file.
 - The closing `---` separates frontmatter from the first slide.
 - Subsequent `---` lines (on their own line) separate slides from each other.

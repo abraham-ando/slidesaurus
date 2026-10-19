@@ -12,10 +12,11 @@ The plugin builds multiple Slidev presentations concurrently during `docusaurus 
 2. File hashes are computed in parallel and compared against the cache manifest. Unchanged presentations are skipped.
 3. For everything that needs rebuilding, an isolated build directory is prepared (frontmatter patched, co-located assets copied).
 4. Up to `maxParallelBuilds` presentations are built simultaneously by separate `slidev build` processes.
-5. Thumbnails and `pdf`/`pptx` exports are generated under the same concurrency budget.
-6. Built outputs are moved to the final cache, then copied into the Docusaurus static output during `postBuild`.
+5. Each build writes to a temporary directory, and the cached output is replaced atomically only on success — if a build fails, the previous output (if any) is kept. Thumbnails and `pdf`/`pptx` exports are then generated from the isolated copy of the deck.
+6. Outputs of deleted or renamed decks, and partial builds, are purged from the cache.
+7. All of this happens in `loadContent`; during `postBuild` the cached outputs are simply copied into the Docusaurus static output.
 
-The orchestrator uses a bounded worker pool (`runConcurrently`) at every stage — hashing, isolated dir prep, builds, asset generation, cleanup — so the same concurrency cap applies end-to-end.
+The orchestrator uses a bounded worker pool (`runConcurrently`) for hashing and builds, so the same concurrency cap applies end-to-end.
 
 ## Why concurrency is safe for `slidev build`
 
@@ -35,14 +36,14 @@ Earlier versions of the plugin ran builds sequentially out of caution. The `EADD
 
 The default is `Math.max(1, os.cpus().length - 1)` — one fewer than the number of logical CPUs, leaving one core free for Docusaurus and the OS. On an 8-core machine this is `7`; on a single-core machine it clamps to `1`.
 
-There is no automatic runtime cap — if you set `maxParallelBuilds: 64` on a 4-core machine the plugin will attempt to run 64 concurrent `slidev build` processes (memory exhaustion will follow). Set a value appropriate for your hardware.
+The option accepts values from 1 to 64, and the effective concurrency is additionally capped at the number of CPUs — setting `maxParallelBuilds: 64` on a 4-core machine runs at most 4 builds at once.
 
 ### Choosing `maxParallelBuilds`
 
 | Scenario | Recommended value |
 | --- | --- |
 | CI with 2 vCPUs | `2` |
-| Development laptop (4–8 cores) | `4` (default) |
+| Development laptop (4–8 cores) | the default (`cpus - 1`) |
 | Build server (16+ cores) | `8`–`12` |
 | Memory-constrained environments | `2`–`3` |
 
@@ -50,7 +51,7 @@ Each Slidev build spawns a Node.js process and a Vite/Rollup compile. Memory usa
 
 ### Build Timeout
 
-If a single presentation takes longer than `buildTimeout` seconds, it is killed and the build continues with the remaining presentations. The failed presentation logs a warning.
+If a single presentation takes longer than `buildTimeout` seconds, the Slidev process **and its child processes** are killed and the presentation is reported as failed; the remaining presentations keep building. In `docusaurus build`, the failure then fails the site build with a message listing every failed presentation; in `docusaurus start` it is only logged. Slidev is spawned without a shell, so the timeout reliably stops the whole process tree.
 
 ```ts
 {
@@ -60,12 +61,21 @@ If a single presentation takes longer than `buildTimeout` seconds, it is killed 
 
 ## Incremental cache
 
-The plugin maintains a SHA-256 hash manifest under `.docusaurus/slidesaurus/{pluginId}/build-hashes.json`. A presentation is rebuilt only when:
+The plugin maintains a SHA-256 hash manifest under `.docusaurus/slidesaurus/{id}/build-hashes.json` (for non-default locales: `.docusaurus/slidesaurus/{id}/i18n/{locale}/`). A presentation is rebuilt only when its **fingerprint** changes. The fingerprint covers everything that influences the output:
 
-- the source `.md` content changes, **or**
-- the build options fingerprint changes — covering `theme`, `addons`, `download`, `exportFormats`, `exportWithClicks`, `withoutNotes`, and `baseUrl`.
+- the content of the `.md` file;
+- the files it depends on: co-located assets and Slidev folders (`components/`, `styles/`, `setup/`, `layouts/`, `public/`, `pages/`…), Markdown imported with `src:` sections, and relative assets referenced from the Markdown (e.g. `./img.png` or `../shared/logo.png`, as long as they stay inside the `path` directory). Files larger than 2 MB are fingerprinted by size and modification time instead of content;
+- the installed versions of `@slidev/cli`, of the theme and of every addon;
+- the build options: `theme`, `addons`, `download`, `exportFormats`, `exportWithClicks`, `withoutNotes` and `baseUrl`;
+- the deck URL (base) and its metadata **after** the `transformFrontmatter` / `onPresentationScanned` hooks.
 
-If you change one of these options, every presentation is invalidated automatically — no manual cache clear needed.
+If any of these change, only the affected presentations are rebuilt — no manual cache clear needed.
+
+:::note One-time full rebuild after upgrading
+The hash format changed when the fingerprint was extended, so the first build after upgrading the plugin rebuilds every presentation once.
+:::
+
+Failures to generate **optional assets** (thumbnail, PDF/PPTX export — typically because Playwright is not installed) are recorded as `BuildResult.warnings`; they do not invalidate the cache, so a missing Playwright does not trigger a rebuild on every run.
 
 ### Cache hits in `onBuildComplete`
 
@@ -102,11 +112,11 @@ If your CI pipeline caches the `.docusaurus/` directory between runs, stale buil
 
 ### Failed presentation retry
 
-A presentation that fails to build is **invalidated from the cache** immediately. The next `docusaurus build` run will retry it — no manual intervention is required.
+A presentation that fails to build is **invalidated from the cache** immediately. The next `docusaurus build` run will retry it — no manual intervention is required. Because outputs are replaced atomically, a failed rebuild never leaves a half-written output behind.
 
 ## Isolated build directories
 
-Each presentation builds in its own temporary directory under `.docusaurus/slidesaurus/{pluginId}/builds/`. This ensures:
+Each presentation builds in its own temporary directory under `.docusaurus/slidesaurus/{id}/builds/`, containing a copy of the deck and its dependencies. Your source directory is never modified (the `.slidev/` and `dist/` folders you may have there are left untouched). This ensures:
 
 - No shared state between builds.
 - Theme and addon resolution for one presentation does not affect another.
@@ -116,14 +126,14 @@ The isolated `.md` is renamed to a `safeId` (slashes replaced with `__`) so Slid
 
 ## Theme and addon resolution caching
 
-Within a single build run, `ensureThemeAvailable` and `ensureAddonsAvailable` are memoized per `(siteDir, packageName)`. If 50 presentations share the same theme, the resolver walks `node_modules` once — not 50 times. Auto-installs are also de-duplicated, so concurrent builds that discover the same missing addon converge on a single `npm install`.
+Within a single build run, `ensureThemeAvailable` and `ensureAddonsAvailable` are memoized per `(siteDir, packageName)`. If 50 presentations share the same theme, the resolver walks `node_modules` once — not 50 times. Auto-installs are also de-duplicated, so concurrent builds that discover the same missing addon converge on a single install.
 
-The Slidev CLI binary lookup (`resolveSlidevBin`) is similarly cached per `siteDir` for the lifetime of the process.
+The Slidev CLI lookup is similarly cached per `siteDir` for the lifetime of the process. The plugin runs the CLI JavaScript entry point with Node directly (no shell, no `.bin` shim).
 
 ## Performance Tips
 
 1. **Reduce slide count** — split large decks into smaller presentations so concurrency has more leverage.
-2. **Pre-install themes** — set `autoInstall: false` and install themes once via `package.json`. This avoids any `npm install` during the build hot path.
+2. **Pre-install themes** — keep `autoInstall: false` (the default) and install themes once via `package.json`. This avoids any package installation during the build hot path.
 3. **Avoid heavy addons in many presentations** — addons increase per-deck startup time.
 4. **Increase `buildTimeout` for CI** — slower CI runners may need `buildTimeout: 300` for complex decks.
 5. **Tune `maxParallelBuilds` to your hardware** — too low underuses the machine; too high causes memory pressure and contention. The default (`os.cpus().length - 1`) is a sane starting point; only override it when you have a measured reason to.
@@ -137,11 +147,12 @@ After each build run, the plugin prints a summary that includes a comparison aga
   Built:   6  (6 ok, 0 failed)
   Cached:  2
   Time:    42.30s (3.8x faster than sequential 161.2s)
+  Asset warnings: 1 presentation(s)
 ```
 
 The **sequential equivalent** is the sum of every individual build duration. The **speedup factor** is `sequentialTime / parallelTime` and appears when there is a measurable gain (i.e. when parallel time is strictly shorter than sequential time). A factor of `3.8x` means the 6 presentations together took 42 s instead of the 161 s they would have taken one after the other.
 
-When all presentations are served from cache (nothing to build), no speedup line is printed — there is nothing to compare.
+The `Asset warnings` line only appears when a thumbnail or export could not be generated. When all presentations are served from cache (nothing to build), the summary is replaced by a single "up-to-date" message — there is nothing to compare.
 
 ## Verbose output
 
