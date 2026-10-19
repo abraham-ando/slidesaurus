@@ -2,24 +2,36 @@
 
 ## Supported Versions
 
-Only the latest published version of `slidesaurus` receives security patches.
+Security patches are provided for the 1.x line of `slidesaurus`.
 
 | Version | Supported          |
 | ------- | ------------------ |
-| latest  | ✅ Yes             |
-| older   | ❌ No              |
+| 1.x     | ✅ Yes             |
+| < 1.0   | ❌ No              |
 
 ## Reporting a Vulnerability
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 
-Please report security issues by email to:
+### Preferred: GitHub Private Vulnerability Reporting
+
+Report the issue privately through GitHub's advisory form:
+
+**<https://github.com/abraham-ando/slidesaurus/security/advisories/new>**
+
+The report stays private between you and the maintainers until a fix is released.
+
+### Alternative: e-mail
+
+If you cannot use GitHub, send an e-mail to:
 
 **<ai.core.net@gmail.com>**
 
 Use the subject line: `[SECURITY] slidesaurus — <brief description>`
 
-Include:
+### What to include
+
+Whichever channel you use, please include:
 
 - Description of the vulnerability
 - Steps to reproduce
