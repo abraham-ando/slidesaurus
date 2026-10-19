@@ -11,7 +11,7 @@
  */
 import path from "node:path";
 import type { LoadContext, Plugin } from "@docusaurus/types";
-import { Joi } from "@docusaurus/utils-validation";
+import * as utilsValidation from "@docusaurus/utils-validation";
 import type { PluginOptions, PluginContentData } from "../domain/types";
 import { PLUGIN_NAME } from "../domain/constants";
 import { scanPresentations } from "../application/scanner";
@@ -54,6 +54,12 @@ const DEFAULT_OPTIONS: PluginOptions = {
   exportWithClicks: false,
   uiTheme: "default",
 };
+
+// @docusaurus/utils-validation is CommonJS: Node's ESM loader cannot detect its
+// `Joi` named export (lib/index.mjs), and it has no default export for the
+// CJS bundle. Under ESM the namespace exposes module.exports as `default`.
+const { Joi } = ((utilsValidation as { default?: typeof utilsValidation })
+  .default ?? utilsValidation) as typeof utilsValidation;
 
 export type SlidesaurusPluginOptions = Partial<PluginOptions>;
 
