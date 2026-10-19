@@ -22,8 +22,8 @@
  * • Edit `styles.module.css` to restyle the ribbons.
  * • Add more overlays here (e.g. a "Draft" badge when `deprecated === true`).
  */
+import { useEffect, useState } from "react";
 import OriginalSlidevCard from "@theme-original/SlidevCard";
-import type { SlidevPresentation } from "../../declarations";
 import styles from "./styles.module.css";
 
 /** Age (in days) below which a presentation is considered "new". */
@@ -44,15 +44,21 @@ function isFeaturedPresentation(tags?: string[]): boolean {
 type Props = React.ComponentProps<typeof OriginalSlidevCard>;
 
 export default function SlidevCard(props: Props) {
-  const presentation = props.presentation as SlidevPresentation;
-  const showNew = isNewPresentation(presentation.date);
+  const { presentation } = props;
+  // "New" depends on the current time: compute it after mount so the server-rendered
+  // HTML (built at an arbitrary date) matches the first client render (no hydration mismatch).
+  const [isNew, setIsNew] = useState(false);
+  useEffect(() => {
+    setIsNew(isNewPresentation(presentation.date));
+  }, [presentation.date]);
+  const showNew = isNew;
   const showFeatured = !showNew && isFeaturedPresentation(presentation.tags);
 
   return (
-    // `display: contents` makes the wrapper invisible to CSS Grid/Flexbox
-    // so card sizing is unchanged. Ribbons use absolute positioning relative
-    // to the wrapper, which is promoted to a containing block via `position:
-    // relative` (CSS Containment keeps stacking order correct).
+    // The wrapper is a real box (`position: relative`, flex column) so the
+    // ribbons can be absolutely positioned against it, and it stretches the card
+    // to the grid row height. (`display: contents` generates no box, so
+    // `position: relative` had no effect on it.)
     <div className={styles.wrapper}>
       {showNew && (
         <span className={styles.ribbonNew} aria-label="New presentation">

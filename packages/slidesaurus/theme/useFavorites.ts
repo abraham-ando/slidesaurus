@@ -14,7 +14,11 @@ function readFavorites(): Set<string> {
 }
 
 function writeFavorites(favs: Set<string>): void {
-  localStorage.setItem(FAVORITES_KEY, JSON.stringify([...favs]));
+  try {
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify([...favs]));
+  } catch {
+    // storage unavailable or full: the in-memory state still updates via the event below
+  }
   window.dispatchEvent(new Event(CHANGE_EVENT));
 }
 
@@ -23,25 +27,32 @@ export function useFavorites(): {
   toggleFavorite: (id: string) => void;
   isFavorite: (id: string) => boolean;
 } {
-  const [favorites, setFavorites] = useState<Set<string>>(readFavorites);
+  // Start empty so the first client render matches the server-rendered HTML;
+  // the stored favorites are loaded right after mount.
+  const [favorites, setFavorites] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     const onChanged = () => setFavorites(readFavorites());
+    onChanged();
     window.addEventListener(CHANGE_EVENT, onChanged);
-    return () => window.removeEventListener(CHANGE_EVENT, onChanged);
+    // Keep several tabs in sync
+    window.addEventListener("storage", onChanged);
+    return () => {
+      window.removeEventListener(CHANGE_EVENT, onChanged);
+      window.removeEventListener("storage", onChanged);
+    };
   }, []);
 
+  // Side effects (localStorage write + event) live here, not in a setState updater,
+  // which React may invoke twice in StrictMode.
   const toggleFavorite = useCallback((id: string) => {
-    setFavorites((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      writeFavorites(next);
-      return next;
-    });
+    const next = readFavorites();
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    writeFavorites(next);
   }, []);
 
   const isFavorite = useCallback((id: string) => favorites.has(id), [favorites]);

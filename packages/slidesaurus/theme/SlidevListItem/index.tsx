@@ -18,7 +18,7 @@ const LEVEL_CLASS: Record<string, string> = {
 };
 
 type Props =
-  | { type: "presentation"; presentation: Presentation; isDev: boolean; uiTheme?: UITheme }
+  | { type: "presentation"; presentation: Presentation; uiTheme?: UITheme }
   | { type: "category"; category: Category; uiTheme?: UITheme };
 
 export default function SlidevListItem(props: Props) {
@@ -45,14 +45,26 @@ export default function SlidevListItem(props: Props) {
     );
   }
 
-  const { presentation, isDev } = props;
+  const { presentation } = props;
+  const favorite = isFavorite(presentation.id);
 
-  const content = (
-    <>
+  // "Card link" pattern: the row is a <div>; the title <a> is stretched over the
+  // whole row by ::after. Download/presenter links and the favorite button are
+  // siblings placed above it, so no interactive element is nested in an <a>.
+  return (
+    <div className={styles.listItem} data-slidev-ui-theme={uiTheme}>
       <div className={styles.titleSection}>
         <PresentationIcon className={styles.icon} width={18} height={18} />
-        <span className={styles.title}>{presentation.title}</span>
-        {isDev && <span className={styles.devBadge}>Build Required</span>}
+        <span className={styles.title}>
+          <a
+            href={presentation.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.cardLink}
+          >
+            {presentation.title}
+          </a>
+        </span>
       </div>
       <div className={styles.descriptionSection}>
         {presentation.description || "—"}
@@ -85,55 +97,43 @@ export default function SlidevListItem(props: Props) {
             <span>{presentation.author}</span>
           </div>
         )}
-        {!isDev && presentation.exportUrls?.map((exportUrl) => (
+        {presentation.exportUrls?.map((exportUrl) => (
           <a
             key={exportUrl}
             href={exportUrl}
             download
             className={styles.downloadBtn}
-            onClick={(e) => e.stopPropagation()}
-            aria-label={`Download ${exportLabel(exportUrl)}`}
+            aria-label={`Download ${exportLabel(exportUrl)} of ${presentation.title}`}
           >
             <DownloadIcon width={12} height={12} />
             <span>{exportLabel(exportUrl)}</span>
           </a>
         ))}
-        {!isDev && (
-          <a
-            href={`${presentation.url}presenter/`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.presenterBtn}
-            onClick={(e) => e.stopPropagation()}
-            aria-label="Open presenter view"
-          >
-            <PresenterIcon width={12} height={12} />
-            <span>Present</span>
-          </a>
-        )}
+        <a
+          href={`${presentation.url}presenter/`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.presenterBtn}
+          aria-label={`Open presenter view for ${presentation.title}`}
+        >
+          <PresenterIcon width={12} height={12} />
+          <span>Present</span>
+        </a>
         <button
           type="button"
-          className={`${styles.favoriteBtn} ${isFavorite(presentation.id) ? styles.favoriteBtnActive : ""}`}
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(presentation.id); }}
-          aria-label={isFavorite(presentation.id) ? "Remove from favorites" : "Add to favorites"}
+          className={`${styles.favoriteBtn} ${favorite ? styles.favoriteBtnActive : ""}`}
+          onClick={() => toggleFavorite(presentation.id)}
+          aria-label={favorite ? "Remove from favorites" : "Add to favorites"}
+          aria-pressed={favorite}
         >
-          <StarIcon filled={isFavorite(presentation.id)} width={15} height={15} />
+          <StarIcon filled={favorite} width={15} height={15} />
         </button>
       </div>
-      {!isDev && presentation.thumbnailUrl && (
+      {presentation.thumbnailUrl && (
         <div className={styles.hoverPreview} aria-hidden="true">
           <img src={presentation.thumbnailUrl} alt="" className={styles.hoverPreviewImg} />
         </div>
       )}
-    </>
-  );
-
-  if (isDev) {
-    return <a href={presentation.url} className={styles.listItem} data-slidev-ui-theme={uiTheme}>{content}</a>;
-  }
-  return (
-    <a href={presentation.url} className={styles.listItem} data-slidev-ui-theme={uiTheme} target="_blank" rel="noopener noreferrer">
-      {content}
-    </a>
+    </div>
   );
 }

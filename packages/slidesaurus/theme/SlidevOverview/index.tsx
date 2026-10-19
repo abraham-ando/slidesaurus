@@ -1,8 +1,9 @@
-import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import Layout from "@theme/Layout";
 import Link from "@docusaurus/Link";
 import { usePluginData } from "@docusaurus/useGlobalData";
 import { useLocation } from "@docusaurus/router";
+import useBaseUrl from "@docusaurus/useBaseUrl";
 import SlidevCard from "../SlidevCard";
 import SlidevCategoryCard from "../SlidevCategoryCard";
 import SlidevListItem from "../SlidevListItem";
@@ -17,7 +18,6 @@ import {
   SortDescIcon,
   GridViewIcon,
   DetailsViewIcon,
-  WarningIcon,
   EmptyPresentationIcon,
   SearchIcon,
   CloseIcon,
@@ -69,76 +69,85 @@ function buildSearch(q: string, level: string, author: string, tags: string[], h
   return str ? `?${str}` : "";
 }
 
-export default function SlidevOverview({ pluginId = "default" }: { readonly pluginId?: string }) {
-  const { presentations, categories, playlists, config, isDev } = usePluginData(
+interface SlidevOverviewProps {
+  readonly pluginId?: string;
+  /**
+   * Optional content rendered inside the page `<Layout>` (below the navbar),
+   * above the overview. Lets swizzle wrappers inject a banner without
+   * rendering a second `<Layout>`.
+   */
+  readonly children?: React.ReactNode;
+}
+
+export default function SlidevOverview({ pluginId = "default", children }: SlidevOverviewProps) {
+  const { presentations, categories, playlists, config } = usePluginData(
     PLUGIN_NAME,
     pluginId,
   ) as PluginData;
   const uiTheme = config.uiTheme ?? "default";
   const location = useLocation();
 
-  const initialParams = useMemo(() => readUrlParams(location.search), []);
-
-  const [searchQuery, setSearchQuery] = useState(initialParams.q);
-  const [selectedLevel, setSelectedLevel] = useState(initialParams.level);
-  const [selectedAuthor, setSelectedAuthor] = useState(initialParams.author);
-  const [selectedTags, setSelectedTags] = useState<string[]>(initialParams.tags);
-  const [hideDeprecated, setHideDeprecated] = useState(initialParams.hideDeprecated);
-  const [selectedPlaylist, setSelectedPlaylist] = useState(initialParams.playlist);
+  // State is initialised with SSR-safe defaults and hydrated from the URL and
+  // localStorage after mount, so the first client render matches the static HTML.
+  const [hydrated, setHydrated] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedLevel, setSelectedLevel] = useState("");
+  const [selectedAuthor, setSelectedAuthor] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [hideDeprecated, setHideDeprecated] = useState(false);
+  const [selectedPlaylist, setSelectedPlaylist] = useState("");
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [viewMode, setViewMode] = useState("grid");
+  const [sortOrder, setSortOrder] = useState("asc");
 
   const { favorites, isFavorite } = useFavorites();
 
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(() => {
-    if (globalThis.window !== undefined) {
-      return localStorage.getItem(STORAGE_KEYS.showFavoritesOnly) === "1";
-    }
-    return false;
-  });
-
-  const [viewMode, setViewMode] = useState(() => {
-    // Minimal theme forces list view — no grid
-    if (uiTheme === "minimal") return "list";
-    if (globalThis.window !== undefined) {
-      return localStorage.getItem(STORAGE_KEYS.viewMode) || "grid";
-    }
-    return "grid";
-  });
-
-  const [sortOrder, setSortOrder] = useState(() => {
-    if (globalThis.window !== undefined) {
-      return localStorage.getItem(STORAGE_KEYS.sortOrder) || "asc";
-    }
-    return "asc";
-  });
-
   useEffect(() => {
-    if (globalThis.window !== undefined) localStorage.setItem(STORAGE_KEYS.viewMode, viewMode);
-  }, [viewMode]);
+    const params = readUrlParams(window.location.search);
+    setSearchQuery(params.q);
+    setSelectedLevel(params.level);
+    setSelectedAuthor(params.author);
+    setSelectedTags(params.tags);
+    setHideDeprecated(params.hideDeprecated);
+    setSelectedPlaylist(params.playlist);
+    try {
+      setShowFavoritesOnly(localStorage.getItem(STORAGE_KEYS.showFavoritesOnly) === "1");
+      setViewMode(localStorage.getItem(STORAGE_KEYS.viewMode) || "grid");
+      setSortOrder(localStorage.getItem(STORAGE_KEYS.sortOrder) || "asc");
+    } catch {
+      // localStorage unavailable (private mode, blocked storage): keep defaults
+    }
+    setHydrated(true);
+  }, []);
 
+  // Persist preferences only after hydration, otherwise defaults would
+  // overwrite the stored values before they are read.
   useEffect(() => {
-    if (globalThis.window !== undefined) localStorage.setItem(STORAGE_KEYS.sortOrder, sortOrder);
-  }, [sortOrder]);
-
-  useEffect(() => {
-    if (globalThis.window !== undefined)
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(STORAGE_KEYS.viewMode, viewMode);
+      localStorage.setItem(STORAGE_KEYS.sortOrder, sortOrder);
       localStorage.setItem(STORAGE_KEYS.showFavoritesOnly, showFavoritesOnly ? "1" : "0");
-  }, [showFavoritesOnly]);
+    } catch {
+      // ignore storage errors
+    }
+  }, [hydrated, viewMode, sortOrder, showFavoritesOnly]);
 
   // Sync filter state to URL (replace, no new history entry)
-  const isMounted = useRef(false);
   useEffect(() => {
-    if (!isMounted.current) { isMounted.current = true; return; }
-    if (typeof window === "undefined") return;
+    if (!hydrated) return;
     const search = buildSearch(searchQuery, selectedLevel, selectedAuthor, selectedTags, hideDeprecated, selectedPlaylist);
-    window.history.replaceState(null, "", window.location.pathname + search);
-  }, [searchQuery, selectedLevel, selectedAuthor, selectedTags, hideDeprecated, selectedPlaylist]);
+    window.history.replaceState(null, "", window.location.pathname + search + window.location.hash);
+  }, [hydrated, searchQuery, selectedLevel, selectedAuthor, selectedTags, hideDeprecated, selectedPlaylist]);
+
+  // Route base path including the site's baseUrl (e.g. "/docs-site/slidev").
+  const basePath = useBaseUrl(config.routeBasePath).replace(/\/$/, "");
 
   const currentCategory = useMemo(() => {
-    const basePath = config.routeBasePath.replace(/\/$/, "");
     const currentPath = location.pathname.replace(/\/$/, "");
-    if (currentPath === basePath) return "";
-    return currentPath.replace(basePath + "/", "");
-  }, [location.pathname, config.routeBasePath]);
+    if (currentPath === basePath || !currentPath.startsWith(basePath + "/")) return "";
+    return currentPath.slice(basePath.length + 1);
+  }, [location.pathname, basePath]);
 
   const isInCategory = currentCategory !== "";
 
@@ -259,7 +268,9 @@ export default function SlidevOverview({ pluginId = "default" }: { readonly plug
   }, [filteredCategories, sortOrder]);
 
   const toggleSort = () => setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-  const toggleView = () => setViewMode(viewMode === "grid" ? "list" : "grid");
+  // Minimal theme forces list view — no grid
+  const effectiveViewMode = uiTheme === "minimal" ? "list" : viewMode;
+  const toggleView = () => setViewMode(effectiveViewMode === "grid" ? "list" : "grid");
 
   const topLevelCategories = useMemo(
     () =>
@@ -280,16 +291,13 @@ export default function SlidevOverview({ pluginId = "default" }: { readonly plug
 
   const backUrl = useMemo(() => {
     if (parentCategoryPath === null) return null;
-    const basePath = config.routeBasePath.replace(/\/$/, "");
     return parentCategoryPath ? `${basePath}/${parentCategoryPath}` : basePath;
-  }, [parentCategoryPath, config.routeBasePath]);
+  }, [parentCategoryPath, basePath]);
 
   const hasContent = filteredPresentations.length > 0 || filteredCategories.length > 0;
   const showSearchBar = hasContent || isFilterActive;
   const noResults = isFilterActive && sortedPresentations.length === 0 && sortedCategories.length === 0;
   const sourceDir = config.path || "./slidev";
-
-  const basePath = config.routeBasePath.replace(/\/$/, "");
 
   const mainContent = (
     <>
@@ -412,20 +420,6 @@ export default function SlidevOverview({ pluginId = "default" }: { readonly plug
         </div>
       )}
 
-      {isDev && (
-        <div className={styles.devModeWarning}>
-          <div className={styles.warningTitle}>
-            <WarningIcon className={styles.warningIcon} />
-            Development Mode
-          </div>
-          <p className={styles.warningText}>
-            Slidev presentations are only available after building the site.
-            <br />
-            Run <code>npm run build</code> to generate presentations, then <code>npm run serve</code> to view them.
-          </p>
-        </div>
-      )}
-
       <div className={styles.contentContainer}>
         {!hasContent && !isInCategory && (
           <div className={styles.emptyState}>
@@ -463,18 +457,18 @@ export default function SlidevOverview({ pluginId = "default" }: { readonly plug
           </div>
         )}
 
-        {hasContent && !noResults && viewMode === "grid" && (
+        {hasContent && !noResults && effectiveViewMode === "grid" && (
           <div className={styles.grid}>
             {sortedCategories.map((category) => (
               <SlidevCategoryCard key={`cat-${category.path}`} category={category} uiTheme={uiTheme} />
             ))}
             {sortedPresentations.map((presentation) => (
-              <SlidevCard key={presentation.id} presentation={presentation} isDev={isDev} uiTheme={uiTheme} />
+              <SlidevCard key={presentation.id} presentation={presentation} uiTheme={uiTheme} />
             ))}
           </div>
         )}
 
-        {hasContent && !noResults && viewMode === "list" && (
+        {hasContent && !noResults && effectiveViewMode === "list" && (
           <div className={styles.list}>
             {sortedCategories.map((category) => (
               <SlidevListItem key={`cat-${category.path}`} type="category" category={category} uiTheme={uiTheme} />
@@ -482,9 +476,9 @@ export default function SlidevOverview({ pluginId = "default" }: { readonly plug
             {sortedPresentations.map((presentation) => (
               uiTheme === "minimal"
                 // Minimal: pure text row using SlidevListItem (no thumbnail at all)
-                ? <SlidevListItem key={presentation.id} type="presentation" presentation={presentation} isDev={isDev} uiTheme={uiTheme} />
+                ? <SlidevListItem key={presentation.id} type="presentation" presentation={presentation} uiTheme={uiTheme} />
                 // Default / compact: horizontal card (thumbnail on left)
-                : <SlidevCard key={presentation.id} presentation={presentation} isDev={isDev} horizontal uiTheme={uiTheme} />
+                : <SlidevCard key={presentation.id} presentation={presentation} horizontal uiTheme={uiTheme} />
             ))}
           </div>
         )}
@@ -494,6 +488,7 @@ export default function SlidevOverview({ pluginId = "default" }: { readonly plug
 
   return (
     <Layout title={title} description={tagline}>
+      {children}
       <div className={styles.container} data-slidev-ui-theme={uiTheme}>
         <div className={styles.bannerWrapper}>
           {isInCategory && backUrl !== null && (
@@ -523,10 +518,10 @@ export default function SlidevOverview({ pluginId = "default" }: { readonly plug
                 type="button"
                 className={styles.controlButton}
                 onClick={toggleView}
-                aria-label={viewMode === "grid" ? "Switch to list view" : "Switch to grid view"}
-                title={viewMode === "grid" ? "Switch to List" : "Switch to Grid"}
+                aria-label={effectiveViewMode === "grid" ? "Switch to list view" : "Switch to grid view"}
+                title={effectiveViewMode === "grid" ? "Switch to List" : "Switch to Grid"}
               >
-                {viewMode === "grid" ? <DetailsViewIcon width={20} height={20} /> : <GridViewIcon width={20} height={20} />}
+                {effectiveViewMode === "grid" ? <DetailsViewIcon width={20} height={20} /> : <GridViewIcon width={20} height={20} />}
               </button>
             </div>
           )}

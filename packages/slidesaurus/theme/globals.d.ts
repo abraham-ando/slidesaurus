@@ -48,6 +48,22 @@ declare module "@docusaurus/router" {
   };
 }
 
+declare module "@docusaurus/useBaseUrl" {
+  interface BaseUrlOptions {
+    forcePrependBaseUrl?: boolean;
+    absolute?: boolean;
+  }
+  export default function useBaseUrl(url: string, options?: BaseUrlOptions): string;
+}
+
+declare module "@docusaurus/useDocusaurusContext" {
+  interface DocusaurusContext {
+    siteConfig: { url: string; baseUrl: string; title: string; [key: string]: unknown };
+    [key: string]: unknown;
+  }
+  export default function useDocusaurusContext(): DocusaurusContext;
+}
+
 declare module "@docusaurus/Head" {
   import type React from "react";
   interface HeadProps {
