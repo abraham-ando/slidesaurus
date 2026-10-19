@@ -47,7 +47,27 @@ jobs:
       - name: Type check (plugin + theme)
         run: pnpm typecheck
 
+      # Building the sites (9 Slidev decks) is by far the slowest step and does
+      # not depend on the OS / Node combination: only one matrix entry does it.
+      # The other entries only build the plugin (needed by the tests).
+      - name: Build plugin
+        if: ${{ !(matrix.os == 'ubuntu-latest' && matrix.node == '22.x') }}
+        run: pnpm build:plugin
+
+      # Slidesaurus incremental cache (built decks + hash manifest). The plugin
+      # fingerprints every deck, so restoring an older cache (restore-keys) is
+      # safe: only the decks whose inputs changed are rebuilt.
+      - name: Restore Slidev build cache
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.node == '22.x' }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: apps/*/.docusaurus/slidesaurus
+          key: slidesaurus-${{ runner.os }}-${{ hashFiles('apps/*/slidev/**', 'pnpm-lock.yaml', 'packages/slidesaurus/src/**') }}
+          restore-keys: |
+            slidesaurus-${{ runner.os }}-
+
       - name: Build plugin, docs and sample
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.node == '22.x' }}
         run: pnpm build
 
       - name: Run unit tests

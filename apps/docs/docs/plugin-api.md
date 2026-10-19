@@ -141,7 +141,9 @@ packages/slidesaurus/
         outputManager.ts            # Cache output, orphan purge, final copy, search index
       process/
         buildRunner.ts              # Spawn `slidev build` (no shell, kills process tree)
-        assetGenerator.ts           # Thumbnail and PDF/PPTX generation
+        assetGenerator.ts           # Thumbnail (shared browser) and PDF/PPTX generation
+        playwright.ts               # Optional playwright-chromium loader
+        staticServer.ts             # Loopback server of a built deck (thumbnails)
       packages/
         packageResolver.ts          # Theme/addon resolution and auto-install
         env.ts                      # Environment variable allowlist (security)

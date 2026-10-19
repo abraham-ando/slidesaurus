@@ -22,7 +22,7 @@ import {
   patchFrontmatterAddons,
   patchFrontmatterTheme,
 } from "./frontmatterValidator";
-import { DEFAULT_POST_PROCESSORS } from "../infrastructure/process/assetGenerator";
+import { createDefaultPostProcessors } from "../infrastructure/process/assetGenerator";
 
 import {
   ensureThemeAvailable,
@@ -157,6 +157,19 @@ async function runPostProcessors(
   return warnings;
 }
 
+/** Run a processor's optional `prepare` / `dispose` hook — failures are non-blocking warnings. */
+async function callLifecycle(
+  processor: IAssetPostProcessor,
+  hook: "prepare" | "dispose",
+  fn: () => Promise<void> | undefined,
+): Promise<void> {
+  try {
+    await fn();
+  } catch (err) {
+    log.warn(`${processor.name}.${hook} threw (non-blocking): ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
 interface BuildEnv {
   options: PluginOptions;
   context: BuildContext;
@@ -259,7 +272,7 @@ export async function buildAllPresentations(
   injectedCache?: ICache,
   /**
    * Post-build asset processors (thumbnails, exports…).
-   * Defaults to `DEFAULT_POST_PROCESSORS` (ThumbnailGenerator + ExportGenerator).
+   * Defaults to `createDefaultPostProcessors()` (ThumbnailGenerator + ExportGenerator).
    * Inject an empty array `[]` to skip all asset generation in tests.
    * Add custom processors to extend without modifying this file (OCP).
    */
@@ -320,23 +333,24 @@ export async function buildAllPresentations(
     // embeds the correct absolute asset paths. Each invocation is isolated
     // (separate dir, no shared port) so up to `concurrency` builds run in parallel.
     log.info(`Building ${toBuild.length}/${total} presentation(s) — concurrency: ${concurrency}`);
-    const env: BuildEnv = {
-      options,
-      context,
-      cacheDir,
-      outputRoot,
-      slidesRoot,
-      processors: postProcessors ?? DEFAULT_POST_PROCESSORS,
-    };
+    const processors = postProcessors ?? createDefaultPostProcessors();
+    const env: BuildEnv = { options, context, cacheDir, outputRoot, slidesRoot, processors };
+    // One-time checks / shared resources (Playwright browser) BEFORE the builds.
+    await Promise.all(processors.map((p) => callLifecycle(p, "prepare", () => p.prepare?.(options, context))));
     let completed = 0;
-    const results = await runConcurrently(toBuild, concurrency, async (p) => {
-      const result = await buildPresentation(p, env);
-      // Increment AFTER build completes so the counter reflects finished presentations.
-      process.stdout.write(
-        `\r  Built [${++completed}/${toBuild.length}] ${p.id}${result.success ? " ✓" : " ✗"}\x1b[K`,
-      );
-      return result;
-    });
+    let results: BuildResult[];
+    try {
+      results = await runConcurrently(toBuild, concurrency, async (p) => {
+        const result = await buildPresentation(p, env);
+        // Increment AFTER build completes so the counter reflects finished presentations.
+        process.stdout.write(
+          `\r  Built [${++completed}/${toBuild.length}] ${p.id}${result.success ? " ✓" : " ✗"}\x1b[K`,
+        );
+        return result;
+      });
+    } finally {
+      await Promise.all(processors.map((p) => callLifecycle(p, "dispose", () => p.dispose?.())));
+    }
     process.stdout.write("\n");
     buildResults = new Map(results.map((r) => [r.id, r]));
     for (const r of results) {

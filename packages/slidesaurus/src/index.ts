@@ -16,6 +16,9 @@ export {
   validateOptions,
 } from "./presentation/plugin";
 export type { SlidesaurusPluginOptions } from "./presentation/plugin";
+// Default of `maxParallelBuilds` — lets a config share the budget between sites
+// built at the same time (monorepo).
+export { defaultMaxParallelBuilds } from "./shared/utils";
 
 // Public types — hooks (`transformFrontmatter`, `onPresentationScanned`,
 // `onBuildComplete`) and swizzled theme components rely on these shapes.

@@ -26,9 +26,9 @@ If using a monorepo, ensure `@slidev/cli` is installed in the workspace root or 
 
 **Error:** `Build timed out after 120 seconds`
 
-**Cause:** A presentation is too large or the build environment is slow.
+**Cause:** A presentation is too large, the build environment is slow, or too many builds run at once. Each `slidev build` peaks at about 1 GB of memory: when concurrent builds exceed the free memory, every build swaps and they all time out together. This also happens when several sites are built at the same time (a monorepo built by Turbo), since each site computes its own concurrency.
 
-**Solution:** Increase the `buildTimeout` option:
+**Solution:** Lower `maxParallelBuilds` (the default already caps it by free memory — see [Parallel Builds](./parallel-builds.md#configuration)), or increase the `buildTimeout` option:
 
 ```ts
 {
@@ -102,9 +102,19 @@ Presentations are built in `docusaurus start` too (and served as static files) �
 
 **Symptom:** Cards show a live iframe instead of a thumbnail, or the download button leads to a missing file. The build log shows an "Asset warnings" line.
 
-**Cause:** Thumbnail and PDF/PPTX generation need Playwright. When it is missing, the plugin logs a warning and continues — the presentation itself is fine.
+**Cause:** Thumbnail and PDF/PPTX generation need Playwright (`playwright-chromium`) and its Chromium browser. Before building, the plugin checks once that both are available; when they are not, it logs a **single** warning saying what to install and skips every thumbnail (and export) — the presentations themselves are fine.
 
-**Solution:** `npm install -D playwright-chromium` then `npx playwright install chromium`.
+- `Thumbnails skipped: playwright-chromium is not installed` — the package cannot be resolved from the site directory.
+- `Thumbnails skipped: Chromium for Playwright could not be started` — the package is installed but its browser was not downloaded (common in CI, or when install scripts are disabled).
+
+**Solution:**
+
+```bash
+npm install -D playwright-chromium
+npx playwright install chromium
+```
+
+Thumbnails are rendered from the already built presentation (served locally to a single headless Chromium shared by all decks), so they take a few seconds each. Asset failures do not invalidate the cache: after installing Playwright, run `slidesaurus cache clear` (or edit the deck) so the cached decks are rebuilt with their thumbnails.
 
 ---
 
@@ -218,7 +228,7 @@ Enable `verbose: true` to see full validation output during a build.
 
 **Symptom:** The download button is missing, or the PDF/PPTX file is not created.
 
-**Cause:** `download: true` requires Playwright. When it is missing the export is skipped with a warning.
+**Cause:** `download: true` requires Playwright. When `playwright-chromium` is missing, every export is skipped with a single warning (checked once before the build).
 
 **Solution:**
 

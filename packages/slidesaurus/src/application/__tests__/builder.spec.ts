@@ -246,6 +246,44 @@ describe("buildAllPresentations", () => {
     expect(assets?.sourcePath.startsWith(path.join(cacheDir(), "builds"))).toBe(true);
   });
 
+  it("prepares processors once before the builds and disposes them after (even when a hook throws)", async () => {
+    const order: string[] = [];
+    const processor: IAssetPostProcessor = {
+      name: "Shared",
+      prepare: vi.fn(async () => {
+        order.push("prepare");
+      }),
+      process: vi.fn(async (p: PresentationMetadata) => {
+        order.push(`process:${p.id}`);
+        return true;
+      }),
+      dispose: vi.fn(async () => {
+        order.push("dispose");
+        throw new Error("close failed");
+      }),
+    };
+    const results = await buildAllPresentations(
+      [makePresentation("a"), makePresentation("b")],
+      makeOptions({ maxParallelBuilds: 2 }),
+      makeContext(),
+      undefined,
+      [processor],
+    );
+    expect(results.every((r) => r.success)).toBe(true);
+    expect(order[0]).toBe("prepare");
+    expect(order.at(-1)).toBe("dispose");
+    expect(processor.prepare).toHaveBeenCalledTimes(1);
+    expect(processor.dispose).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not prepare processors when every presentation is cached", async () => {
+    const p = makePresentation("talk");
+    await buildAllPresentations([p], makeOptions(), makeContext(), undefined, NO_ASSETS);
+    const prepare = vi.fn(async () => undefined);
+    await buildAllPresentations([p], makeOptions(), makeContext(), undefined, [{ name: "P", prepare, process: vi.fn() }]);
+    expect(prepare).not.toHaveBeenCalled();
+  });
+
   it("refuses an outputPath outside the plugin cache", async () => {
     const outside = path.join(tmpDir, "precious");
     fs.mkdirSync(outside);
