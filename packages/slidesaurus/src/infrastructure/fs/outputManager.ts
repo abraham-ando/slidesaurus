@@ -3,41 +3,35 @@
  *
  * Single responsibility: everything related to the per-presentation output
  * directory under `.docusaurus/slidesaurus/{id}/output/`:
- * cache hit detection, copying to final site output, presenter fallbacks,
- * and search index generation.
+ * cache hit detection, orphan purge, copying to final site output, presenter
+ * fallbacks, and search index generation.
  */
 import fs from "node:fs";
 import path from "node:path";
 import { log } from "../../shared/logger";
 import { getSlidevCacheDir } from "./fileSystem";
+import { copyDirRecursive } from "./fsUtils";
 import type { PresentationMetadata } from "../../domain/types";
-
-// ── Internal helpers ──────────────────────────────────────────────────────────
-
-/** Recursively copy a directory, skipping symlinks to prevent traversal. */
-function copyDirRecursive(src: string, dest: string): void {
-  if (fs.lstatSync(src).isSymbolicLink()) return;
-  fs.mkdirSync(dest, { recursive: true });
-  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    if (entry.isSymbolicLink()) continue;
-    const srcPath = path.join(src, entry.name);
-    const destPath = path.join(dest, entry.name);
-    if (entry.isDirectory()) {
-      copyDirRecursive(srcPath, destPath);
-    } else {
-      fs.copyFileSync(srcPath, destPath);
-    }
-  }
-}
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
  * Returns the root of the Slidev build output for a given plugin instance.
  * Each presentation is a sub-directory: `{outputDir}/{presentationId}/`.
+ * `locale` selects the per-locale cache (see `getSlidevCacheDir`).
  */
-export function getSlidevBuildOutputDir(siteDir: string, pluginId: string): string {
-  return path.join(getSlidevCacheDir(siteDir, pluginId), "output");
+export function getSlidevBuildOutputDir(siteDir: string, pluginId: string, locale?: string): string {
+  return path.join(getSlidevCacheDir(siteDir, pluginId, locale), "output");
+}
+
+/** True when `dir/index.html` exists and is not empty (complete build). */
+export function isCompleteBuildOutput(dir: string): boolean {
+  const indexHtml = path.join(dir, "index.html");
+  try {
+    return fs.statSync(indexHtml).isFile() && fs.statSync(indexHtml).size > 0;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -56,9 +50,56 @@ export function hasCachedOutput(cacheDir: string, presentationId: string): boole
   if (rel.startsWith("..") || path.isAbsolute(rel)) {
     throw new Error(`[Security] Path traversal detected in presentationId: "${presentationId}"`);
   }
-  const indexHtml = path.join(outputDir, "index.html");
-  if (!fs.existsSync(indexHtml)) return false;
-  return fs.statSync(indexHtml).size > 0;
+  return isCompleteBuildOutput(outputDir);
+}
+
+/**
+ * Remove everything under `outputRoot` that does not belong to a current,
+ * complete presentation build:
+ *   - directories of presentations that no longer exist (renamed / deleted decks);
+ *   - presentation directories without a non-empty `index.html` (partial builds);
+ *   - stray files at category level.
+ *
+ * Directories that are ancestors of a current presentation (categories) are
+ * kept and recursed into. Returns the relative paths removed.
+ */
+export function purgeStaleOutputs(outputRoot: string, presentationIds: Iterable<string>): string[] {
+  const ids = new Set([...presentationIds].map((id) => id.replace(/\\/g, "/")));
+  const ancestors = new Set<string>();
+  for (const id of ids) {
+    const parts = id.split("/");
+    for (let i = 1; i < parts.length; i++) ancestors.add(parts.slice(0, i).join("/"));
+  }
+  const removed: string[] = [];
+  if (!fs.existsSync(outputRoot)) return removed;
+
+  const walk = (dir: string, rel: string): void => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const childRel = rel ? `${rel}/${entry.name}` : entry.name;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory() && !entry.isSymbolicLink()) {
+        if (ids.has(childRel)) {
+          if (!isCompleteBuildOutput(full)) {
+            fs.rmSync(full, { recursive: true, force: true });
+            removed.push(childRel);
+          }
+          continue;
+        }
+        if (ancestors.has(childRel)) {
+          walk(full, childRel);
+          continue;
+        }
+      }
+      // Orphan presentation dir, stray file, or symlink.
+      fs.rmSync(full, { recursive: true, force: true });
+      removed.push(childRel);
+    }
+  };
+  walk(outputRoot, "");
+  if (removed.length > 0) {
+    log.info(`Removed ${removed.length} stale output entr${removed.length > 1 ? "ies" : "y"} from the cache`);
+  }
+  return removed;
 }
 
 /**

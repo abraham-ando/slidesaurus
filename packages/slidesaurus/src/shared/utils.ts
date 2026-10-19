@@ -15,7 +15,50 @@ export function normalizeRoutePath(routePath: string): string {
 
 /** Strip leading and trailing slashes from a path segment. */
 export function stripSlashes(segment: string): string {
-  return segment.replace(/^\//, "").replace(/\/$/, "");
+  return segment.replace(/^\/+/, "").replace(/\/+$/, "");
+}
+
+/**
+ * Join the site `baseUrl` and the plugin `routeBasePath` into the absolute
+ * route prefix used by every plugin page — without trailing slash.
+ *
+ * Examples:
+ *   ("/", "/slidev")        → "/slidev"
+ *   ("/docs/", "slidev/")   → "/docs/slidev"
+ *   ("/", "/")              → ""   (callers use `|| "/"` for the overview route)
+ */
+export function buildRouteBase(baseUrl: string, routeBasePath: string): string {
+  const base = stripSlashes(baseUrl);
+  const route = stripSlashes(routeBasePath);
+  const parts = [base, route].filter(Boolean);
+  return parts.length > 0 ? `/${parts.join("/")}` : "";
+}
+
+/**
+ * Percent-encode every segment of a slash-separated presentation / category id
+ * so it can be embedded in a URL (spaces, `#`, `?`, `%`… are escaped; `/` is kept).
+ */
+export function encodeIdForUrl(id: string): string {
+  return id.split("/").map(encodeURIComponent).join("/");
+}
+
+/**
+ * Map a presentation id (which may contain `/`) to a single, filesystem-safe
+ * path segment. The mapping is injective: every character outside
+ * `[A-Za-z0-9-]` (including `_` itself) is escaped as `_<hex>_`, so
+ * `a/b` → `a_2f_b` and `a__b` → `a_5f__5f_b` can never collide.
+ */
+export function toSafeId(id: string): string {
+  let out = "";
+  for (const ch of id) {
+    out += /[A-Za-z0-9-]/.test(ch) ? ch : `_${ch.codePointAt(0)!.toString(16)}_`;
+  }
+  return out;
+}
+
+/** True when a theme/addon reference is a local path rather than an npm package name. */
+export function isLocalPath(name: string): boolean {
+  return name.startsWith(".") || name.startsWith("/") || name.startsWith("\\") || path.isAbsolute(name);
 }
 
 /**
@@ -30,19 +73,18 @@ export function getUrlPathFromPath(pathOption: string): string {
 
 /**
  * Valid npm package name pattern.
- * Allows scoped packages (@scope/name), regular names (my-pkg),
- * and local paths (./local or /absolute).
+ * Allows scoped packages (@scope/name) and regular names (my-pkg).
  */
-const SAFE_NPM_PKG = /^(@[a-zA-Z0-9_-]+\/)?[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
+const SAFE_NPM_PKG = /^(@[a-zA-Z0-9_-][a-zA-Z0-9._-]*\/)?[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
 
 /**
- * Validate a resolved npm package name to prevent shell injection.
+ * Validate a resolved npm package name to prevent argument / shell injection.
  * Local paths (starting with . / \) are passed through unchanged.
  * Throws an Error if the name contains disallowed characters.
  */
 export function validatePackageName(name: string): string {
   // Local paths are controlled by the developer and not user-facing input
-  if (name.startsWith(".") || name.startsWith("/") || name.startsWith("\\")) {
+  if (isLocalPath(name)) {
     return name;
   }
   if (!SAFE_NPM_PKG.test(name)) {
@@ -52,6 +94,52 @@ export function validatePackageName(name: string): string {
     );
   }
   return name;
+}
+
+/** Package name patterns accepted for Slidev themes and addons. */
+const SLIDEV_PACKAGE_PATTERNS: Record<"theme" | "addon", RegExp> = {
+  // slidev-theme-x | @slidev/theme-x | @scope/slidev-theme-x
+  theme: /^(?:slidev-theme-[a-z0-9][a-z0-9._-]*|@slidev\/theme-[a-z0-9][a-z0-9._-]*|@[a-z0-9][a-z0-9._-]*\/slidev-theme-[a-z0-9][a-z0-9._-]*)$/i,
+  // slidev-addon-x | @slidev/addon-x | @scope/slidev-addon-x
+  addon: /^(?:slidev-addon-[a-z0-9][a-z0-9._-]*|@slidev\/addon-[a-z0-9][a-z0-9._-]*|@[a-z0-9][a-z0-9._-]*\/slidev-addon-[a-z0-9][a-z0-9._-]*)$/i,
+};
+
+/**
+ * Validate a resolved Slidev theme / addon package name.
+ *
+ * On top of the syntactic check of `validatePackageName`, enforces the Slidev
+ * naming convention so `autoInstall` can never be abused to install an
+ * arbitrary package (e.g. a typosquatted `lodash`):
+ *   - themes: `slidev-theme-*`, `@slidev/theme-*`, `@scope/slidev-theme-*`
+ *   - addons: `slidev-addon-*`, `@slidev/addon-*`, `@scope/slidev-addon-*`
+ * Local paths are passed through (their containment is checked separately).
+ */
+export function validateSlidevPackageName(name: string, kind: "theme" | "addon"): string {
+  validatePackageName(name);
+  if (isLocalPath(name)) return name;
+  if (!SLIDEV_PACKAGE_PATTERNS[kind].test(name)) {
+    throw new Error(
+      `Invalid Slidev ${kind} package "${name}". Expected "slidev-${kind}-*", "@slidev/${kind}-*" ` +
+        `or "@scope/slidev-${kind}-*".`,
+    );
+  }
+  return name;
+}
+
+/**
+ * Serialise a value to JSON with object keys sorted recursively — stable
+ * across Node.js versions and property insertion order. Functions and
+ * `undefined` values are dropped (same as JSON.stringify).
+ */
+export function stableStringify(value: unknown): string {
+  return JSON.stringify(value, (_key, v: unknown) => {
+    if (v && typeof v === "object" && !Array.isArray(v) && !(v instanceof Date)) {
+      return Object.fromEntries(
+        Object.entries(v as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+      );
+    }
+    return v;
+  });
 }
 
 /**

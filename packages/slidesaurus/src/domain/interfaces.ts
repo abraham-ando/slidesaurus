@@ -64,6 +64,18 @@ export interface IBuildEngine {
 
 // ── IAssetPostProcessor ───────────────────────────────────────────────────────
 
+/** Build artifacts handed to asset post-processors by the builder. */
+export interface AssetProcessingContext {
+  /**
+   * Isolated, patched copy of the presentation `.md` (theme / addons injected).
+   * Exports must use it instead of `presentation.sourceAbsolutePath` so that
+   * the user's source directory is never written to.
+   */
+  sourcePath: string;
+  /** Root of the isolated build directory (removed after post-processing). */
+  isolatedDir: string;
+}
+
 /**
  * A post-build asset generator (thumbnail screenshot, PDF export, …).
  * Registered via the `postProcessors` parameter of `buildAllPresentations`
@@ -74,12 +86,15 @@ export interface IAssetPostProcessor {
   readonly name: string;
   /**
    * Process one presentation after a successful build.
-   * Returns `true` on success, `false` on failure (cache is invalidated on failure).
+   * Returns `true` on success, `false` when the asset could not be produced.
+   * Asset failures are NON-blocking: they are reported as warnings on the
+   * `BuildResult` and never invalidate the cached HTML build.
    */
   process(
     presentation: PresentationMetadata,
     options: BuildOptions,
     context: BuildContext,
+    assets?: AssetProcessingContext,
   ): Promise<boolean>;
 }
 

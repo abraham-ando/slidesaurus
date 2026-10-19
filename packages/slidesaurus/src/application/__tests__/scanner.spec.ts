@@ -638,3 +638,167 @@ describe("scanPresentations — relativePath uses forward slashes", () => {
     expect(p.id).not.toContain("\\");
   });
 });
+
+// ── Hardening: frontmatter engines, types, URLs, collisions ──────────────────
+
+describe("scanPresentations — hardening", () => {
+  let tmpDir: string;
+  let slidevDir: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scanner-hardening-"));
+    slidevDir = path.join(tmpDir, "slidev");
+    fs.mkdirSync(slidevDir, { recursive: true });
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  async function scan(overrides: Partial<PluginOptions> = {}, ctx: Partial<BuildContext> = {}) {
+    const { scanPresentations } = await import("../scanner");
+    return scanPresentations({ ...defaultOptions, ...overrides }, { siteDir: tmpDir, baseUrl: "/", ...ctx });
+  }
+
+  function write(rel: string, content: string): void {
+    const p = path.join(slidevDir, rel);
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    fs.writeFileSync(p, content);
+  }
+
+  it("never evaluates ---js front-matter", async () => {
+    const g = globalThis as Record<string, unknown>;
+    delete g.__slidesaurusPwned;
+    write("evil.md", "---js\n{ title: (globalThis.__slidesaurusPwned = true, 'pwned') }\n---\n\n# Evil");
+
+    const result = await scan();
+
+    expect(g.__slidesaurusPwned).toBeUndefined();
+    expect(result.presentations).toHaveLength(1);
+    expect(result.presentations[0].title).toBe("evil");
+  });
+
+  it("ignores frontmatter fields of the wrong type instead of crashing", async () => {
+    write("typed.md", "---\ntitle: 42\ntheme: 42\naddons: excalidraw\ndescription: [a]\nauthor: true\n---\n\n# x");
+    const { log } = await import("../../shared/logger");
+
+    const p = (await scan()).presentations[0];
+
+    expect(p.title).toBe("typed");
+    expect(p.theme).toBeUndefined();
+    expect(p.addons).toBeUndefined();
+    expect(p.description).toBeUndefined();
+    expect(p.author).toBeUndefined();
+    expect(vi.mocked(log.warn)).toHaveBeenCalledWith(expect.stringContaining('Invalid "theme"'));
+  });
+
+  it("keeps valid theme and addons (filtering invalid addon items)", async () => {
+    write("ok.md", "---\ntheme: seriph\naddons:\n  - excalidraw\n  - 3\n---\n\n# x");
+    const p = (await scan()).presentations[0];
+    expect(p.theme).toBe("seriph");
+    expect(p.addons).toEqual(["excalidraw"]);
+  });
+
+  it("ignores a transformFrontmatter hook that does not return an object", async () => {
+    write("t.md", "---\ntitle: Kept\n---\n\n# x");
+    const p = (await scan({ transformFrontmatter: (() => null) as never })).presentations[0];
+    expect(p.title).toBe("Kept");
+  });
+
+  it("percent-encodes ids in URLs but keeps the raw id for the filesystem", async () => {
+    write("my talk #1.md", "---\ntitle: T\n---\n\n# x");
+    const p = (await scan()).presentations[0];
+    expect(p.id).toBe("my talk #1");
+    expect(p.url).toBe("/slidev/my%20talk%20%231/");
+    expect(p.thumbnailUrl).toBe("/slidev/my%20talk%20%231/thumbnail.png");
+    expect(path.basename(p.outputPath)).toBe("my talk #1");
+  });
+
+  it("prefixes presentation and category URLs with baseUrl and normalises routeBasePath", async () => {
+    write("cat/talk.md", "---\ntitle: T\n---\n\n# x");
+    const result = await scan({ routeBasePath: "slidev/" }, { baseUrl: "/docs/" });
+    expect(result.presentations[0].url).toBe("/docs/slidev/cat/talk/");
+    expect(result.categories[0].url).toBe("/docs/slidev/cat");
+  });
+
+  it("stores outputs in the per-locale cache when a locale is given", async () => {
+    write("talk.md", "---\ntitle: T\n---\n\n# x");
+    const p = (await scan({}, { baseUrl: "/fr/", locale: "fr" })).presentations[0];
+    expect(p.outputPath).toBe(
+      path.join(tmpDir, ".docusaurus", "slidesaurus", "default", "i18n", "fr", "output", "talk"),
+    );
+  });
+
+  it("throws a clear error when foo.md and the foo/ directory collide", async () => {
+    write("foo.md", "---\ntitle: Foo\n---\n\n# x");
+    write("foo/bar.md", "---\ntitle: Bar\n---\n\n# x");
+    const { PresentationCollisionError } = await import("../scanner");
+
+    await expect(scan()).rejects.toBeInstanceOf(PresentationCollisionError);
+    await expect(scan()).rejects.toThrow(/foo\.md/);
+  });
+});
+
+describe("detectPresentationCollisions", () => {
+  it("reports ids that differ only by case", async () => {
+    const { detectPresentationCollisions } = await import("../scanner");
+    const collisions = detectPresentationCollisions([
+      { id: "Intro", sourcePath: "Intro.md" },
+      { id: "intro", sourcePath: "intro.md" },
+    ]);
+    expect(collisions).toHaveLength(1);
+    expect(collisions[0]).toContain("Intro.md");
+  });
+
+  it("reports nested outputs but not mere common prefixes", async () => {
+    const { detectPresentationCollisions } = await import("../scanner");
+    expect(detectPresentationCollisions([
+      { id: "foo", sourcePath: "foo.md" },
+      { id: "foo-bar", sourcePath: "foo-bar.md" },
+      { id: "foo/baz", sourcePath: "foo/baz.md" },
+    ])).toHaveLength(1);
+    expect(detectPresentationCollisions([
+      { id: "foo", sourcePath: "foo.md" },
+      { id: "foobar/x", sourcePath: "foobar/x.md" },
+    ])).toEqual([]);
+  });
+});
+
+describe("frontmatter patching", () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "fm-patch-"));
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("patchFrontmatterTheme only fills a missing theme unless forced", async () => {
+    const { patchFrontmatterTheme } = await import("../frontmatterValidator");
+    const file = path.join(tmpDir, "a.md");
+    fs.writeFileSync(file, "---\ntheme: seriph\n---\n\n# x");
+    patchFrontmatterTheme(file, "@slidev/theme-default");
+    expect(fs.readFileSync(file, "utf-8")).toContain("theme: seriph");
+    patchFrontmatterTheme(file, "@slidev/theme-default", true);
+    expect(fs.readFileSync(file, "utf-8")).toContain("theme: '@slidev/theme-default'");
+  });
+
+  it("patchFrontmatterAddons replaces raw shorthands with the resolved list", async () => {
+    const { patchFrontmatterAddons } = await import("../frontmatterValidator");
+    const file = path.join(tmpDir, "b.md");
+    fs.writeFileSync(file, "---\naddons:\n  - excalidraw\n---\n\n# x");
+    patchFrontmatterAddons(file, ["slidev-addon-excalidraw"]);
+    const content = fs.readFileSync(file, "utf-8");
+    expect(content).toContain("slidev-addon-excalidraw");
+    expect(content).not.toMatch(/- excalidraw$/m);
+  });
+
+  it("patching refuses ---js front-matter", async () => {
+    const { patchFrontmatterTheme } = await import("../frontmatterValidator");
+    const file = path.join(tmpDir, "c.md");
+    fs.writeFileSync(file, "---js\n{ theme: 'x' }\n---\n# x");
+    expect(() => patchFrontmatterTheme(file, "seriph")).toThrow(/not supported/);
+  });
+});
