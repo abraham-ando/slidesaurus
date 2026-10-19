@@ -8,7 +8,7 @@ The plugin automatically generates an overview page that lists all discovered pr
 
 ## Overview
 
-The overview page is powered by the `SlidevOverview` theme component. It receives the full list of presentations (with metadata, category info, and playlist assignments) as props from the plugin's `contentLoaded` hook.
+The overview page is powered by the `SlidevOverview` theme component. It reads the list of presentations (with metadata, category info, and playlist assignments) from the plugin's global data, which `contentLoaded` registers. Only public fields are exposed to the browser — absolute file paths are never included.
 
 At a glance, the page provides:
 
@@ -36,7 +36,7 @@ No submit action is required — results update on every keystroke.
 
 ### Sort Toggle
 
-A sort button next to the search bar cycles between **A → Z** and **Z → A** alphabetical ordering by title. The selected sort direction is stored in `localStorage` and restored on the next visit.
+A sort button next to the search bar toggles the sort direction. Presentations are ordered by their `position` frontmatter (those without one come last), then by source path, then by title; **Z → A** reverses that order. The selected direction is stored in `localStorage` and restored on the next visit.
 
 ### Filter Row
 
@@ -123,7 +123,7 @@ Selecting a different playlist chip replaces the previous selection — only one
 
 Users can toggle between two view modes using the toggle in the top-right of the content area:
 
-- **Grid view** — a responsive card grid. Each card is rendered by the `SlidevCard` component and shows the title, description, author, tags, level badge, playlist badges, and favorites star.
+- **Grid view** — a responsive card grid. Each card is rendered by the `SlidevCard` component and shows the thumbnail, title, description, author, duration, level badge, playlist badges, and favorites star.
 - **List view** — a compact list. Each row is rendered by the `SlidevListItem` component. Hovering a list row reveals a **thumbnail preview** of the first slide.
 
 The selected view is persisted in `localStorage` and restored on every subsequent visit.
@@ -203,4 +203,18 @@ Use Docusaurus component swizzling to replace or wrap any theme component:
 npx docusaurus swizzle slidesaurus SlidevOverview --wrap
 ```
 
-See [Custom Styling](./custom-styling.md) for the full guide including a custom `uiTheme` CSS example and complete swizzle wrapper patterns.
+`SlidevOverview` accepts optional `children`, rendered inside the page layout (below the navbar, above the overview). A swizzle wrapper can use this to inject a banner without rendering a second `<Layout>`:
+
+```tsx title="src/theme/SlidevOverview/index.tsx"
+import OriginalSlidevOverview from "@theme-original/SlidevOverview";
+
+export default function SlidevOverview(props) {
+  return (
+    <OriginalSlidevOverview {...props}>
+      <div>My banner</div>
+    </OriginalSlidevOverview>
+  );
+}
+```
+
+Cards are rendered as a `<div>` with the title link stretched over the whole card (the "card link" pattern), so the favorite, presenter and download controls are never nested inside a link. See [Custom Styling](./custom-styling.md) for the full guide including a custom `uiTheme` CSS example and complete swizzle wrapper patterns.

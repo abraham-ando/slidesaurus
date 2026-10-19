@@ -4,7 +4,7 @@ sidebar_position: 11
 
 # Categories
 
-Categories let you group presentations into logical sections on the overview page. They are defined by subdirectories inside the `path` directory, each containing a `_category_.yml` file.
+Categories let you group presentations into logical sections on the overview page. They are defined by subdirectories inside the `path` directory, optionally described by a `_category_.yml` (or `_category_.yaml` / `_category_.json`) file.
 
 ## Directory Structure
 
@@ -31,8 +31,8 @@ description: Step-by-step tutorial presentations
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `label` | `string` | Yes | Display name for the category. |
-| `position` | `number` | No | Sort order. Lower values appear first. |
+| `label` | `string` | No | Display name for the category. Defaults to the title-cased directory name. |
+| `position` | `number` | No | Sort order. Lower values appear first. Defaults to `99`. |
 | `description` | `string` | No | Short description displayed below the category heading. |
 
 ## How Categories Render
@@ -43,23 +43,25 @@ On the overview page, categories render as distinct sections, each with:
 - An optional `description` below the heading.
 - The presentations within that category, sorted by their frontmatter `position`.
 
-Uncategorized presentations (files directly in the `path` root) are sorted by their frontmatter `position` value relative to each other and rendered in a default section. The position of that section among the categorized sections is determined by its effective `position` — uncategorized presentations with no explicit position default to `0`.
+Uncategorized presentations (files directly in the `path` root) are sorted among themselves like any other presentations (see [Ordering](#ordering)) and rendered in a default section.
 
 ## Nested Categories
 
-Categories are one level deep. Subdirectories inside a category directory are **not** treated as nested categories — only the immediate subdirectories of the `path` directory define categories.
+Every subdirectory (at any depth) that contains presentations is a category, identified by its path relative to `path` (e.g. `tutorials/basics`). A nested category is listed under its parent and has its own `_category_.yml`; its presentation count only includes the files directly inside it.
 
 ```
 slidev/
-  tutorials/             # ✅ Category
+  tutorials/             # Category "tutorials"
     _category_.yml
-    basics/              # ❌ Not a nested category — treated as part of "tutorials"
+    basics/              # Category "tutorials/basics"
       intro.md           # URL: /presentations/tutorials/basics/intro
 ```
 
+Directories whose name starts with `.` or `_`, `node_modules` and `sections/` are never scanned; symlinks are not followed.
+
 ## Auto-Labeling
 
-If a subdirectory does not contain a `_category_.yml` file, the directory name is used as the label with default position `0`. The name is title-cased automatically:
+If a subdirectory does not contain a category file (or it is invalid — a warning is logged), the directory name is used as the label with the default position `99`. The name is title-cased automatically:
 
 - `tutorials` → "Tutorials"
 - `advanced-topics` → "Advanced Topics"
@@ -68,14 +70,15 @@ If a subdirectory does not contain a `_category_.yml` file, the directory name i
 
 Within a category, presentations are sorted by:
 
-1. Frontmatter `position` (ascending, lower first).
-2. Frontmatter `title` (alphabetical) as a tiebreaker.
+1. Frontmatter `position` (ascending, lower first; presentations without one come last).
+2. Source path (natural order).
+3. Frontmatter `title` as a final tiebreaker.
 
-Categories themselves are sorted by their `position` field, then alphabetically by `label`.
+Categories themselves are sorted by their `position` field, then alphabetically by `label`. The sort button on the overview page reverses both orders.
 
 ## Empty Categories
 
-A category directory that contains a `_category_.yml` file but no `.md` presentations is silently skipped — it does not appear as an empty section on the overview page. The directory and its metadata are still valid; the category becomes visible as soon as at least one presentation is added to it.
+A category directory that contains no `.md` presentations (even with a `_category_.yml`) is silently skipped — it does not appear as an empty section on the overview page. The directory and its metadata are still valid; the category becomes visible as soon as at least one presentation is added to it.
 
 ## Categories and Playlists
 

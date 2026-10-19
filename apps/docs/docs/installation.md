@@ -8,7 +8,7 @@ This guide walks you through adding `slidesaurus` to an existing Docusaurus site
 
 ## Prerequisites
 
-- Node.js **18+**
+- Node.js **20.12+**
 - An existing Docusaurus v3 project
 - A package manager: npm, pnpm, or yarn
 
@@ -69,6 +69,12 @@ const config: Config = {
 
 That is the minimal configuration. See [Options](./options.md) for the full list.
 
+`@slidev/cli` is an **optional peer dependency**: install it in your project too, otherwise no presentation is built.
+
+```bash
+npm install -D @slidev/cli
+```
+
 ## 3. Create the Slidev Directory
 
 ```bash
@@ -106,7 +112,7 @@ Powered by slidesaurus.
 npm start
 ```
 
-Navigate to `/presentations` to see the overview page, then click your presentation.
+Navigate to `/presentations` to see the overview page, then click your presentation. In dev mode the plugin builds the presentations and serves them as static files (no Slidev dev server, see [Dev Server](./dev-server.md)).
 
 ## 6. Build for Production
 
@@ -114,7 +120,7 @@ Navigate to `/presentations` to see the overview page, then click your presentat
 npm run build
 ```
 
-The plugin runs `slidev build` for every presentation during the Docusaurus build and copies the output into the final site.
+The plugin runs `slidev build` for every presentation (incrementally, in parallel) during the Docusaurus build and copies the output into the final site. If a presentation fails to build, the whole build fails.
 
 ## What's Next?
 
