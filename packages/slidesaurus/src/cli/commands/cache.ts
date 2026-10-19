@@ -9,7 +9,7 @@ import { getSlidevBuildOutputDir } from "../../infrastructure/fs/outputManager";
 import { loadHashManifest, saveHashManifest } from "../../infrastructure/fs/hashManifest";
 
 interface CacheClearOptions {
-  id?: string;     // presentationId to target
+  presentation?: string; // presentationId to target (CLI: --presentation)
   yes?: boolean;   // skip confirmation
   pluginId: string;
 }
@@ -19,7 +19,7 @@ export async function runCacheClear(opts: CacheClearOptions): Promise<void> {
 
   // Validate pluginId and presentationId before using them as path components
   try { validatePluginId(opts.pluginId); } catch {
-    fail(`Invalid --plugin-id "${opts.pluginId}": must contain only letters, digits, underscores and dashes.`);
+    fail(`Invalid --id "${opts.pluginId}": must contain only letters, digits, underscores and dashes.`);
     process.exit(1);
   }
 
@@ -31,14 +31,24 @@ export async function runCacheClear(opts: CacheClearOptions): Promise<void> {
   }
 
   // ── Targeted clear ────────────────────────────────────────────────────────
-  if (opts.id) {
-    const presentationId = opts.id;
+  // `!== undefined` (not truthiness): an empty --presentation must be rejected,
+  // never silently turned into a full clear.
+  if (opts.presentation !== undefined) {
+    const presentationId = opts.presentation.trim();
     const outputRoot = getSlidevBuildOutputDir(cwd, opts.pluginId);
     const outputDir = path.join(outputRoot, presentationId);
-    // Guard against path traversal via --id flag
+    // Strict guard: the target must be a proper descendant of output/. An empty id,
+    // "." or "a/.." resolves to the root itself (rel === "") and would wipe every
+    // cached presentation; ".." and absolute paths escape the root.
     const rel = path.relative(outputRoot, outputDir);
-    if (rel.startsWith("..") || path.isAbsolute(rel)) {
-      fail(`Invalid --id "${presentationId}": path traversal detected.`);
+    if (
+      presentationId === "" ||
+      rel === "" ||
+      rel === ".." ||
+      rel.startsWith(`..${path.sep}`) ||
+      path.isAbsolute(rel)
+    ) {
+      fail(`Invalid --presentation "${opts.presentation}": must name a single presentation inside the cache (no empty value, ".", or "..").`);
       process.exit(1);
     }
 
@@ -53,7 +63,7 @@ export async function runCacheClear(opts: CacheClearOptions): Promise<void> {
         name: "confirmed",
         message: `Remove cache for "${pc.cyan(presentationId)}"?`,
         initial: false,
-      }, { onCancel: () => process.exit(0) });
+      }, { onCancel: () => process.exit(130) });
 
       if (!confirmed) { info("Aborted."); return; }
     }
@@ -85,7 +95,7 @@ export async function runCacheClear(opts: CacheClearOptions): Promise<void> {
       name: "confirmed",
       message: `Remove all cached builds in ${pc.cyan(displayPath)}${entryCount > 0 ? ` (${entryCount} presentation(s))` : ""}?`,
       initial: false,
-    }, { onCancel: () => process.exit(0) });
+    }, { onCancel: () => process.exit(130) });
 
     if (!confirmed) { info("Aborted."); return; }
   }

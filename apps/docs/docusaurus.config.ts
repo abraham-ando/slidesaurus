@@ -1,7 +1,7 @@
 import { themes as prismThemes } from "prism-react-renderer";
 import type { Config } from "@docusaurus/types";
 import type * as Preset from "@docusaurus/preset-classic";
-import { SlidesaurusPluginOptions } from "slidesaurus";
+import type { SlidesaurusPluginOptions } from "slidesaurus";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -27,8 +27,11 @@ const config: Config = {
     "Seamlessly integrate Slidev presentations into your Docusaurus site",
   favicon: "img/favicon.ico",
 
-  url: "http://localhost:3001",
-  baseUrl: "/",
+  // Public URL of the deployed site (used for canonical/og:url, sitemap, absolute links).
+  // Set SITE_URL (and SITE_BASE_URL when served from a sub-path) in the deployment
+  // environment; the fallbacks target the local dev server (port 3001).
+  url: process.env.SITE_URL ?? "http://localhost:3001",
+  baseUrl: process.env.SITE_BASE_URL ?? "/",
 
   onBrokenLinks: "throw",
 

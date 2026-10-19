@@ -19,7 +19,7 @@ program
   .description("Scaffold a new Slidev presentation")
   .option("-c, --category <category>", "Category sub-folder")
   .option("-t, --theme <theme>", "Slidev theme to use")
-  .option("--template <template>", "Template: basic | tutorial | talk", "basic")
+  .option("--template <template>", "Template: basic | tutorial | talk (asked interactively when omitted)")
   .option("--force", "Overwrite if the file already exists")
   .action(async (name: string | undefined, cmdOpts: Record<string, unknown>) => {
     const parent = program.opts<{ id: string }>();
@@ -45,7 +45,7 @@ program
 // ── slidesaurus doctor ────────────────────────────────────────────────────────
 program
   .command("doctor")
-  .description("Diagnose configuration, themes, ports, and cache health")
+  .description("Diagnose configuration, themes, addons, and cache health")
   .action(async () => {
     const parent = program.opts<{ id: string }>();
     await runDoctor({ pluginId: parent.id });
@@ -59,12 +59,12 @@ const cacheCmd = program
 cacheCmd
   .command("clear")
   .description("Clear the build cache (all presentations or a specific one)")
-  .option("--id <presentationId>", "Clear cache for a single presentation")
+  .option("-p, --presentation <presentationId>", "Clear cache for a single presentation (--id selects the plugin instance)")
   .option("-y, --yes", "Skip confirmation prompt")
   .action(async (cmdOpts: Record<string, unknown>) => {
     const parent = program.opts<{ id: string }>();
     await runCacheClear({
-      id: cmdOpts.id as string | undefined,
+      presentation: cmdOpts.presentation as string | undefined,
       yes: Boolean(cmdOpts.yes),
       pluginId: parent.id,
     });

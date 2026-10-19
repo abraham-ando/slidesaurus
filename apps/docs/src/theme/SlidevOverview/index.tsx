@@ -8,9 +8,9 @@
  *
  * ── How it works ────────────────────────────────────────────────────────────
  * `@theme-original/SlidevOverview` resolves to the plugin's built-in
- * overview page. This wrapper renders the banner then delegates everything
- * else to the original component.  The original includes its own `<Layout>`
- * wrapper, so we must NOT add a second `<Layout>` here.
+ * overview page. The original renders its own `<Layout>`, so we must NOT add a
+ * second one here. Instead the banner is passed as `children`, which the
+ * original renders inside its `<Layout>` (below the navbar), above the overview.
  *
  * ── Customising ─────────────────────────────────────────────────────────────
  * • Edit the `TEAM_BANNER` constant to change text/links.
@@ -46,17 +46,12 @@ type Props = React.ComponentProps<typeof OriginalSlidevOverview>;
 
 export default function SlidevOverview(props: Props) {
   return (
-    <>
-      {/*
-       * The banner sits outside SlidevOverview's <Layout> wrapper.
-       * It renders server-side safely (no window access) and is visible
-       * on both the root overview and every category sub-page.
-       *
-       * If you only want the banner on the root page, gate it with:
-       *   const location = useLocation();
-       *   const isRoot = location.pathname === config.routeBasePath;
-       */}
-      <div className={styles.teamBanner} role="banner" aria-label="Team learning hub">
+    // Original overview — search bar, sidebar, cards, everything.
+    // The banner is rendered inside its <Layout>, so it sits under the navbar and
+    // is visible on the root overview and every category sub-page.
+    // To show it only on the root page, gate it with `useLocation()` here.
+    <OriginalSlidevOverview {...props}>
+      <section className={styles.teamBanner} aria-label="Team learning hub">
         <div className={styles.teamAvatar} aria-hidden="true">
           {TEAM_BANNER.avatar}
         </div>
@@ -67,10 +62,7 @@ export default function SlidevOverview(props: Props) {
         <Link to={TEAM_BANNER.cta.href} className={styles.teamCta}>
           {TEAM_BANNER.cta.label}
         </Link>
-      </div>
-
-      {/* Original overview — search bar, sidebar, cards, everything. */}
-      <OriginalSlidevOverview {...props} />
-    </>
+      </section>
+    </OriginalSlidevOverview>
   );
 }

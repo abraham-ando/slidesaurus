@@ -1,10 +1,13 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import Layout from "@theme/Layout";
 import Head from "@docusaurus/Head";
+import Link from "@docusaurus/Link";
+import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import { usePluginData } from "@docusaurus/useGlobalData";
 import { useLocation } from "@docusaurus/router";
 import type { PluginData, Presentation, PlaylistData } from "../types";
 import { PLUGIN_NAME } from "../types";
+import SlidevIframe from "../SlidevIframe";
 import { PlaylistIcon, DownloadIcon } from "../icons";
 
 function exportLabel(url: string): string {
@@ -12,6 +15,54 @@ function exportLabel(url: string): string {
   return ["PDF", "PPTX"].includes(ext) ? ext : "FILE";
 }
 import styles from "./styles.module.css";
+
+/** Resolves a site-relative URL (already including baseUrl) against `siteConfig.url`. */
+function toAbsoluteUrl(siteUrl: string, path: string): string {
+  try {
+    return new URL(path, siteUrl).href;
+  } catch {
+    return path;
+  }
+}
+
+/**
+ * Reads the current slide number from the Slidev iframe.
+ * Supports both Slidev router modes: `history` (default, `<url>/N`) and
+ * `hash` (`#/N`, with `#N` accepted for legacy values).
+ * Returns null when the iframe is cross-origin or no slide is routed yet.
+ */
+function readSlide(win: Window | null | undefined, baseUrl: string): number | null {
+  try {
+    if (!win) return null;
+    const base = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+    const { pathname, hash } = win.location;
+    if (pathname.startsWith(base)) {
+      const m = /^(\d+)\/?$/.exec(pathname.slice(base.length));
+      if (m) return parseInt(m[1], 10);
+    }
+    const hm = /^#\/?(\d+)/.exec(hash);
+    return hm ? parseInt(hm[1], 10) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Navigates the Slidev iframe to a slide, whichever router mode it uses. */
+function goToSlide(win: Window, baseUrl: string, slide: number): void {
+  try {
+    const base = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+    if (win.location.pathname.startsWith(base) && /^\d+\/?$/.test(win.location.pathname.slice(base.length))) {
+      // history mode: update the URL then let vue-router pick it up
+      win.history.replaceState(win.history.state, "", `${base}${slide}`);
+      win.dispatchEvent(new PopStateEvent("popstate", { state: win.history.state }));
+    } else {
+      // hash mode
+      win.location.hash = `#/${slide}`;
+    }
+  } catch {
+    // cross-origin: nothing we can do
+  }
+}
 
 function buildJsonLd(p: Presentation): Record<string, unknown> {
   const ld: Record<string, unknown> = {
@@ -28,18 +79,18 @@ function buildJsonLd(p: Presentation): Record<string, unknown> {
   return ld;
 }
 
-function PresentationHead({ p, url }: { p: Presentation; url: string }) {
+function PresentationHead({ p, url, imageUrl }: { p: Presentation; url: string; imageUrl?: string }) {
   return (
     <Head>
       <meta property="og:type" content="article" />
       <meta property="og:title" content={p.title} />
       {p.description && <meta property="og:description" content={p.description} />}
       <meta property="og:url" content={url} />
-      {p.thumbnailUrl && <meta property="og:image" content={p.thumbnailUrl} />}
-      <meta name="twitter:card" content={p.thumbnailUrl ? "summary_large_image" : "summary"} />
+      {imageUrl && <meta property="og:image" content={imageUrl} />}
+      <meta name="twitter:card" content={imageUrl ? "summary_large_image" : "summary"} />
       <meta name="twitter:title" content={p.title} />
       {p.description && <meta name="twitter:description" content={p.description} />}
-      {p.thumbnailUrl && <meta name="twitter:image" content={p.thumbnailUrl} />}
+      {imageUrl && <meta name="twitter:image" content={imageUrl} />}
       <script type="application/ld+json">{JSON.stringify(buildJsonLd(p))}</script>
     </Head>
   );
@@ -51,7 +102,9 @@ export default function SlidevPresentation({ pluginId = "default" }: { readonly 
   const location = useLocation();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [resumeSlide, setResumeSlide] = useState<number | null>(null);
-  const [iframeSrc, setIframeSrc] = useState<string>("");
+  const { siteConfig } = useDocusaurusContext();
+  // Slide to apply once the iframe has loaded (set when the user clicks "Resume")
+  const pendingSlideRef = useRef<number | null>(null);
   const [showResumeBar, setShowResumeBar] = useState(false);
 
   const presentation = presentations.find((p) => {
@@ -81,41 +134,46 @@ export default function SlidevPresentation({ pluginId = "default" }: { readonly 
     };
   }, [presentation?.id, playlists, presentations]);
 
-  // ── Dev mode: lazy server start + open in new tab ────────────────────────
+  // Dev mode serves the same static build output as production, so the
+  // iframe always loads `presentation.url`; only the resume offer is computed here.
   useEffect(() => {
-    // Dev mode now uses the same static build output as production —
-    // no Slidev dev servers, no proxy. Just load the iframe.
     if (!presentation) return;
 
-    setIframeSrc(presentation.url);
-
-    const storageKey = `slidev-resume-${presentation.id}`;
-    const stored = localStorage.getItem(storageKey);
-    const slide = stored ? parseInt(stored, 10) : NaN;
-    if (!isNaN(slide) && slide > 1) {
-      setResumeSlide(slide);
-      setShowResumeBar(true);
+    try {
+      const stored = localStorage.getItem(`slidev-resume-${presentation.id}`);
+      const slide = stored ? parseInt(stored, 10) : NaN;
+      if (!isNaN(slide) && slide > 1) {
+        setResumeSlide(slide);
+        setShowResumeBar(true);
+      }
+    } catch {
+      // storage unavailable
     }
   }, [presentation?.id]);
 
+  // Persist the current slide when leaving: on page unload AND on in-app
+  // (SPA) navigation, which does not fire `beforeunload`.
   useEffect(() => {
     if (!presentation) return;
     const storageKey = `slidev-resume-${presentation.id}`;
+    const url = presentation.url;
 
-    const onUnload = () => {
-      try {
-        const hash = iframeRef.current?.contentWindow?.location.hash;
-        const slide = hash ? parseInt(hash.replace("#", ""), 10) : NaN;
-        if (!isNaN(slide) && slide > 1) {
+    const save = () => {
+      const slide = readSlide(iframeRef.current?.contentWindow, url);
+      if (slide !== null && slide > 1) {
+        try {
           localStorage.setItem(storageKey, String(slide));
+        } catch {
+          // storage unavailable
         }
-      } catch {
-        // cross-origin: silently ignore
       }
     };
 
-    window.addEventListener("beforeunload", onUnload);
-    return () => window.removeEventListener("beforeunload", onUnload);
+    window.addEventListener("beforeunload", save);
+    return () => {
+      window.removeEventListener("beforeunload", save);
+      save();
+    };
   }, [presentation?.id]);
 
   if (!presentation) {
@@ -144,8 +202,28 @@ export default function SlidevPresentation({ pluginId = "default" }: { readonly 
   }
 
   const handleResume = () => {
-    setIframeSrc(`${presentation.url}#${resumeSlide}`);
+    pendingSlideRef.current = resumeSlide;
     setShowResumeBar(false);
+    applyPendingSlide();
+  };
+
+  // Applies the requested slide once Slidev's router has settled on its first slide.
+  const applyPendingSlide = () => {
+    const win = iframeRef.current?.contentWindow;
+    const slide = pendingSlideRef.current;
+    if (!win || slide === null) return;
+    let attempts = 0;
+    const tryApply = () => {
+      if (pendingSlideRef.current === null) return;
+      if (readSlide(iframeRef.current?.contentWindow, presentation.url) !== null || attempts >= 50) {
+        pendingSlideRef.current = null;
+        goToSlide(win, presentation.url, slide);
+        return;
+      }
+      attempts += 1;
+      setTimeout(tryApply, 100);
+    };
+    tryApply();
   };
 
   const handleDismiss = () => {
@@ -178,16 +256,16 @@ export default function SlidevPresentation({ pluginId = "default" }: { readonly 
       </div>
       <div className={styles.playlistActions}>
         {playlistNav.prev ? (
-          <a href={playlistNav.prev.url} className={styles.playlistNavBtn} aria-label="Previous in playlist">
+          <Link to={playlistNav.prev.url} className={styles.playlistNavBtn} aria-label={`Previous in playlist: ${playlistNav.prev.title}`}>
             ← {playlistNav.prev.title}
-          </a>
+          </Link>
         ) : (
           <span className={styles.playlistNavBtnDisabled}>← First</span>
         )}
         {playlistNav.next ? (
-          <a href={playlistNav.next.url} className={styles.playlistNavBtn} aria-label="Next in playlist">
+          <Link to={playlistNav.next.url} className={styles.playlistNavBtn} aria-label={`Next in playlist: ${playlistNav.next.title}`}>
             {playlistNav.next.title} →
-          </a>
+          </Link>
         ) : (
           <span className={styles.playlistNavBtnDisabled}>Last →</span>
         )}
@@ -197,7 +275,11 @@ export default function SlidevPresentation({ pluginId = "default" }: { readonly 
 
   return (
     <Layout title={presentation.title} description={presentation.description}>
-      <PresentationHead p={presentation} url={presentation.url} />
+      <PresentationHead
+        p={presentation}
+        url={toAbsoluteUrl(siteConfig.url, presentation.url)}
+        imageUrl={presentation.thumbnailUrl ? toAbsoluteUrl(siteConfig.url, presentation.thumbnailUrl) : undefined}
+      />
       <div className={styles.presentationContainer} data-slidev-ui-theme={uiTheme}>
         {uiTheme !== "minimal" && (
           <div className={styles.presenterLinkBar}>
@@ -219,13 +301,13 @@ export default function SlidevPresentation({ pluginId = "default" }: { readonly 
         )}
         {resumeBar}
         {uiTheme !== "minimal" && playlistBar}
-        <iframe
+        <SlidevIframe
           ref={iframeRef}
-          src={iframeSrc || presentation.url}
+          src={presentation.url}
           className={styles.presentationIframe}
           title={presentation.title}
-          sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
           allowFullScreen
+          onLoad={applyPendingSlide}
         />
       </div>
     </Layout>

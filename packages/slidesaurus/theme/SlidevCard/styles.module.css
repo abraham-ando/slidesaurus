@@ -14,7 +14,7 @@
  * Override these CSS custom properties from custom.css to theme the card.
  * Target the root element that carries `data-slidev-ui-theme`:
  *
- *   a[data-slidev-ui-theme="my-theme"] {
+ *   [data-slidev-ui-theme="my-theme"] {
  *     --slidev-card-bg:           rgba(255,255,255,0.06);
  *     --slidev-card-shadow:       0 8px 32px rgba(0,0,0,0.3);
  *     --slidev-card-radius:       12px;
@@ -42,9 +42,38 @@
   text-decoration: none;
 }
 
-.card:focus-visible {
+/*
+ * "Card link": the title <a> is stretched over the whole card by ::after so the
+ * entire card is clickable while the favorite button and the presenter/download
+ * links (z-index: 10) remain independent interactive elements above it.
+ * The anchor itself must stay `position: static` so ::after is sized by .card.
+ */
+.cardLink {
+  color: inherit;
+  text-decoration: none !important;
+}
+
+.cardLink::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  border-radius: inherit;
+}
+
+.cardLink:hover {
+  color: inherit;
+}
+
+/* Visible keyboard focus: draw the ring on the stretched area (inside the card,
+   which has overflow: hidden) rather than on the small text link. */
+.cardLink:focus {
+  outline: none;
+}
+
+.cardLink:focus-visible::after {
   outline: 2px solid var(--ifm-color-primary);
-  outline-offset: 2px;
+  outline-offset: -3px;
 }
 
 .preview {
@@ -189,11 +218,6 @@
   height: 12px;
 }
 
-.unavailableBadge {
-  background: var(--ifm-color-warning-contrast-background);
-  color: var(--ifm-color-warning-contrast-foreground);
-}
-
 .metaBadges {
   display: flex;
   flex-wrap: wrap;
@@ -288,7 +312,8 @@
   transition: opacity 0.15s;
 }
 
-.preview:hover .overlayActions {
+.card:hover .overlayActions,
+.card:focus-within .overlayActions {
   opacity: 1;
 }
 
@@ -462,6 +487,7 @@
 /* ── Minimal variant — text-only row, no thumbnail ──────────────────────────── */
 
 .cardMinimal {
+  position: relative;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -482,8 +508,17 @@
   text-decoration: none;
 }
 
-.cardMinimal:focus-visible {
-  outline: 2px solid var(--ifm-color-primary);
+.cardMinimal .cardLink {
+  color: var(--ifm-color-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardMinimal .cardLink::after {
+  border-radius: 6px;
+}
+
+.cardMinimal .cardLink:focus-visible::after {
   outline-offset: 2px;
 }
 
@@ -530,6 +565,8 @@
 }
 
 .minimalFavoriteBtn {
+  position: relative;
+  z-index: 10; /* above the stretched title link */
   background: transparent;
   border: none;
   cursor: pointer;

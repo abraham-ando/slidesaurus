@@ -8,13 +8,29 @@ export interface TemplateVars {
 
 const SEPARATOR = "\n---\n\n";
 
+const PLAIN_YAML_SCALAR = /^[A-Za-z0-9][A-Za-z0-9 ._/-]*$/;
+/** Plain scalars that YAML would parse as a non-string (bool / null / number). */
+const YAML_RESERVED = /^(true|false|yes|no|on|off|null|~|[-+]?\d[\d_]*(\.\d*)?([eE][-+]?\d+)?|0x[0-9a-fA-F]+|0o[0-7]+)$/i;
+
+/**
+ * Serialise a string as a safe YAML scalar: left plain when unambiguous,
+ * otherwise emitted as a double-quoted string (JSON strings are valid YAML),
+ * which neutralises `: `, ` #`, leading `@`/`*`/`&`, quotes and newlines.
+ */
+export function yamlScalar(value: string): string {
+  if (value !== "" && value === value.trim() && PLAIN_YAML_SCALAR.test(value) && !YAML_RESERVED.test(value)) {
+    return value;
+  }
+  return JSON.stringify(value);
+}
+
 const FRONTMATTER = (vars: TemplateVars, extra: Record<string, unknown> = {}) => {
   const lines = [
     "---",
-    `title: ${vars.title}`,
+    `title: ${yamlScalar(vars.title)}`,
     `description: `,
-    `author: ${vars.author ?? ""}`,
-    `theme: ${vars.theme}`,
+    `author: ${vars.author ? yamlScalar(vars.author) : ""}`,
+    `theme: ${yamlScalar(vars.theme)}`,
     `tags: []`,
     ...Object.entries(extra).map(([k, v]) => `${k}: ${v}`),
     "---",

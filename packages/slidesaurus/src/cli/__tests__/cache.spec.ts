@@ -67,7 +67,7 @@ describe("runCacheClear", () => {
     };
     fs.writeFileSync(path.join(cacheDir, "build-hashes.json"), JSON.stringify(manifest));
 
-    await runCacheClear({ id: "intro/getting-started", yes: true, pluginId: "default" });
+    await runCacheClear({ presentation: "intro/getting-started", yes: true, pluginId: "default" });
 
     // Output dir should be gone
     expect(fs.existsSync(outputDir)).toBe(false);
@@ -80,7 +80,7 @@ describe("runCacheClear", () => {
 
   it("warns when the targeted presentation has no cached output", async () => {
     const logSpy = vi.spyOn(console, "log");
-    await runCacheClear({ id: "nonexistent", yes: true, pluginId: "default" });
+    await runCacheClear({ presentation: "nonexistent", yes: true, pluginId: "default" });
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("No cached output"));
     logSpy.mockRestore();
   });
@@ -91,5 +91,34 @@ describe("runCacheClear", () => {
     await runCacheClear({ yes: true, pluginId: "default" });
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("already empty"));
     logSpy.mockRestore();
+  });
+
+  describe("targeted clear guard", () => {
+    let outputRoot: string;
+    let exitSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      outputRoot = path.join(cacheDir, "output");
+      fs.mkdirSync(path.join(outputRoot, "keep-me"), { recursive: true });
+      fs.writeFileSync(path.join(outputRoot, "keep-me", "index.html"), "");
+      exitSpy = vi.spyOn(process, "exit").mockImplementation((() => {
+        throw new Error("process.exit called");
+      }) as never);
+    });
+
+    afterEach(() => {
+      exitSpy.mockRestore();
+    });
+
+    it.each([".", "", "   ", "./", "a/..", "..", "../escape", "intro/../.."])(
+      "refuses presentation %j and keeps the output root intact",
+      async (bad) => {
+        await expect(
+          runCacheClear({ presentation: bad, yes: true, pluginId: "default" }),
+        ).rejects.toThrow("process.exit called");
+        expect(exitSpy).toHaveBeenCalledWith(1);
+        expect(fs.existsSync(path.join(outputRoot, "keep-me", "index.html"))).toBe(true);
+      },
+    );
   });
 });

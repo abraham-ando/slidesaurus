@@ -7,7 +7,7 @@ import { renderTemplate, TEMPLATE_NAMES, type TemplateName } from "../templates"
 import { cliLogger } from "../output";
 const { success, error, info } = cliLogger;
 import type { PluginOptions } from "../../domain/types";
-import { normalizeRoutePath } from "../../shared/utils";
+import { normalizeRoutePath, validatePackageName } from "../../shared/utils";
 
 interface NewOptions {
   category?: string;
@@ -20,22 +20,51 @@ interface NewOptions {
 function slugify(name: string): string {
   return name
     .toLowerCase()
-    .replace(/[^a-z0-9/]+/g, "-")
+    .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 }
 
-/** Derive relative path and ID from the name arg (may include category/name). */
+/** Exit code used when the user cancels a prompt (Ctrl+C), by shell convention. */
+const EXIT_CANCELLED = 130;
+
+/**
+ * Derive relative path and ID from the name arg (may include category/name).
+ * A trailing ".md" is stripped (so "foo.md" → "foo", not "foo-md").
+ * Throws when the name or category reduces to nothing.
+ */
 function resolveName(
   rawName: string,
   categoryFlag: string | undefined,
 ): { relativePath: string; id: string } {
-  const parts = rawName.replace(/\\/g, "/").split("/").map(slugify);
-  const fileName = parts.pop()!;
-  const category = categoryFlag ? slugify(categoryFlag) : parts.join("/");
-  const segments = category ? [category, fileName] : [fileName];
-  const id = segments.join("/");
-  const relativePath = `${id}.md`;
-  return { relativePath, id };
+  const segments = rawName.replace(/\\/g, "/").split("/").map((s) => s.trim()).filter(Boolean);
+  const last = (segments.pop() ?? "").replace(/\.md$/i, "");
+  const fileName = slugify(last);
+  if (!fileName) {
+    throw new Error(`Invalid presentation name "${rawName}": it must contain at least one letter or digit.`);
+  }
+
+  let categoryParts: string[];
+  if (categoryFlag !== undefined) {
+    categoryParts = categoryFlag.replace(/\\/g, "/").split("/").map(slugify).filter(Boolean);
+    if (categoryParts.length === 0) {
+      throw new Error(`Invalid category "${categoryFlag}": it must contain at least one letter or digit.`);
+    }
+  } else {
+    categoryParts = segments.map(slugify).filter(Boolean);
+  }
+
+  const id = [...categoryParts, fileName].join("/");
+  return { relativePath: `${id}.md`, id };
+}
+
+/** Human-readable title derived from the last path segment of the name argument. */
+function deriveTitle(rawName: string): string {
+  const last = rawName.replace(/\\/g, "/").split("/").filter(Boolean).pop() ?? rawName;
+  return last
+    .replace(/\.md$/i, "")
+    .replace(/[-_]+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export async function runNew(rawName: string | undefined, opts: NewOptions): Promise<void> {
@@ -66,10 +95,14 @@ export async function runNew(rawName: string | undefined, opts: NewOptions): Pro
         initial: options.theme ?? "seriph",
       },
     ],
-    { onCancel: () => process.exit(0) },
+    { onCancel: () => process.exit(EXIT_CANCELLED) },
   );
 
-  const name = rawName ?? answers.name;
+  const name: string | undefined = rawName ?? answers.name;
+  if (!name?.trim()) {
+    error("A presentation name is required.");
+    process.exit(1);
+  }
   const template = (opts.template ?? answers.template ?? "basic") as TemplateName;
   const theme = opts.theme ?? answers.theme ?? options.theme ?? "seriph";
 
@@ -78,7 +111,21 @@ export async function runNew(rawName: string | undefined, opts: NewOptions): Pro
     process.exit(1);
   }
 
-  const { relativePath, id } = resolveName(name, opts.category);
+  try {
+    validatePackageName(theme);
+  } catch (err) {
+    error(`Invalid theme "${theme}": ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(1);
+  }
+
+  let resolved: { relativePath: string; id: string };
+  try {
+    resolved = resolveName(name, opts.category);
+  } catch (err) {
+    error(err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  }
+  const { relativePath, id } = resolved;
   const slidevDir = path.resolve(cwd, options.path ?? "./slidev");
   const targetPath = path.join(slidevDir, relativePath);
 
@@ -96,9 +143,7 @@ export async function runNew(rawName: string | undefined, opts: NewOptions): Pro
     process.exit(1);
   }
 
-  const title = path.basename(name, ".md")
-    .replace(/[-_]/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  const title = deriveTitle(name);
 
   const content = renderTemplate(template, { title, theme });
 
