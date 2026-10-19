@@ -11,7 +11,7 @@
  * with `node scripts/build-theme.mjs`.
  *
  * Each file is transpiled in isolation (no type-checking — run
- * `pnpm typecheck:theme` for that). Type-only imports are erased, so the output
+ * `pnpm typecheck`, which also checks theme/). Type-only imports are erased, so the output
  * never references src/.
  */
 import fs from "node:fs";

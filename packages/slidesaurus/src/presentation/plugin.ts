@@ -10,11 +10,10 @@
  *   outputManager → postBuild file copying
  */
 import path from "node:path";
-import os from "node:os";
 import type { LoadContext, Plugin } from "@docusaurus/types";
 import { Joi } from "@docusaurus/utils-validation";
 import type { PluginOptions, PluginContentData } from "../domain/types";
-import { PLUGIN_NAME } from "../domain/constants";
+import { DEFAULT_MAX_PARALLEL_BUILDS, PLUGIN_NAME } from "../domain/constants";
 import { scanPresentations } from "../application/scanner";
 import {
   assertBuildSucceeded,
@@ -46,7 +45,7 @@ const DEFAULT_OPTIONS: PluginOptions = {
   addons: [],
   buildTimeout: 120,
   verbose: false,
-  maxParallelBuilds: Math.max(1, os.cpus().length - 1),
+  maxParallelBuilds: DEFAULT_MAX_PARALLEL_BUILDS,
   // OWASP A05 — Principle of Least Privilege: auto-installing packages (pnpm add) must
   // be an explicit opt-in, not an invisible default that runs in CI/production environments.
   autoInstall: false,

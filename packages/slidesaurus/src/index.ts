@@ -14,5 +14,23 @@ export {
   default,
   getSwizzleComponentList,
   validateOptions,
-  SlidesaurusPluginOptions,
 } from "./presentation/plugin";
+export type { SlidesaurusPluginOptions } from "./presentation/plugin";
+
+// Public types — hooks (`transformFrontmatter`, `onPresentationScanned`,
+// `onBuildComplete`) and swizzled theme components rely on these shapes.
+export type {
+  BuildResult,
+  Category,
+  CategoryMetadata,
+  ExportFormat,
+  PlaylistData,
+  PluginConfig,
+  PluginData,
+  PluginOptions,
+  Presentation,
+  PresentationLevel,
+  PresentationMetadata,
+  SlidevFrontmatter,
+  UITheme,
+} from "./domain/types";

@@ -138,17 +138,18 @@ export async function runDoctor(opts: DoctorOptions): Promise<void> {
   );
 
   // ── Check 7: Playwright (required for thumbnails and export) ─────────────
+  // `slidev export` loads `playwright-chromium`, not the `playwright` package.
   let playwrightOk = false;
   try {
-    require.resolve("playwright", { paths: [cwd] });
+    require.resolve("playwright-chromium", { paths: [cwd] });
     playwrightOk = true;
   } catch {
     playwrightOk = false;
   }
   if (!playwrightOk) {
-    info(`playwright not found — thumbnail and export generation will be skipped (optional: pnpm add playwright)`);
+    info(`playwright-chromium not found — thumbnail and export generation will be skipped (optional: pnpm add -D playwright-chromium)`);
   } else {
-    ok("playwright installed (thumbnails/exports)");
+    ok("playwright-chromium installed (thumbnails/exports)");
     passed++;
   }
 
