@@ -25,6 +25,9 @@
       "outputs": []
     },
     "lint": {},
+    "typecheck": {
+      "outputs": []
+    },
     "clean": {
       "cache": false
     },

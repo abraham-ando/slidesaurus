@@ -17,39 +17,38 @@ concurrency:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   build-and-test:
-    name: Build & Test
-    runs-on: ubuntu-latest
+    name: Build & Test (${{ matrix.os }}, Node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: ['20.x', '22.x']
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
+      # pnpm version comes from the root package.json "packageManager" field
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '20'
-
-      - name: Get pnpm store path
-        id: pnpm-store
-        run: echo "path=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
-
-      - uses: actions/cache@v4
-        with:
-          path: ${{ steps.pnpm-store.outputs.path }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+          node-version: ${{ matrix.node }}
+          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build plugin
-        run: pnpm build:plugin
+      - name: Type check (plugin + theme)
+        run: pnpm typecheck
+
+      - name: Build plugin, docs and sample
+        run: pnpm build
 
       - name: Run unit tests
         run: pnpm --filter slidesaurus test
@@ -57,33 +56,108 @@ jobs:
       - name: Run integration tests
         run: pnpm --filter slidesaurus test:integration
 
-  lint:
-    name: Lint & Type Check
+  pack-smoke:
+    name: Pack & smoke test (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20.x', '22.x']
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          version: 9
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Get pnpm store path
-        id: pnpm-store
-        run: echo "path=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
-
-      - uses: actions/cache@v4
-        with:
-          path: ${{ steps.pnpm-store.outputs.path }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+          node-version: ${{ matrix.node }}
+          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: TypeScript type check
-        run: pnpm --filter slidesaurus exec tsc --noEmit
+      - name: Build plugin
+        run: pnpm build:plugin
+
+      - name: Pack tarball
+        working-directory: packages/slidesaurus
+        run: |
+          mkdir -p "$RUNNER_TEMP/pack"
+          pnpm pack --pack-destination "$RUNNER_TEMP/pack"
+          TARBALL=$(ls "$RUNNER_TEMP"/pack/slidesaurus-*.tgz)
+          echo "TARBALL=$TARBALL" >> "$GITHUB_ENV"
+
+      - name: Check tarball contents
+        run: |
+          tar -tzf "$TARBALL" | sort > "$RUNNER_TEMP/contents.txt"
+          cat "$RUNNER_TEMP/contents.txt"
+          for f in \
+            package/lib/index.cjs \
+            package/lib/index.mjs \
+            package/lib/index.d.cts \
+            package/lib/index.d.mts \
+            package/lib/cli.cjs \
+            package/lib/theme/types.js \
+            package/lib/theme/SlidevOverview/index.js \
+            package/lib/theme/SlidevOverview/styles.module.css \
+            package/lib/theme/SlidevCard/index.js \
+            package/lib/theme/SlidevCard/styles.module.css \
+            package/theme/SlidevOverview/index.tsx; do
+            grep -qx "$f" "$RUNNER_TEMP/contents.txt" || { echo "::error::missing $f"; exit 1; }
+          done
+          if grep -q '^package/src/' "$RUNNER_TEMP/contents.txt"; then
+            echo "::error::src/ must not be published"; exit 1
+          fi
+          # The compiled theme must be self-contained (no runtime import of src/)
+          mkdir -p "$RUNNER_TEMP/extract"
+          tar -xzf "$TARBALL" -C "$RUNNER_TEMP/extract"
+          if grep -rnE "from ['\"][./]*src/" "$RUNNER_TEMP/extract/package/lib/theme"; then
+            echo "::error::lib/theme imports from src/"; exit 1
+          fi
+
+      - name: Install tarball in a fresh project
+        run: |
+          mkdir -p "$RUNNER_TEMP/consumer"
+          cd "$RUNNER_TEMP/consumer"
+          npm init -y > /dev/null
+          # Peer deps (Docusaurus, React, Slidev) are not needed to load the plugin
+          npm install --no-audit --no-fund --legacy-peer-deps "$TARBALL"
+
+      - name: require() works (CJS)
+        working-directory: ${{ runner.temp }}/consumer
+        run: |
+          node -e '
+            const fs = require("node:fs");
+            const path = require("node:path");
+            const mod = require("slidesaurus");
+            const plugin = mod.default ?? mod;
+            if (typeof plugin !== "function") throw new Error("default export is not a function");
+            if (typeof mod.validateOptions !== "function") throw new Error("validateOptions missing");
+            const inst = plugin({ siteDir: process.cwd(), baseUrl: "/" }, {});
+            const themeDir = inst.getThemePath();
+            if (!fs.existsSync(path.join(themeDir, "SlidevOverview", "index.js")))
+              throw new Error("compiled theme not found at " + themeDir);
+            if (!fs.existsSync(path.join(inst.getTypeScriptThemePath(), "SlidevOverview", "index.tsx")))
+              throw new Error("TypeScript theme not found");
+            console.log("CJS OK:", inst.name, themeDir);
+          '
+
+      - name: import works (ESM)
+        working-directory: ${{ runner.temp }}/consumer
+        run: |
+          node --input-type=module -e '
+            import fs from "node:fs";
+            import path from "node:path";
+            import plugin, { validateOptions } from "slidesaurus";
+            if (typeof plugin !== "function") throw new Error("default export is not a function");
+            if (typeof validateOptions !== "function") throw new Error("validateOptions missing");
+            const inst = plugin({ siteDir: process.cwd(), baseUrl: "/" }, {});
+            const themeDir = inst.getThemePath();
+            if (!fs.existsSync(path.join(themeDir, "SlidevOverview", "index.js")))
+              throw new Error("compiled theme not found at " + themeDir);
+            console.log("ESM OK:", inst.name, themeDir);
+          '
+
+      - name: CLI binary runs
+        working-directory: ${{ runner.temp }}/consumer
+        run: npx --no-install slidesaurus --help

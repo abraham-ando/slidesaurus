@@ -3,6 +3,7 @@ import commonjs from "@rollup/plugin-commonjs";
 import typescript from "@rollup/plugin-typescript";
 import json from "@rollup/plugin-json";
 import dts from "rollup-plugin-dts";
+import { themeBuildPlugin } from "./scripts/build-theme.mjs";
 
 /** Node built-ins — always external regardless of build target. */
 const NODE_BUILTINS = [
@@ -13,7 +14,11 @@ const NODE_BUILTINS = [
 /**
  * Packages that must NOT be bundled for the Docusaurus plugin — they are
  * resolved at runtime by the consumer (Docusaurus, Node.js built-ins, declared
- * peer/runtime deps).
+ * peer/runtime deps). Every entry here must be listed in package.json
+ * `dependencies` or `peerDependencies`.
+ *
+ * p-limit is deliberately NOT external: v7 is ESM-only and `require()` of ESM
+ * is unavailable before Node 20.19, so it is inlined (and kept in devDependencies).
  */
 const PLUGIN_EXTERNALS = [
   ...NODE_BUILTINS,
@@ -45,8 +50,15 @@ const CLI_EXTERNALS = [
   "react-dom",
 ];
 
-// Keep backward-compat alias
-const EXTERNALS = PLUGIN_EXTERNALS;
+/**
+ * The ESM bundle has no CommonJS `__dirname`; derive it from import.meta.url so
+ * `getThemePath()` resolves the same directory (lib/) in both formats.
+ */
+const ESM_DIRNAME_SHIM = [
+  'import { fileURLToPath as __slidesaurusFileURLToPath } from "node:url";',
+  'import { dirname as __slidesaurusDirname } from "node:path";',
+  "const __dirname = __slidesaurusDirname(__slidesaurusFileURLToPath(import.meta.url));",
+].join("\n");
 
 /** TypeScript compiler overrides for Rollup (override tsconfig.json) */
 const TS_OVERRIDES = {
@@ -78,8 +90,7 @@ const config = [
       json({ compact: true }),
       typescript({
         tsconfig: "./tsconfig.json",
-        compilerOptions: { ...TS_OVERRIDES, declaration: false, declarationMap: false },
-        exclude: ["src/__tests__/**"],
+        compilerOptions: TS_OVERRIDES,
       }),
     ],
   },
@@ -99,35 +110,37 @@ const config = [
         interop: "auto",
       },
       {
-        file: "lib/index.js",
+        file: "lib/index.mjs",
         format: "esm",
         sourcemap: true,
+        intro: ESM_DIRNAME_SHIM,
       },
     ],
-    external: EXTERNALS,
+    external: PLUGIN_EXTERNALS,
     plugins: [
       // Resolve node_modules (prefer Node built-ins)
       resolve({ preferBuiltins: true }),
-      // Convert CJS modules (gray-matter, js-yaml) to ESM for Rollup
+      // Convert inlined CJS modules to ESM for Rollup
       commonjs(),
       // Inline package.json fields used in constants.ts
       json({ compact: true }),
       typescript({
         tsconfig: "./tsconfig.json",
         compilerOptions: TS_OVERRIDES,
-        exclude: ["src/__tests__/**"],
       }),
+      // Compile theme/ (TSX) → lib/theme (JS + CSS modules) for getThemePath()
+      themeBuildPlugin(),
     ],
   },
 
-  // ── Pass 2: Bundled type declarations (.d.ts) ───────────────────────────
+  // ── Pass 2: Bundled type declarations (.d.cts for require, .d.mts for import)
   {
     input: "src/index.ts",
-    output: {
-      file: "lib/index.d.ts",
-      format: "esm",
-    },
-    external: EXTERNALS,
+    output: [
+      { file: "lib/index.d.cts", format: "esm" },
+      { file: "lib/index.d.mts", format: "esm" },
+    ],
+    external: PLUGIN_EXTERNALS,
     plugins: [
       json({ compact: true }),
       dts({ tsconfig: "./tsconfig.json" }),
