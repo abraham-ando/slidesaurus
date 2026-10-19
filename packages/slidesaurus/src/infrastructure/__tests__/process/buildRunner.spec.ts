@@ -23,7 +23,6 @@ vi.mock("node:child_process", async (importOriginal) => {
 import { spawn } from "node:child_process";
 import { SIGKILL_DELAY_MS } from "../../../domain/constants";
 import {
-  resolveSlidevBin,
   resolveSlidevCli,
   runSlidevBuild,
   _resetSlidevCliCache,
@@ -75,19 +74,6 @@ afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
   fs.rmSync(tmpDir, { recursive: true, force: true });
-});
-
-describe("resolveSlidevBin (legacy)", () => {
-  it("finds slidev binary in node_modules/.bin, walking up", () => {
-    const binName = process.platform === "win32" ? "slidev.cmd" : "slidev";
-    const binDir = path.join(tmpDir, "node_modules", ".bin");
-    fs.mkdirSync(binDir, { recursive: true });
-    fs.writeFileSync(path.join(binDir, binName), "");
-    const childDir = path.join(tmpDir, "packages", "my-app");
-    fs.mkdirSync(childDir, { recursive: true });
-
-    expect(resolveSlidevBin(childDir)).toBe(path.join(binDir, binName));
-  });
 });
 
 describe("resolveSlidevCli", () => {

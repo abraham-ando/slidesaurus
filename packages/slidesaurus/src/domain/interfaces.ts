@@ -5,7 +5,7 @@
  * enabling dependency injection, easier testing (no vi.mock required), and
  * extension without modifying existing code (Open/Closed Principle).
  */
-import type { BuildOptions, BuildContext, PresentationMetadata, SlidevFrontmatter, PluginOptions } from "./types";
+import type { BuildOptions, BuildContext, PresentationMetadata, PluginOptions } from "./types";
 
 // ── ILogger ───────────────────────────────────────────────────────────────────
 
@@ -44,22 +44,6 @@ export interface ICache {
   persist(): void;
   /** Combine a file content hash with an options fingerprint into a single cache key. */
   computeHash(sourceAbsolutePath: string, optionsFingerprint: string): string;
-}
-
-// ── IBuildEngine ──────────────────────────────────────────────────────────────
-
-/**
- * Abstraction over the build tool (Slidev CLI by default).
- * Implement this interface to plug in an alternative engine (Marp, Reveal.js…)
- * without touching `builder.ts`.
- */
-export interface IBuildEngine {
-  build(
-    sourcePath: string,
-    outputPath: string,
-    options: BuildOptions,
-    context: BuildContext,
-  ): Promise<{ success: boolean; error?: string; duration?: number }>;
 }
 
 // ── IAssetPostProcessor ───────────────────────────────────────────────────────
@@ -115,27 +99,4 @@ export interface ICliCommand {
    * Called by `registerCliCommands()` when the user invokes the command.
    */
   action(options: PluginOptions, context: BuildContext): Promise<void>;
-}
-
-// ── IFrontmatterRule ──────────────────────────────────────────────────────────
-
-/**
- * A single validation/transformation rule for Slidev frontmatter.
- * Rules are applied in sequence during the scan phase.
- * Implement this interface to add custom frontmatter validation without
- * modifying `FrontmatterValidator`.
- */
-export interface IFrontmatterRule {
-  /** Unique identifier used in error messages. */
-  readonly name: string;
-  /**
-   * Validate or transform the frontmatter.
-   * Must return the (possibly modified) frontmatter object.
-   * Use `logger.warn()` for non-fatal issues; throw only for fatal errors.
-   */
-  validate(
-    frontmatter: SlidevFrontmatter,
-    filePath: string,
-    logger: ILogger,
-  ): SlidevFrontmatter;
 }

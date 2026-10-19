@@ -15,7 +15,7 @@ describe("validateOptions — defaults", () => {
     const result = callValidate({});
     expect(result.path).toBe("./slidev");
     expect(result.autoInstall).toBe(false);
-    expect(result.devServerBasePort).toBe(8600);
+    expect(result.devServerBasePort).toBeUndefined();
   });
 
   it("autoInstall defaults to false (OWASP A05 — principle of least privilege)", () => {

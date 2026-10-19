@@ -28,19 +28,15 @@ export interface BuildOptions {
   exportWithClicks: boolean;
 }
 
-/** Options related to the Slidev dev server (used during `docusaurus start`). */
+/**
+ * Legacy options of the removed per-presentation Slidev dev servers.
+ * `docusaurus start` now builds presentations and serves them statically.
+ */
 export interface DevServerOptions {
-  /**
-   * Base port for Slidev dev servers. Each presentation gets basePort+index.
-   * Useful to avoid collision when multiple plugin instances are configured.
-   * Defaults to 8600.
-   */
-  devServerBasePort: number;
-  /**
-   * Maximum time (ms) to wait for a Slidev dev server to become ready.
-   * Defaults to 60000 (60 s).
-   */
-  devServerTimeout: number;
+  /** @deprecated No effect — accepted for backward compatibility only. */
+  devServerBasePort?: number;
+  /** @deprecated No effect — accepted for backward compatibility only. */
+  devServerTimeout?: number;
 }
 
 /**

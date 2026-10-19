@@ -6,28 +6,6 @@ import { STDERR_MAX_BYTES, SIGKILL_DELAY_MS, TREE_WALK_MAX_DEPTH } from "../../d
 import { walkUpTree } from "../../shared/utils";
 import { log } from "../../shared/logger";
 
-const slidevBinCache = new Map<string, string>();
-
-/**
- * Resolve the absolute path to the Slidev CLI shim in `node_modules/.bin`.
- *
- * @deprecated Only kept for the legacy dev-server code. Builds no longer
- * execute the `.bin` shim (a `.cmd` file on Windows that requires `cmd.exe`);
- * use `resolveSlidevCli()` instead.
- */
-export function resolveSlidevBin(siteDir: string): string {
-  const cached = slidevBinCache.get(siteDir);
-  if (cached !== undefined) return cached;
-  const binName = process.platform === "win32" ? "slidev.cmd" : "slidev";
-  const found = walkUpTree(siteDir, TREE_WALK_MAX_DEPTH, (dir) => {
-    const p = path.join(dir, "node_modules", ".bin", binName);
-    return fs.existsSync(p) ? p : undefined;
-  });
-  const resolved = found ?? binName;
-  slidevBinCache.set(siteDir, resolved);
-  return resolved;
-}
-
 /** Location and version of the installed `@slidev/cli` package. */
 export interface SlidevCliInfo {
   /** Absolute path of the CLI's JavaScript entry point (the package `bin`). */
@@ -72,7 +50,6 @@ export function resolveSlidevCli(siteDir: string): SlidevCliInfo | undefined {
 /** Reset memoized lookups — for tests only. */
 export function _resetSlidevCliCache(): void {
   slidevCliCache.clear();
-  slidevBinCache.clear();
 }
 
 /**

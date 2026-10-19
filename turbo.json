@@ -24,7 +24,9 @@
       "dependsOn": ["build"],
       "outputs": []
     },
-    "lint": {},
+    "lint": {
+      "outputs": []
+    },
     "typecheck": {
       "outputs": []
     },
