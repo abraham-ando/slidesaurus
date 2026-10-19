@@ -8,7 +8,9 @@
     "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true
   },
   "include": ["./**/*.tsx", "./**/*.ts"],
   "exclude": ["../node_modules", "../lib"]

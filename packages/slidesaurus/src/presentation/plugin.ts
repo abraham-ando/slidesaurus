@@ -94,7 +94,15 @@ export default function pluginSlidev(
   return {
     name: PLUGIN_NAME,
 
+    // `__dirname` is the bundle directory (lib/) — native in lib/index.cjs,
+    // shimmed from import.meta.url in lib/index.mjs (see rollup.config.mjs).
     getThemePath() {
+      // Compiled JS: Docusaurus does not transpile TSX from node_modules.
+      return path.resolve(__dirname, "theme");
+    },
+
+    getTypeScriptThemePath() {
+      // Raw TSX sources, used by `docusaurus swizzle --typescript`.
       return path.resolve(__dirname, "../theme");
     },
 
