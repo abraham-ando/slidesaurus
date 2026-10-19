@@ -103,11 +103,16 @@ export default function pluginSlidev(
   } as PluginOptions;
   const isDev = process.env.NODE_ENV === "development";
   // Non-default locales get their own build cache (their baseUrl differs).
-  const { currentLocale, defaultLocale } = context.i18n;
+  // `i18n` is optional here so the plugin also works with a minimal context
+  // (programmatic use, smoke tests).
+  const i18n = context.i18n as LoadContext["i18n"] | undefined;
   const buildContext = {
     siteDir: context.siteDir,
     baseUrl: context.baseUrl,
-    locale: currentLocale !== defaultLocale ? currentLocale : undefined,
+    locale:
+      i18n && i18n.currentLocale !== i18n.defaultLocale
+        ? i18n.currentLocale
+        : undefined,
   };
 
   return {

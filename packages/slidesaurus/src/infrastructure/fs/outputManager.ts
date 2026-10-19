@@ -45,9 +45,14 @@ export function hasCachedOutput(cacheDir: string, presentationId: string): boole
   const outputRoot = path.join(cacheDir, "output");
   const outputDir = path.join(outputRoot, presentationId);
   const rel = path.relative(outputRoot, outputDir);
-  // path.isAbsolute() guards against Windows drive-letter paths (e.g. "C:\evil") that
-  // path.join() may produce when presentationId is an absolute path on Windows.
-  if (rel.startsWith("..") || path.isAbsolute(rel)) {
+  // An absolute id is rejected outright: on POSIX path.join() would silently
+  // re-root "/etc/passwd" under outputRoot. path.isAbsolute(rel) catches
+  // Windows drive-letter results (e.g. "C:\evil").
+  if (
+    path.isAbsolute(presentationId) ||
+    rel.startsWith("..") ||
+    path.isAbsolute(rel)
+  ) {
     throw new Error(`[Security] Path traversal detected in presentationId: "${presentationId}"`);
   }
   return isCompleteBuildOutput(outputDir);
