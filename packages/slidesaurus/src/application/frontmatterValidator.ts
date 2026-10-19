@@ -9,7 +9,34 @@ const VALID_COLOR_SCHEMAS: ColorSchema[] = ["dark", "light", "auto"];
 const VALID_LEVELS: PresentationLevel[] = ["beginner", "intermediate", "advanced"];
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+/**
+ * gray-matter options used for EVERY frontmatter parse in the plugin.
+ *
+ * gray-matter ships a `javascript` engine that `eval`s front-matter written as
+ * `---js` / `---javascript`: a Markdown file would execute arbitrary code in
+ * the Docusaurus process. Both engines are replaced by one that refuses to run.
+ */
+function refuseJsEngine(): never {
+  throw new Error("JavaScript front-matter (---js) is not supported for security reasons");
+}
+export const SAFE_MATTER_OPTIONS = {
+  engines: {
+    js: refuseJsEngine,
+    javascript: refuseJsEngine,
+  },
+};
+
+/** Parse frontmatter with the hardened engine set (no `---js` evaluation). */
+export function parseFrontmatter(content: string): { data: Record<string, unknown>; content: string } {
+  return matter(content, SAFE_MATTER_OPTIONS);
+}
+
 export interface ValidatedFields {
+  title?: string;
+  description?: string;
+  author?: string;
+  theme?: string;
+  addons?: string[];
   tags?: string[];
   date?: string;
   position?: number;
@@ -36,6 +63,11 @@ export class FrontmatterValidator {
 
   validate(fm: Record<string, unknown>): ValidatedFields {
     return {
+      title:        this.validateNonEmptyString("title", fm.title),
+      description:  this.validateString("description", fm.description),
+      author:       this.validateString("author", fm.author),
+      theme:        this.validateNonEmptyString("theme", fm.theme),
+      addons:       this.validateAddons(fm.addons),
       tags:         this.validateTags(fm.tags),
       date:         this.validateDate("date", fm.date),
       position:     this.validatePosition(fm.position),
@@ -48,6 +80,27 @@ export class FrontmatterValidator {
       withoutNotes: this.validateBoolean("withoutNotes", fm.withoutNotes),
       playlist:     this.validatePlaylist(fm.playlist),
     };
+  }
+
+  private validateNonEmptyString(field: string, raw: unknown): string | undefined {
+    if (raw === undefined || raw === null) return undefined;
+    if (typeof raw === "string" && raw.trim()) return raw.trim();
+    this.warn(`Invalid "${field}": must be a non-empty string`);
+    return undefined;
+  }
+
+  private validateAddons(raw: unknown): string[] | undefined {
+    if (raw === undefined || raw === null) return undefined;
+    if (!Array.isArray(raw)) {
+      this.warn(`Invalid "addons": must be an array of strings`);
+      return undefined;
+    }
+    const valid: string[] = [];
+    for (const item of raw) {
+      if (typeof item === "string" && item.trim()) valid.push(item.trim());
+      else this.warn(`Invalid addon item: each addon must be a non-empty string, got ${typeof item}`);
+    }
+    return valid.length > 0 ? [...new Set(valid)] : undefined;
   }
 
   private validateTags(raw: unknown): string[] | undefined {
@@ -142,28 +195,36 @@ export class FrontmatterValidator {
 }
 
 /**
- * Merge resolved addon names into a Slidev markdown file's frontmatter.
+ * Write the resolved addon list into a Slidev markdown file's frontmatter.
  * Slidev reads addons from frontmatter, not CLI flags — this patch ensures
  * the isolated source file used during build has the full merged addon list.
+ *
+ * The list REPLACES the raw frontmatter value: `addons` already contains the
+ * presentation addons (after `transformFrontmatter` / `onPresentationScanned`)
+ * merged with the global ones, resolved to full package names — keeping the raw
+ * shorthands would load the same addon twice.
  */
 export function patchFrontmatterAddons(filePath: string, addons: string[]): void {
   const content = fs.readFileSync(filePath, "utf-8");
-  const parsed = matter(content);
-  const existing: string[] = Array.isArray(parsed.data.addons) ? parsed.data.addons : [];
-  parsed.data.addons = [...new Set([...existing, ...addons])];
+  const parsed = parseFrontmatter(content);
+  parsed.data.addons = [...new Set(addons)];
   const newContent = matter.stringify(parsed.content, parsed.data);
   if (newContent !== content) fs.writeFileSync(filePath, newContent, "utf-8");
 }
 
 /**
- * Set the theme in a Slidev markdown file's frontmatter if not already defined.
+ * Set the theme in a Slidev markdown file's frontmatter.
  * Used in batch builds to inject the global theme without the --theme CLI flag
  * (which would apply uniformly to all files in the batch).
+ *
+ * @param force - Overwrite an existing `theme` (used when the theme comes from
+ *   the presentation metadata AFTER `transformFrontmatter` / `onPresentationScanned`,
+ *   which may differ from the raw file). Otherwise only fills a missing theme.
  */
-export function patchFrontmatterTheme(filePath: string, theme: string): void {
+export function patchFrontmatterTheme(filePath: string, theme: string, force = false): void {
   const content = fs.readFileSync(filePath, "utf-8");
-  const parsed = matter(content);
-  if (!parsed.data.theme) {
+  const parsed = parseFrontmatter(content);
+  if (force ? parsed.data.theme !== theme : !parsed.data.theme) {
     parsed.data.theme = theme;
     fs.writeFileSync(filePath, matter.stringify(parsed.content, parsed.data), "utf-8");
   }

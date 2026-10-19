@@ -52,3 +52,34 @@ describe("filterEnvAllowlist", () => {
     expect(result).not.toHaveProperty("DATABASE_URL");
   });
 });
+
+describe("filterEnvAllowlist — network / tooling variables", () => {
+  it("forwards proxy variables in upper and lower case", () => {
+    const result = filterEnvAllowlist({
+      HTTP_PROXY: "http://proxy:3128",
+      https_proxy: "http://proxy:3128",
+      no_proxy: "localhost",
+    } as NodeJS.ProcessEnv);
+    expect(result.HTTP_PROXY).toBe("http://proxy:3128");
+    expect(result.https_proxy).toBe("http://proxy:3128");
+    expect(result.no_proxy).toBe("localhost");
+  });
+
+  it("forwards NODE_EXTRA_CA_CERTS, PLAYWRIGHT_BROWSERS_PATH and CI", () => {
+    const result = filterEnvAllowlist({
+      NODE_EXTRA_CA_CERTS: "/etc/ca.pem",
+      PLAYWRIGHT_BROWSERS_PATH: "/ms-playwright",
+      CI: "true",
+    } as NodeJS.ProcessEnv);
+    expect(result).toEqual({
+      NODE_EXTRA_CA_CERTS: "/etc/ca.pem",
+      PLAYWRIGHT_BROWSERS_PATH: "/ms-playwright",
+      CI: "true",
+    });
+  });
+
+  it("still blocks tokens", () => {
+    const result = filterEnvAllowlist({ NPM_TOKEN: "x", GITHUB_TOKEN: "y" } as NodeJS.ProcessEnv);
+    expect(result).toEqual({});
+  });
+});

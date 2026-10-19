@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { BuildCache } from "../buildCache";
-import type { PluginOptions } from "../../domain/types";
+import { BuildCache, FileHashMemo, computePresentationFingerprint } from "../buildCache";
+import type { PluginOptions, PresentationMetadata } from "../../domain/types";
 
 function makeOptions(overrides: Partial<PluginOptions> = {}): PluginOptions {
   return {
@@ -256,5 +256,103 @@ describe("BuildCache.computeHash", () => {
     const fp2 = BuildCache.computeOptionsFingerprint(makeOptions({ theme: "apple-basic" }), "/");
 
     expect(cache.computeHash(mdFile, fp1)).not.toBe(cache.computeHash(mdFile, fp2));
+  });
+});
+
+// ── computePresentationFingerprint ────────────────────────────────────────────
+
+describe("computePresentationFingerprint", () => {
+  let slides: string;
+
+  function write(rel: string, content = "x"): string {
+    const p = path.join(slides, rel);
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    fs.writeFileSync(p, content);
+    return p;
+  }
+
+  function presentation(overrides: Partial<PresentationMetadata> = {}): PresentationMetadata {
+    return {
+      id: "talk",
+      title: "Talk",
+      sourcePath: "talk.md",
+      sourceAbsolutePath: path.join(slides, "talk.md"),
+      url: "/slidev/talk/",
+      outputPath: path.join(tmpDir, "out", "talk"),
+      previewUrl: "/slidev/talk/",
+      category: "",
+      ...overrides,
+    };
+  }
+
+  function fp(p: PresentationMetadata, opts: Partial<PluginOptions> = {}): string {
+    const options = makeOptions(opts);
+    return computePresentationFingerprint(p, {
+      options,
+      context: { siteDir: tmpDir, baseUrl: "/" },
+      slidesRoot: slides,
+      optionsFingerprint: BuildCache.computeOptionsFingerprint(options, "/"),
+      memo: new FileHashMemo(),
+    });
+  }
+
+  beforeEach(() => {
+    slides = path.join(tmpDir, "slidev");
+    write("talk.md", "---\nsrc: ./pages/part.md\n---\n![l](../slidev/shared/logo.png)\n");
+    write("pages/part.md", "# part");
+    write("shared/logo.png", "logo-v1");
+    write("components/Counter.vue", "<template>v1</template>");
+  });
+
+  it("is stable for identical inputs", () => {
+    expect(fp(presentation())).toBe(fp(presentation()));
+    expect(fp(presentation())).toMatch(/^[0-9a-f]{16}$/);
+  });
+
+  it("changes when a file imported with src: changes", () => {
+    const before = fp(presentation());
+    write("pages/part.md", "# part v2");
+    expect(fp(presentation())).not.toBe(before);
+  });
+
+  it("changes when a referenced asset changes", () => {
+    const before = fp(presentation());
+    write("shared/logo.png", "logo-v2");
+    expect(fp(presentation())).not.toBe(before);
+  });
+
+  it("changes when a co-located component changes", () => {
+    const before = fp(presentation());
+    write("components/Counter.vue", "<template>v2</template>");
+    expect(fp(presentation())).not.toBe(before);
+  });
+
+  it("does not change when an unrelated sibling deck changes", () => {
+    write("other/deck.md", "# other");
+    const before = fp(presentation());
+    write("other/deck.md", "# other v2");
+    expect(fp(presentation())).toBe(before);
+  });
+
+  it("changes with the effective base URL (routeBasePath / baseUrl)", () => {
+    expect(fp(presentation({ url: "/docs/slidev/talk/" }))).not.toBe(fp(presentation()));
+  });
+
+  it("changes with metadata modified by hooks (e.g. theme override)", () => {
+    expect(fp(presentation({ theme: "seriph" }))).not.toBe(fp(presentation()));
+    expect(fp(presentation({ withoutNotes: true }))).not.toBe(fp(presentation()));
+  });
+
+  it("changes with the installed theme version", () => {
+    const themeDir = path.join(tmpDir, "node_modules", "@slidev", "theme-seriph");
+    fs.mkdirSync(themeDir, { recursive: true });
+    fs.writeFileSync(path.join(themeDir, "package.json"), JSON.stringify({ version: "1.0.0" }));
+    const v1 = fp(presentation({ theme: "@slidev/theme-seriph" }));
+    fs.writeFileSync(path.join(themeDir, "package.json"), JSON.stringify({ version: "1.1.0" }));
+    expect(fp(presentation({ theme: "@slidev/theme-seriph" }))).not.toBe(v1);
+  });
+
+  it("ignores machine-specific absolute paths", () => {
+    expect(fp(presentation({ outputPath: "/elsewhere/talk" }))).toBe(fp(presentation()));
   });
 });

@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import matter from "gray-matter";
 import yaml from "js-yaml";
 import type {
   PluginOptions,
@@ -26,8 +25,8 @@ export type ScannerOptions = ScanOptions
   & Pick<PluginOptions, "onPresentationScanned" | "transformFrontmatter">;
 import { log } from "../shared/logger";
 import { getSlidevBuildOutputDir } from "../infrastructure/fs/outputManager";
-import { normalizeBaseUrl, normalizeRoutePath } from "../shared/utils";
-import { FrontmatterValidator } from "./frontmatterValidator";
+import { buildRouteBase, encodeIdForUrl } from "../shared/utils";
+import { FrontmatterValidator, parseFrontmatter } from "./frontmatterValidator";
 import { runConcurrently } from "../shared/concurrentRunner";
 
 function slugifyPlaylist(name: string): string {
@@ -155,6 +154,7 @@ function scanCategories(
   routeBasePath: string,
 ): Map<string, CategoryMetadata> {
   const categories = new Map<string, CategoryMetadata>();
+  const routeBase = buildRouteBase(baseUrl, routeBasePath);
 
   function scan(dir: string, categoryPath = ""): void {
     if (!fs.existsSync(dir)) return;
@@ -174,15 +174,13 @@ function scanCategories(
       // later by `.filter((cat) => cat.count > 0)`. This avoids a redundant full
       // recursive traversal of each subdirectory (previously done by hasMarkdownFiles).
       const data = readCategoryFile(fullPath);
-      const normalizedBase = normalizeBaseUrl(baseUrl);
-      const normalizedRoute = normalizeRoutePath(routeBasePath);
       categories.set(newPath, {
         path: newPath,
         label: data.label || formatDirectoryName(entry.name),
         description: data.description,
         position: data.position ?? 99,
         count: 0,
-        url: `${normalizedBase}${normalizedRoute}/${newPath}`,
+        url: `${routeBase}/${encodeIdForUrl(newPath)}`,
       });
       scan(fullPath, newPath);
     }
@@ -205,12 +203,16 @@ function extractMetadata(
 ): Record<string, unknown> {
   try {
     const content = fs.readFileSync(filePath, "utf-8");
-    let { data } = matter(content);
-    if (transformFrontmatter) {
-      // Pass relative path only — never expose absolute system paths to user hooks
-      data = transformFrontmatter(data as SlidevFrontmatter, relativePath);
+    // parseFrontmatter refuses `---js` front-matter (gray-matter would eval it).
+    const { data } = parseFrontmatter(content);
+    if (!transformFrontmatter) return data;
+    // Pass relative path only — never expose absolute system paths to user hooks
+    const transformed: unknown = transformFrontmatter(data as SlidevFrontmatter, relativePath);
+    if (transformed === null || typeof transformed !== "object" || Array.isArray(transformed)) {
+      log.warn(`transformFrontmatter did not return an object for ${log.path(relativePath)} — ignoring its result`);
+      return data;
     }
-    return data;
+    return transformed as Record<string, unknown>;
   } catch {
     log.warn(`Failed to extract frontmatter from ${log.path(filePath)}`);
     return {};
@@ -218,14 +220,72 @@ function extractMetadata(
 }
 
 /**
+ * Thrown by `scanPresentations` when two presentations would be served at the
+ * same URL or nested inside each other's build output.
+ */
+export class PresentationCollisionError extends Error {
+  readonly collisions: string[];
+
+  constructor(collisions: string[]) {
+    super(
+      `Slidev presentation route collision(s):
+${collisions.map((c) => `  - ${c}`).join("
+")}
+` +
+        `Rename the file or the directory so that each presentation has a unique route.`,
+    );
+    this.name = "PresentationCollisionError";
+    this.collisions = collisions;
+  }
+}
+
+/**
+ * Detect presentation ids that cannot coexist:
+ *   - same id ignoring case (`Intro.md` / `intro.md`) — identical output
+ *     directory on case-insensitive filesystems (Windows, macOS);
+ *   - an id that is a path prefix of another (`foo.md` + `foo/bar.md`):
+ *     `foo`'s route equals the `foo/` category route, and `foo/bar`'s output
+ *     would be nested in — and wiped by every rebuild of — `foo`'s output.
+ * Returns human-readable descriptions (empty when there is no collision).
+ */
+export function detectPresentationCollisions(presentations: Pick<PresentationMetadata, "id" | "sourcePath">[]): string[] {
+  const collisions: string[] = [];
+  const byKey = new Map<string, Pick<PresentationMetadata, "id" | "sourcePath">>();
+  for (const p of presentations) {
+    const key = p.id.toLowerCase();
+    const other = byKey.get(key);
+    if (other) collisions.push(`"${other.sourcePath}" and "${p.sourcePath}" resolve to the same id "${p.id}"`);
+    else byKey.set(key, p);
+  }
+  const keys = [...byKey.keys()].sort();
+  for (let i = 0; i < keys.length; i++) {
+    // Sorted order: every id prefixed by keys[i] + "/" follows it contiguously
+    // (only ids sharing the prefix sort between them).
+    for (let j = i + 1; j < keys.length && keys[j].startsWith(keys[i]); j++) {
+      if (keys[j].startsWith(`${keys[i]}/`)) {
+        const parent = byKey.get(keys[i])!;
+        collisions.push(
+          `"${parent.sourcePath}" collides with the "${parent.id}/" directory (contains "${byKey.get(keys[j])!.sourcePath}")`,
+        );
+        break;
+      }
+    }
+  }
+  return collisions;
+}
+
+/**
  * Scan for Slidev presentations and extract metadata.
+ *
+ * @throws PresentationCollisionError when two presentations would share a route.
  */
 export async function scanPresentations(
   options: ScannerOptions,
   context: BuildContext,
 ): Promise<ScanResult> {
   const sourceDir = path.resolve(context.siteDir, options.path);
-  const normalizedRoute = normalizeRoutePath(options.routeBasePath);
+  const routeBase = buildRouteBase(context.baseUrl, options.routeBasePath);
+  const outputRoot = getSlidevBuildOutputDir(context.siteDir, options.id, context.locale);
 
   const categoriesMap = scanCategories(
     sourceDir,
@@ -258,8 +318,6 @@ export async function scanPresentations(
     if (cat) cat.count = count;
   }
 
-  const baseUrl = normalizeBaseUrl(context.baseUrl);
-
   const presentations: PresentationMetadata[] = scannedFiles.map(
     ({ relativePath, category }) => {
       const sourceAbsolutePath = path.join(sourceDir, relativePath);
@@ -273,26 +331,20 @@ export async function scanPresentations(
         normalizedRelativePath,
         options.transformFrontmatter,
       );
-      const title = (fm.title as string) || path.basename(normalizedRelativePath, ".md");
-      const url = `${baseUrl}${normalizedRoute}/${id}/`;
+      const enriched = new FrontmatterValidator(normalizedRelativePath).validate(fm);
+      const title = enriched.title ?? path.basename(normalizedRelativePath, ".md");
+      // Each segment is percent-encoded: ids may contain spaces, "#", "?"…
+      const url = `${routeBase}/${encodeIdForUrl(id)}/`;
       const thumbnailUrl = `${url}thumbnail.png`;
       const exportUrls = options.download && options.exportFormats?.length
         ? options.exportFormats.map((fmt) => `${url}export.${fmt}`)
         : undefined;
-      const outputPath = path.join(
-        getSlidevBuildOutputDir(context.siteDir, options.id),
-        id,
-      );
-      const enriched = new FrontmatterValidator(normalizedRelativePath).validate(fm);
+      const outputPath = path.join(outputRoot, id);
 
       return {
         id,
-        title,
-        description: fm.description as string | undefined,
-        theme: fm.theme as string | undefined,
-        addons: Array.isArray(fm.addons) ? (fm.addons as string[]) : undefined,
-        author: fm.author as string | undefined,
         ...enriched,
+        title,
         sourcePath: normalizedRelativePath,
         sourceAbsolutePath,
         url,
@@ -324,6 +376,9 @@ export async function scanPresentations(
       },
     );
   }
+
+  const collisions = detectPresentationCollisions(presentations);
+  if (collisions.length > 0) throw new PresentationCollisionError(collisions);
 
   const categories = Array.from(categoriesMap.values())
     .filter((cat) => cat.count > 0)

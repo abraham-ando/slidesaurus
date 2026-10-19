@@ -14,9 +14,15 @@ vi.mock("../../../shared/logger", () => ({
   },
 }));
 
-import { getSlidevCacheDir } from "../../fs/fileSystem";
+import { cleanupSourceDirectory, getSlidevCacheDir } from "../../fs/fileSystem";
 import { getSlidevBuildOutputDir } from "../../fs/outputManager";
-import { createIsolatedBuildDir, cleanupIsolatedBuildDir } from "../../fs/isolatedBuild";
+import {
+  createIsolatedBuild,
+  createIsolatedBuildDir,
+  cleanupIsolatedBuildDir,
+  purgeIsolatedBuilds,
+} from "../../fs/isolatedBuild";
+import { toSafeId } from "../../../shared/utils";
 
 describe("getSlidevCacheDir", () => {
   it("returns path within .docusaurus directory", () => {
@@ -30,102 +36,184 @@ describe("getSlidevCacheDir", () => {
     const result = getSlidevCacheDir("/project", "custom-id");
     expect(result).toContain("custom-id");
   });
+
+  it("uses a separate cache per locale", () => {
+    const fr = getSlidevCacheDir("/project", "default", "fr");
+    const en = getSlidevCacheDir("/project", "default", "en");
+    expect(fr).toBe(path.join("/project", ".docusaurus", "slidesaurus", "default", "i18n", "fr"));
+    expect(fr).not.toBe(en);
+  });
+
+  it("rejects a locale that could traverse the filesystem", () => {
+    expect(() => getSlidevCacheDir("/project", "default", "../evil")).toThrow("[Security]");
+  });
 });
 
 describe("getSlidevBuildOutputDir", () => {
   it("returns output subdirectory of cache dir", () => {
     const result = getSlidevBuildOutputDir("/project", "default");
     expect(result).toBe(
-      path.join(
-        "/project",
-        ".docusaurus",
-        "slidesaurus",
-        "default",
-        "output",
-      ),
+      path.join("/project", ".docusaurus", "slidesaurus", "default", "output"),
+    );
+  });
+
+  it("is locale-aware", () => {
+    expect(getSlidevBuildOutputDir("/project", "default", "fr")).toBe(
+      path.join("/project", ".docusaurus", "slidesaurus", "default", "i18n", "fr", "output"),
     );
   });
 });
 
-describe("createIsolatedBuildDir", () => {
+describe("cleanupSourceDirectory", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "fs-test-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "cleanup-src-"));
   });
 
   afterEach(() => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it("copies .md file to isolated directory", () => {
-    const sourceDir = path.join(tmpDir, "source");
-    fs.mkdirSync(sourceDir, { recursive: true });
-    const mdFile = path.join(sourceDir, "slides.md");
-    fs.writeFileSync(mdFile, "---\ntitle: Test\n---\n# Slide");
+  it("removes the empty index.html sentinel written by older plugin versions", () => {
+    fs.writeFileSync(path.join(tmpDir, "index.html"), "");
+    cleanupSourceDirectory(tmpDir);
+    expect(fs.existsSync(path.join(tmpDir, "index.html"))).toBe(false);
+  });
 
-    const cacheDir = path.join(tmpDir, "cache");
-    const result = createIsolatedBuildDir(mdFile, "my-slides", cacheDir);
+  it("keeps a legitimate (non-empty) index.html, dist/ and .slidev/", () => {
+    fs.writeFileSync(path.join(tmpDir, "index.html"), "<head><script src=x></script></head>");
+    fs.mkdirSync(path.join(tmpDir, "dist"));
+    fs.mkdirSync(path.join(tmpDir, ".slidev", "drawings"), { recursive: true });
+    cleanupSourceDirectory(tmpDir);
+    expect(fs.existsSync(path.join(tmpDir, "index.html"))).toBe(true);
+    expect(fs.existsSync(path.join(tmpDir, "dist"))).toBe(true);
+    expect(fs.existsSync(path.join(tmpDir, ".slidev", "drawings"))).toBe(true);
+  });
 
-    expect(fs.existsSync(result)).toBe(true);
+  it("handles a missing directory", () => {
+    expect(() => cleanupSourceDirectory(path.join(tmpDir, "nope"))).not.toThrow();
+  });
+});
+
+describe("createIsolatedBuild", () => {
+  let tmpDir: string;
+  let slides: string;
+  let cacheDir: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "fs-test-"));
+    slides = path.join(tmpDir, "slidev");
+    cacheDir = path.join(tmpDir, "cache");
+    fs.mkdirSync(slides, { recursive: true });
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  function write(rel: string, content = "x"): string {
+    const p = path.join(slides, rel);
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    fs.writeFileSync(p, content);
+    return p;
+  }
+
+  it("copies the .md file to the isolated directory under its safeId", () => {
+    const md = write("slides.md", "---\ntitle: Test\n---\n# Slide");
+    const result = createIsolatedBuildDir(md, "my-slides", cacheDir);
+    expect(path.basename(result)).toBe("my-slides.md");
     expect(fs.readFileSync(result, "utf-8")).toContain("title: Test");
   });
 
   it("copies co-located assets but not other .md files", () => {
-    const sourceDir = path.join(tmpDir, "source");
-    fs.mkdirSync(sourceDir, { recursive: true });
-    fs.writeFileSync(path.join(sourceDir, "slides.md"), "# Main");
-    fs.writeFileSync(path.join(sourceDir, "other.md"), "# Other");
-    fs.writeFileSync(path.join(sourceDir, "image.png"), "fake-png");
+    const md = write("slides.md", "# Main");
+    write("other.md", "# Other");
+    write("image.png", "fake-png");
 
-    const cacheDir = path.join(tmpDir, "cache");
-    createIsolatedBuildDir(
-      path.join(sourceDir, "slides.md"),
-      "test",
-      cacheDir,
-    );
-
-    const isolatedDir = path.join(cacheDir, "builds", "test");
-    // File is renamed to {safeId}.md to avoid filename collisions in batch builds
-    expect(fs.existsSync(path.join(isolatedDir, "test.md"))).toBe(true);
-    expect(fs.existsSync(path.join(isolatedDir, "image.png"))).toBe(true);
-    expect(fs.existsSync(path.join(isolatedDir, "other.md"))).toBe(false);
+    const { isolatedSourcePath } = createIsolatedBuild(md, "test", cacheDir, slides);
+    const dir = path.dirname(isolatedSourcePath);
+    expect(fs.existsSync(path.join(dir, "image.png"))).toBe(true);
+    expect(fs.existsSync(path.join(dir, "other.md"))).toBe(false);
   });
 
-  it("creates a dummy index.html", () => {
-    const sourceDir = path.join(tmpDir, "source");
-    fs.mkdirSync(sourceDir, { recursive: true });
-    fs.writeFileSync(path.join(sourceDir, "slides.md"), "# Slides");
+  it("does not copy sibling category directories, but copies Slidev conventional dirs", () => {
+    const md = write("intro.md", "# Intro");
+    write("other-category/talk.md", "# Talk");
+    write("other-category/big.png", "png");
+    write("components/Counter.vue", "<template/>");
+    write("styles/index.css", "body{}");
+    write("diagrams/flow.svg", "<svg/>");
 
-    const cacheDir = path.join(tmpDir, "cache");
-    createIsolatedBuildDir(
-      path.join(sourceDir, "slides.md"),
-      "test",
-      cacheDir,
-    );
-
-    const indexPath = path.join(cacheDir, "builds", "test", "index.html");
-    expect(fs.existsSync(indexPath)).toBe(true);
+    const { isolatedSourcePath } = createIsolatedBuild(md, "intro", cacheDir, slides);
+    const dir = path.dirname(isolatedSourcePath);
+    expect(fs.existsSync(path.join(dir, "other-category"))).toBe(false);
+    expect(fs.existsSync(path.join(dir, "components", "Counter.vue"))).toBe(true);
+    expect(fs.existsSync(path.join(dir, "styles", "index.css"))).toBe(true);
+    // Not a category (no .md inside) → regular asset directory
+    expect(fs.existsSync(path.join(dir, "diagrams", "flow.svg"))).toBe(true);
   });
 
-  it("sanitizes presentation id with slashes", () => {
-    const sourceDir = path.join(tmpDir, "source");
-    fs.mkdirSync(sourceDir, { recursive: true });
-    fs.writeFileSync(path.join(sourceDir, "slides.md"), "# Slides");
+  it("copies ../ relative assets that stay inside the slides root (mirrored layout)", () => {
+    write("shared/logo.png", "logo");
+    const md = write("cat/talk.md", "# Talk\n\n![logo](../shared/logo.png)\n");
 
-    const cacheDir = path.join(tmpDir, "cache");
-    createIsolatedBuildDir(
-      path.join(sourceDir, "slides.md"),
-      "cat/sub-slide",
-      cacheDir,
-    );
+    const { isolatedSourcePath } = createIsolatedBuild(md, "cat/talk", cacheDir, slides);
+    const resolved = path.resolve(path.dirname(isolatedSourcePath), "../shared/logo.png");
+    expect(fs.readFileSync(resolved, "utf-8")).toBe("logo");
+  });
 
-    const isolatedDir = path.join(cacheDir, "builds", "cat__sub-slide");
-    expect(fs.existsSync(isolatedDir)).toBe(true);
+  it("never copies references escaping the slides root", () => {
+    fs.writeFileSync(path.join(tmpDir, "secret.txt"), "secret");
+    const md = write("talk.md", "![x](../secret.txt)\n");
+
+    const { isolatedDir } = createIsolatedBuild(md, "talk", cacheDir, slides);
+    const all = fs.readdirSync(isolatedDir, { recursive: true }) as string[];
+    expect(all.some((f) => f.includes("secret"))).toBe(false);
+  });
+
+  it("copies Markdown imported with src: (and its own assets)", () => {
+    write("pages/part.md", "# Part\n\n![d](./diagram.png)\n");
+    write("pages/diagram.png", "d");
+    const md = write("talks/main.md", "---\ntitle: Main\n---\n\n---\nsrc: ../pages/part.md\n---\n");
+
+    const { isolatedSourcePath } = createIsolatedBuild(md, "talks/main", cacheDir, slides);
+    const dir = path.dirname(isolatedSourcePath);
+    expect(fs.existsSync(path.resolve(dir, "../pages/part.md"))).toBe(true);
+    expect(fs.existsSync(path.resolve(dir, "../pages/diagram.png"))).toBe(true);
+  });
+
+  it("creates a dummy index.html without touching a user's index.html", () => {
+    const md = write("slides.md", "# Slides");
+    const { isolatedSourcePath } = createIsolatedBuild(md, "test", cacheDir, slides);
+    expect(fs.existsSync(path.join(path.dirname(isolatedSourcePath), "index.html"))).toBe(true);
+
+    const userIndex = write("index.html", "<head>custom</head>");
+    const second = createIsolatedBuild(md, "test", cacheDir, slides);
+    const copy = path.join(path.dirname(second.isolatedSourcePath), "index.html");
+    // Simulate Slidev overwriting its root index.html during the build
+    fs.writeFileSync(copy, "generated");
+    expect(fs.readFileSync(userIndex, "utf-8")).toBe("<head>custom</head>");
+  });
+
+  it("uses the injective safeId for ids with slashes", () => {
+    const md = write("slides.md", "# Slides");
+    const { isolatedDir, safeId } = createIsolatedBuild(md, "cat/sub-slide", cacheDir);
+    expect(safeId).toBe(toSafeId("cat/sub-slide"));
+    expect(isolatedDir).toBe(path.resolve(cacheDir, "builds", safeId));
+    expect(createIsolatedBuild(md, "cat__sub-slide", cacheDir).isolatedDir).not.toBe(isolatedDir);
+  });
+
+  it("starts from a clean directory (stale files removed)", () => {
+    const md = write("slides.md", "# Slides");
+    const { isolatedDir } = createIsolatedBuild(md, "test", cacheDir);
+    fs.writeFileSync(path.join(isolatedDir, "stale.txt"), "old");
+    createIsolatedBuild(md, "test", cacheDir);
+    expect(fs.existsSync(path.join(isolatedDir, "stale.txt"))).toBe(false);
   });
 });
 
-describe("cleanupIsolatedBuildDir", () => {
+describe("cleanupIsolatedBuildDir / purgeIsolatedBuilds", () => {
   let tmpDir: string;
 
   beforeEach(() => {
@@ -136,25 +224,25 @@ describe("cleanupIsolatedBuildDir", () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it("removes known artifacts from isolated dir", () => {
+  it("removes the whole isolated directory (sources, copied assets, artifacts)", () => {
     const isolatedDir = path.join(tmpDir, "build");
-    fs.mkdirSync(isolatedDir, { recursive: true });
-    fs.writeFileSync(path.join(isolatedDir, "index.html"), "<html>");
     fs.mkdirSync(path.join(isolatedDir, "dist"), { recursive: true });
-    fs.mkdirSync(path.join(isolatedDir, ".slidev"), { recursive: true });
-    fs.writeFileSync(path.join(isolatedDir, "slides.md"), "# Keep");
+    fs.writeFileSync(path.join(isolatedDir, "slides.md"), "# x");
+    fs.writeFileSync(path.join(isolatedDir, "logo.png"), "png");
 
     cleanupIsolatedBuildDir(isolatedDir);
-
-    expect(fs.existsSync(path.join(isolatedDir, "index.html"))).toBe(false);
-    expect(fs.existsSync(path.join(isolatedDir, "dist"))).toBe(false);
-    expect(fs.existsSync(path.join(isolatedDir, ".slidev"))).toBe(false);
-    expect(fs.existsSync(path.join(isolatedDir, "slides.md"))).toBe(true);
+    expect(fs.existsSync(isolatedDir)).toBe(false);
   });
 
   it("handles non-existent directory gracefully", () => {
-    expect(() =>
-      cleanupIsolatedBuildDir(path.join(tmpDir, "nope")),
-    ).not.toThrow();
+    expect(() => cleanupIsolatedBuildDir(path.join(tmpDir, "nope"))).not.toThrow();
+  });
+
+  it("purges every leftover under builds/", () => {
+    fs.mkdirSync(path.join(tmpDir, "builds", "a"), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, "output", "a"), { recursive: true });
+    purgeIsolatedBuilds(tmpDir);
+    expect(fs.existsSync(path.join(tmpDir, "builds"))).toBe(false);
+    expect(fs.existsSync(path.join(tmpDir, "output", "a"))).toBe(true);
   });
 });

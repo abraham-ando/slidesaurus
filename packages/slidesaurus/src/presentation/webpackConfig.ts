@@ -9,31 +9,35 @@
  * webpack's file watcher picks up the new static files automatically.
  */
 import { getSlidevBuildOutputDir } from "../infrastructure/fs/outputManager";
-import { stripSlashes } from "../shared/utils";
-import type { PluginOptions } from "../domain/types";
+import { buildRouteBase } from "../shared/utils";
+import type { BuildContext, PluginOptions } from "../domain/types";
 
 /**
  * Build the webpack devServer.static config for dev mode.
  *
- * Maps `{cacheOutputDir}/` → `/{routeDir}/` so a presentation at
+ * Maps `{cacheOutputDir}/` → `{baseUrl}{routeBasePath}/` so a presentation at
  * `.docusaurus/slidesaurus/default/output/getting-started/intro/index.html`
- * is served at `http://localhost:3001/slidev/getting-started/intro/`.
+ * is served at `http://localhost:3001/{baseUrl}slidev/getting-started/intro/` —
+ * the same URL the presentations were built for (`--base`).
  *
+ * @param context - `baseUrl` of the site and, for non-default locales, the
+ *   `locale` selecting the per-locale cache. Defaults to `/` and no locale.
  * @returns Empty object when not in dev mode (caller checks `isDev`).
  */
 export function buildWebpackDevServerConfig(
   siteDir: string,
   options: PluginOptions,
+  context: Partial<Pick<BuildContext, "baseUrl" | "locale">> = {},
 ): Record<string, unknown> {
-  const outputDir = getSlidevBuildOutputDir(siteDir, options.id);
-  const routeDir = stripSlashes(options.routeBasePath);
+  const outputDir = getSlidevBuildOutputDir(siteDir, options.id, context.locale);
+  const publicPath = buildRouteBase(context.baseUrl ?? "/", options.routeBasePath) || "/";
 
   return {
     devServer: {
       static: [
         {
           directory: outputDir,
-          publicPath: `/${routeDir}`,
+          publicPath,
           watch: { ignored: /node_modules/ },
         },
       ],

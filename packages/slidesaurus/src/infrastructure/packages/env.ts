@@ -19,6 +19,12 @@ const ENV_ALLOWLIST = [
   // Terminal color control — safe to inherit so Slidev output respects the
   // user's terminal preferences (e.g. FORCE_COLOR=1 in verbose mode).
   "FORCE_COLOR", "NO_COLOR",
+  // Corporate networks: package installs and Playwright downloads must honour the
+  // proxy / custom CA configuration. Matching is case-insensitive, so the
+  // lowercase variants (http_proxy, https_proxy, no_proxy) are allowed too.
+  "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "NODE_EXTRA_CA_CERTS",
+  // Playwright browser location (thumbnail / PDF export) and CI detection.
+  "PLAYWRIGHT_BROWSERS_PATH", "CI",
 ];
 
 /**

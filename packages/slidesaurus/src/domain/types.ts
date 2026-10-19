@@ -210,11 +210,19 @@ export interface BuildResult {
   duration?: number;
   /** True when the result was served from the incremental cache (no rebuild occurred). */
   cacheHit?: boolean;
+  /** Non-blocking problems (e.g. thumbnail / PDF export failed because Playwright is missing). */
+  warnings?: string[];
 }
 
 export interface BuildContext {
   siteDir: string;
   baseUrl: string;
+  /**
+   * Current Docusaurus locale, set ONLY for non-default locales. Selects a
+   * per-locale build cache (each locale has its own `baseUrl`, embedded in
+   * the built assets). Undefined → single, locale-less cache (historical layout).
+   */
+  locale?: string;
 }
 
 // ============================================
