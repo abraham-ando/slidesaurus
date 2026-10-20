@@ -1,19 +1,21 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "commonjs",
+    // Sources are bundled by Rollup (CJS + ESM): resolve imports like a bundler.
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "lib": ["ES2022"],
     "types": ["node"],
     "strict": true,
+    "esModuleInterop": true,
+    // Each file is transpiled on its own (esbuild, tsx).
+    "isolatedModules": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true
-  },
-  "ts-node": {
-    "transpileOnly": true
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts"],
   "exclude": ["node_modules", "lib", "theme", "src/**/__tests__/**", "src/**/*.spec.ts"]

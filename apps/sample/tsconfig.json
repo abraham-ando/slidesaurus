@@ -1,7 +1,12 @@
 {
   "extends": "@docusaurus/tsconfig",
   "compilerOptions": {
-    "ignoreDeprecations": "6.0",
+    // @docusaurus/tsconfig still sets `baseUrl`, removed in TypeScript 7: unset it
+    // and declare `paths` here so they resolve relative to this project.
+    "baseUrl": null,
+    "paths": {
+      "@site/*": ["./*"]
+    },
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "jsx": "react-jsx",

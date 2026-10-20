@@ -13,17 +13,20 @@
  * Each file is transpiled in isolation (no type-checking — run
  * `pnpm typecheck`, which also checks theme/). Type-only imports are erased, so the output
  * never references src/.
+ *
+ * TypeScript 7 ships no JS compiler API yet, so `transpileModule` comes from
+ * the TS 6 compatibility package `@typescript/typescript6`.
  */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import ts from "typescript";
+import ts from "@typescript/typescript6";
 
 const pkgDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const srcDir = path.join(pkgDir, "theme");
 const outDir = path.join(pkgDir, "lib", "theme");
 
-/** @type {import("typescript").CompilerOptions} */
+/** @type {import("@typescript/typescript6").CompilerOptions} */
 const compilerOptions = {
   target: ts.ScriptTarget.ES2020,
   module: ts.ModuleKind.ESNext,
