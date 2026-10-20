@@ -1,6 +1,6 @@
 import resolve from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
-import typescript from "@rollup/plugin-typescript";
+import esbuild from "rollup-plugin-esbuild";
 import json from "@rollup/plugin-json";
 import dts from "rollup-plugin-dts";
 import { themeBuildPlugin } from "./scripts/build-theme.mjs";
@@ -60,15 +60,13 @@ const ESM_DIRNAME_SHIM = [
   "const __dirname = __slidesaurusDirname(__slidesaurusFileURLToPath(import.meta.url));",
 ].join("\n");
 
-/** TypeScript compiler overrides for Rollup (override tsconfig.json) */
-const TS_OVERRIDES = {
-  module: "ESNext",
-  moduleResolution: "bundler",
-  // Declarations are handled by the dts pass below
-  declaration: false,
-  declarationMap: false,
-  sourceMap: true,
-};
+/**
+ * TypeScript → JavaScript, without type-checking: TypeScript 7 has no JS
+ * compiler API yet, so transpilation goes through esbuild and `pnpm typecheck`
+ * (`tsc`, TS 7) does the type-checking. Declarations come from the dts pass.
+ */
+const transpileTs = () =>
+  esbuild({ tsconfig: "./tsconfig.json", target: "es2020", sourceMap: true });
 
 /** @type {import('rollup').RollupOptions[]} */
 const config = [
@@ -88,10 +86,7 @@ const config = [
       resolve({ preferBuiltins: true }),
       commonjs(),
       json({ compact: true }),
-      typescript({
-        tsconfig: "./tsconfig.json",
-        compilerOptions: TS_OVERRIDES,
-      }),
+      transpileTs(),
     ],
   },
 
@@ -124,10 +119,7 @@ const config = [
       commonjs(),
       // Inline package.json fields used in constants.ts
       json({ compact: true }),
-      typescript({
-        tsconfig: "./tsconfig.json",
-        compilerOptions: TS_OVERRIDES,
-      }),
+      transpileTs(),
       // Compile theme/ (TSX) → lib/theme (JS + CSS modules) for getThemePath()
       themeBuildPlugin(),
     ],
@@ -143,6 +135,8 @@ const config = [
     external: PLUGIN_EXTERNALS,
     plugins: [
       json({ compact: true }),
+      // TypeScript 7 has no JS API: rollup-plugin-dts falls back to the TS 6 API
+      // provided by `@typescript/typescript6`.
       dts({ tsconfig: "./tsconfig.json" }),
     ],
   },

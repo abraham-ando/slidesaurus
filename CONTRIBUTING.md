@@ -170,6 +170,8 @@ pnpm format:check    # Prettier (check only)
 pnpm typecheck       # tsc for the plugin sources and the theme
 ```
 
+The repository uses **TypeScript 7** (`tsc`, native compiler). The build does not type-check (Rollup transpiles with esbuild, Cucumber loads TypeScript with tsx), so run `pnpm typecheck` before pushing. TypeScript 7.0 has no JS compiler API yet: `rollup-plugin-dts`, `scripts/build-theme.mjs` and `typescript-eslint` use the TS 6 API from `@typescript/typescript6` (at the repo root, `typescript` is an alias to that package, for ESLint).
+
 ### Full CI check
 
 CI (`.github/workflows/ci.yml`) runs on ubuntu and windows with Node 20 and 22, plus a pack & smoke job that installs the packed tarball in a fresh project. To reproduce it locally:

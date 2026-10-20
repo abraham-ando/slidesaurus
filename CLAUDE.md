@@ -114,6 +114,15 @@ Rollup produces two passes plus the compiled theme:
 
 External dependencies (not bundled): Node built-ins, `@docusaurus/*`, `gray-matter`, `js-yaml`.
 
+### TypeScript toolchain (TypeScript 7)
+
+`typescript` is **TypeScript 7** (native compiler) in the plugin and the apps. TS 7.0 ships **no JS compiler API**, so:
+- `tsc` (TS 7) only type-checks (`pnpm typecheck`); nothing in the build type-checks.
+- Rollup transpiles `src/` with **esbuild** (`rollup-plugin-esbuild`); Cucumber loads step definitions with **tsx** (`tsx/cjs`).
+- Tools that still need the TS API use the TS 6 compatibility package **`@typescript/typescript6`**: `rollup-plugin-dts` (automatic fallback), `scripts/build-theme.mjs` (`transpileModule`, keeps comments in the compiled theme for swizzling), and `typescript-eslint` (the root `typescript` dependency is an alias to `@typescript/typescript6`).
+- The plugin tsconfig uses `module: ESNext` + `moduleResolution: bundler` + `isolatedModules` (sources are bundled; each file is transpiled on its own). The apps unset the `baseUrl` inherited from `@docusaurus/tsconfig` (removed in TS 7) and redeclare `paths`.
+- When TS 7.1 ships its new API and the tools support it, drop `@typescript/typescript6` and the root alias.
+
 ---
 
 ## Tests

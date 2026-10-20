@@ -89,7 +89,9 @@ Given(
 );
 
 When("the plugin scans for presentations", async function () {
-  const { scanPresentations } = await import("../../src/application/scanner");
+  // require() (not import()): step definitions run as CommonJS through tsx/cjs.
+  const { scanPresentations } =
+    require("../../src/application/scanner") as typeof import("../../src/application/scanner");
   const context: BuildContext = { siteDir: world.tmpDir, baseUrl: "/" };
   world.result = await scanPresentations(defaultOptions, context);
 });
