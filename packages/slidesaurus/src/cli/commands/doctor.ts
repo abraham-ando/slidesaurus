@@ -20,7 +20,7 @@ interface DoctorOptions {
 }
 
 /** Minimum supported Node.js version (major.minor). */
-const MIN_NODE = { major: 20, minor: 12 };
+const MIN_NODE = { major: 22, minor: 12 };
 
 export function isSupportedNodeVersion(version: string): boolean {
   const [major, minor] = version.split(".").map((n) => parseInt(n, 10));

@@ -25,11 +25,12 @@ jobs:
   build-and-test:
     name: Build & Test (${{ matrix.os }}, Node ${{ matrix.node }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        node: ['20.x', '22.x']
+        node: ['22.x', '24.x', '26.x']
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -41,7 +42,10 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: pnpm
 
+      # A postinstall script can hang (e.g. playwright-chromium < 1.64 on Node 26):
+      # fail fast instead of waiting for the 6 h job limit.
       - name: Install dependencies
+        timeout-minutes: 10
         run: pnpm install --frozen-lockfile
 
       - name: Type check (plugin + theme)
@@ -79,10 +83,11 @@ jobs:
   pack-smoke:
     name: Pack & smoke test (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        node: ['20.x', '22.x']
+        node: ['22.x', '24.x', '26.x']
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -93,7 +98,10 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: pnpm
 
+      # A postinstall script can hang (e.g. playwright-chromium < 1.64 on Node 26):
+      # fail fast instead of waiting for the 6 h job limit.
       - name: Install dependencies
+        timeout-minutes: 10
         run: pnpm install --frozen-lockfile
 
       - name: Build plugin

@@ -53,7 +53,7 @@ pnpm add slidesaurus @slidev/cli
 yarn add slidesaurus @slidev/cli
 ```
 
-**Prérequis** : Docusaurus v3, Node.js ≥ 20.12.
+**Prérequis** : Docusaurus v3, Node.js ≥ 22.12.
 
 `@slidev/cli` est une **peer dependency optionnelle** — Slidev compile les présentations, le plugin orchestre. Installez-le dans votre projet : sans lui, aucune présentation n'est construite (un avertissement est affiché).
 

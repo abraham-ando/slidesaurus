@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Slidesaurus** is a Docusaurus v3 plugin that integrates [Slidev](https://sli.dev) presentations into Docusaurus sites. It auto-discovers `.md` slide decks, builds them in parallel with incremental caching, serves them via iframe, and provides embeddable React components.
 
-This is a **pnpm monorepo** (pnpm 10, Node >= 20.12) managed with **Turbo**:
+This is a **pnpm monorepo** (pnpm 10, Node >= 22.12; dev version Node 24 LTS in `.nvmrc`) managed with **Turbo**:
 - `packages/slidesaurus` — the `slidesaurus` npm package (TypeScript, built with Rollup)
 - `apps/docs` — documentation site (Docusaurus, port 3001)
 - `apps/sample` — sample integration site (Docusaurus, port 3000)
@@ -130,7 +130,7 @@ External dependencies (not bundled): Node built-ins, `@docusaurus/*`, `gray-matt
 - **Unit tests:** Vitest, in `packages/slidesaurus/src/**/__tests__/*.spec.ts`. Globals disabled — import `describe`, `it`, `expect`, `vi` explicitly. The logger is mocked by mocking the `shared/logger` module (`vi.mock("../../shared/logger", ...)`).
 - **Integration tests:** Cucumber BDD, in `packages/slidesaurus/features/`. Feature files + step definitions test presentation discovery, category handling, and option validation end-to-end.
 - Vitest config: `packages/slidesaurus/vitest.config.ts` — root `./src`, timeout 15 s.
-- CI (`.github/workflows/ci.yml`): ubuntu + windows × Node 20/22 (typecheck, build, unit + integration tests), plus a pack & smoke job (tarball contents, `require`/`import`, CLI binary).
+- CI (`.github/workflows/ci.yml`): ubuntu + windows × Node 22/24/26 (typecheck, unit + integration tests; only ubuntu + Node 22 builds the sites, with an `actions/cache` of the Slidev cache), plus a pack & smoke job on Node 22/24/26 (tarball contents, `require`/`import`, CLI binary).
 
 ---
 
