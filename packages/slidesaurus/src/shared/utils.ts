@@ -167,9 +167,19 @@ export function walkUpTree<T>(
 }
 
 /**
- * Default build concurrency: one core is left free for Docusaurus itself.
+ * Approximate peak memory of one `slidev build` (Vite + Rollup + Vue
+ * compiler), measured at ≈ 0.9 GiB for a small deck.
+ */
+export const SLIDEV_BUILD_MEMORY_BYTES = 1024 ** 3;
+
+/**
+ * Default build concurrency: one core is left free for Docusaurus itself, and
+ * no more builds than the free memory can hold (each `slidev build` peaks at
+ * about 1 GiB — oversubscribing RAM makes every build swap and time out).
  * Lives here, not in domain/constants (also type-checked by theme/, no Node types).
  */
 export function defaultMaxParallelBuilds(): number {
-  return Math.max(1, os.cpus().length - 1);
+  const byCpu = os.cpus().length - 1;
+  const byMemory = Math.floor(os.freemem() / SLIDEV_BUILD_MEMORY_BYTES);
+  return Math.max(1, Math.min(byCpu, byMemory));
 }

@@ -12,7 +12,7 @@ The plugin builds multiple Slidev presentations concurrently during `docusaurus 
 2. File hashes are computed in parallel and compared against the cache manifest. Unchanged presentations are skipped.
 3. For everything that needs rebuilding, an isolated build directory is prepared (frontmatter patched, co-located assets copied).
 4. Up to `maxParallelBuilds` presentations are built simultaneously by separate `slidev build` processes.
-5. Each build writes to a temporary directory, and the cached output is replaced atomically only on success — if a build fails, the previous output (if any) is kept. Thumbnails and `pdf`/`pptx` exports are then generated from the isolated copy of the deck.
+5. Each build writes to a temporary directory, and the cached output is replaced atomically only on success — if a build fails, the previous output (if any) is kept. The thumbnail is then rendered from the built output, and `pdf`/`pptx` exports are generated from the isolated copy of the deck (see [Thumbnails](#thumbnails)).
 6. Outputs of deleted or renamed decks, and partial builds, are purged from the cache.
 7. All of this happens in `loadContent`; during `postBuild` the cached outputs are simply copied into the Docusaurus static output.
 
@@ -28,13 +28,22 @@ Earlier versions of the plugin ran builds sequentially out of caution. The `EADD
 
 ```ts
 {
-  // Default: Math.max(1, os.cpus().length - 1)  — one less than your CPU count
+  // Default: min(cpus - 1, free memory in GiB), at least 1
   maxParallelBuilds: 4,
   buildTimeout: 120,  // Default: 120 seconds per presentation
 }
 ```
 
-The default is `Math.max(1, os.cpus().length - 1)` — one fewer than the number of logical CPUs, leaving one core free for Docusaurus and the OS. On an 8-core machine this is `7`; on a single-core machine it clamps to `1`.
+The default is `min(os.cpus().length - 1, floor(os.freemem() / 1 GiB))`, at least `1`: one fewer than the number of logical CPUs (leaving one core free for Docusaurus and the OS), and no more builds than the free memory can hold — each `slidev build` peaks at about 1 GB. On an 8-core machine with 16 GB free this is `7`; on a 20-core machine with only 4 GB free it is `4`. Oversubscribing memory is the main cause of builds that all time out together.
+
+The default is exported as `defaultMaxParallelBuilds()`, which helps when several sites are built **at the same time** (for example a monorepo built by Turbo): each site computes its own concurrency, so share the budget instead of letting each take all of it:
+
+```ts title="docusaurus.config.ts"
+import { defaultMaxParallelBuilds } from "slidesaurus";
+
+// Two sites are built in parallel: each takes half of the machine.
+maxParallelBuilds: Math.max(1, Math.floor(defaultMaxParallelBuilds() / 2)),
+```
 
 The option accepts values from 1 to 64, and the effective concurrency is additionally capped at the number of CPUs — setting `maxParallelBuilds: 64` on a 4-core machine runs at most 4 builds at once.
 
@@ -42,12 +51,12 @@ The option accepts values from 1 to 64, and the effective concurrency is additio
 
 | Scenario | Recommended value |
 | --- | --- |
-| CI with 2 vCPUs | `2` |
-| Development laptop (4–8 cores) | the default (`cpus - 1`) |
+| CI with 2 vCPUs | the default (`1`) |
+| Development laptop (4–8 cores) | the default |
 | Build server (16+ cores) | `8`–`12` |
 | Memory-constrained environments | `2`–`3` |
 
-Each Slidev build spawns a Node.js process and a Vite/Rollup compile. Memory usage is roughly 200–400 MB per concurrent build, plus ~300 MB per Playwright instance when generating thumbnails or PDF/PPTX exports.
+Each Slidev build spawns a Node.js process and a Vite/Rollup compile. Memory usage peaks at roughly 1 GB per concurrent build (measured on a small deck with `@slidev/cli` 52). Thumbnails share a single headless Chromium (~300 MB); each PDF/PPTX export starts its own.
 
 ### Build Timeout
 
@@ -103,12 +112,22 @@ Or use the built-in CLI command:
 slidesaurus cache clear
 ```
 
-### CI caching warning
+### Caching in CI
 
-If your CI pipeline caches the `.docusaurus/` directory between runs, stale build outputs may carry over and prevent presentations from rebuilding when their sources change. Either:
+The cache is safe to persist between CI runs: every deck is fingerprinted (see above), so a restored cache only skips the decks whose inputs did not change. Persisting it turns a cold build of every deck into a build of the changed decks only. With GitHub Actions:
 
-- exclude `.docusaurus/slidesaurus/` from the CI cache, or
-- add `rm -rf .docusaurus/slidesaurus` as a step before the build.
+```yaml title=".github/workflows/ci.yml"
+- name: Restore Slidev build cache
+  uses: actions/cache@v6
+  with:
+    path: .docusaurus/slidesaurus
+    key: slidesaurus-${{ runner.os }}-${{ hashFiles('slidev/**', 'pnpm-lock.yaml') }}
+    # An older cache is fine: the plugin rebuilds only what changed.
+    restore-keys: |
+      slidesaurus-${{ runner.os }}-
+```
+
+The key only decides when a new cache entry is saved; correctness comes from the plugin's fingerprint. Cache `.docusaurus/slidesaurus/` only — not the whole `.docusaurus/` directory, which Docusaurus regenerates. To force a full rebuild, run `slidesaurus cache clear` (or `rm -rf .docusaurus/slidesaurus`) before the build.
 
 ### Failed presentation retry
 
@@ -124,6 +143,12 @@ Each presentation builds in its own temporary directory under `.docusaurus/slide
 
 The isolated `.md` is renamed to a `safeId` (slashes replaced with `__`) so Slidev's per-file output folder is unique even when many files coexist in the same root.
 
+## Thumbnails
+
+The card thumbnail (`thumbnail.png`, first slide) is rendered **from the built output**, not with `slidev export`: the plugin serves the deck's output directory on a loopback port under its `--base` and screenshots slide 1 at 1280×720 in a headless Chromium. One browser is launched per build run and shared by every deck; it is closed when the run ends. A thumbnail takes a few seconds, instead of the ~1 minute (and frequent timeouts) of `slidev export`, which compiles the whole deck again in a Vite dev server.
+
+Before the builds start, the plugin checks once that `playwright-chromium` can be resolved from the site directory and that its Chromium starts. If not, all thumbnails are skipped with a single warning that says what to install (`npm install -D playwright-chromium`, then `npx playwright install chromium`); the cards then fall back to their placeholder. PDF/PPTX exports (`download: true`) still use `slidev export` and are skipped the same way when Playwright is missing.
+
 ## Theme and addon resolution caching
 
 Within a single build run, `ensureThemeAvailable` and `ensureAddonsAvailable` are memoized per `(siteDir, packageName)`. If 50 presentations share the same theme, the resolver walks `node_modules` once — not 50 times. Auto-installs are also de-duplicated, so concurrent builds that discover the same missing addon converge on a single install.
@@ -136,7 +161,7 @@ The Slidev CLI lookup is similarly cached per `siteDir` for the lifetime of the 
 2. **Pre-install themes** — keep `autoInstall: false` (the default) and install themes once via `package.json`. This avoids any package installation during the build hot path.
 3. **Avoid heavy addons in many presentations** — addons increase per-deck startup time.
 4. **Increase `buildTimeout` for CI** — slower CI runners may need `buildTimeout: 300` for complex decks.
-5. **Tune `maxParallelBuilds` to your hardware** — too low underuses the machine; too high causes memory pressure and contention. The default (`os.cpus().length - 1`) is a sane starting point; only override it when you have a measured reason to.
+5. **Tune `maxParallelBuilds` to your hardware** — too low underuses the machine; too high causes memory pressure and contention. The default (CPU count − 1, capped by free memory) is a sane starting point; only override it when you have a measured reason to, or when several sites build at the same time.
 
 ## Build summary and speedup comparison
 

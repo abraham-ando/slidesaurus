@@ -80,6 +80,14 @@ export interface IAssetPostProcessor {
     context: BuildContext,
     assets?: AssetProcessingContext,
   ): Promise<boolean>;
+  /**
+   * Optional one-time setup before the first presentation of a build run is
+   * processed (e.g. check that Playwright is installed, launch a shared
+   * browser). Must not throw for a missing optional tool: warn instead.
+   */
+  prepare?(options: BuildOptions, context: BuildContext): Promise<void>;
+  /** Optional teardown after the build run (close shared resources). */
+  dispose?(): Promise<void>;
 }
 
 // ── ICliCommand ───────────────────────────────────────────────────────────────
