@@ -60,7 +60,7 @@
   "dependencies": {
     "@docusaurus/logger": "^3.0.0",
     "@docusaurus/utils-validation": "^3.0.0",
-    "commander": "^14.0.3",
+    "commander": "^15.0.0",
     "gray-matter": "^4.0.3",
     "jiti": "^2.6.1",
     "js-yaml": "^4.3.2",
@@ -68,7 +68,7 @@
     "prompts": "^2.4.2"
   },
   "devDependencies": {
-    "@cucumber/cucumber": "^11.0.0",
+    "@cucumber/cucumber": "^13.3.0",
     "@docusaurus/types": ">=3.0.0",
     "@rollup/plugin-commonjs": "^29.0.2",
     "@rollup/plugin-json": "^6.1.0",
@@ -85,7 +85,7 @@
     "rollup-plugin-esbuild": "^6.2.1",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.5"
   },
   "keywords": [
     "docusaurus",
@@ -96,6 +96,6 @@
   ],
   "license": "MIT",
   "engines": {
-    "node": ">=20.12.0"
+    "node": ">=22.12.0"
   }
 }

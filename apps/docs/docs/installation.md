@@ -8,7 +8,7 @@ This guide walks you through adding `slidesaurus` to an existing Docusaurus site
 
 ## Prerequisites
 
-- Node.js **20.12+**
+- Node.js **22.12+** (Node 22, 24 or 26; 24 LTS recommended)
 - An existing Docusaurus v3 project
 - A package manager: npm, pnpm, or yarn
 

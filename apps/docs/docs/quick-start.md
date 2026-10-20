@@ -7,7 +7,7 @@ sidebar_position: 3
 Get a presentation running inside your Docusaurus site in under 5 minutes.
 
 :::note Prerequisites
-Node.js 20.12+, an existing Docusaurus v3 project, and `@slidev/cli` installed.
+Node.js 22.12+, an existing Docusaurus v3 project, and `@slidev/cli` installed.
 Not set up yet? Follow the [Installation guide](./installation.md) first.
 :::
 

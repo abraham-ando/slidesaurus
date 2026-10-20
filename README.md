@@ -81,7 +81,7 @@ pnpm add slidesaurus @slidev/cli
 yarn add slidesaurus @slidev/cli
 ```
 
-> **Prérequis** : Docusaurus v3, Node.js ≥ 20.12. `@slidev/cli` est une peer dependency **optionnelle** : installez-la dans votre projet, sinon aucune présentation n'est construite.
+> **Prérequis** : Docusaurus v3, Node.js ≥ 22.12. `@slidev/cli` est une peer dependency **optionnelle** : installez-la dans votre projet, sinon aucune présentation n'est construite.
 
 ---
 

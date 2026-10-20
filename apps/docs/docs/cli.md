@@ -119,7 +119,7 @@ slidesaurus doctor --id secondary   # for a secondary plugin instance
 | 4 | **`@slidev/cli` installed** | Slidev CLI available in `node_modules` (searched up the monorepo tree) |
 | 5 | **Themes & addons installed** | Global `theme`, per-slide themes and all addons are resolvable (same resolution as the build) |
 | 6 | **Cache coherent** | Hash manifest entries have matching output directories (only checked if a cache exists) |
-| 7 | **Node.js version** | Node.js ≥ 20.12 |
+| 7 | **Node.js version** | Node.js ≥ 22.12 |
 | 8 | **Playwright** | Informational only, never a failure — `playwright-chromium` (the package `slidev export` loads) is optional and only needed for thumbnails and PDF/PPTX exports |
 
 ### Example output
@@ -133,7 +133,7 @@ slidesaurus doctor --id secondary   # for a secondary plugin instance
   ✓ @slidev/cli installed
   ✓ Global theme "seriph" installed
   ✓ Cache manifest coherent (3 entries)
-  ✓ Node.js version ≥ 20.12 — v22.3.0
+  ✓ Node.js version ≥ 22.12 — v24.22.0
   ✓ playwright-chromium installed (thumbnails/exports)
 
   ✔ All 8 checks passed.
@@ -149,7 +149,7 @@ slidesaurus doctor --id secondary   # for a secondary plugin instance
   ✓ Slidev directory exists — slidev
   ✗ @slidev/cli installed — Run: pnpm add @slidev/cli
   ✓ Global theme "seriph" installed
-  ✓ Node.js version ≥ 20.12 — v22.3.0
+  ✓ Node.js version ≥ 22.12 — v24.22.0
 
   5 passed  1 failed
 ```

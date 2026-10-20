@@ -40,7 +40,7 @@ For significant changes, open an issue first to align on the approach before wri
 
 ### Prerequisites
 
-- **Node.js** ≥ 20.12 (CI runs Node 20 and 22)
+- **Node.js** ≥ 22.12 — the repository pins Node 24 LTS in `.nvmrc` (`nvm use`); CI runs Node 22, 24 and 26
 - **pnpm** 10 — the exact version is pinned in the root `package.json` (`packageManager`); `corepack enable` picks it up automatically
 - **Git**
 
@@ -174,7 +174,7 @@ The repository uses **TypeScript 7** (`tsc`, native compiler). The build does no
 
 ### Full CI check
 
-CI (`.github/workflows/ci.yml`) runs on ubuntu and windows with Node 20 and 22, plus a pack & smoke job that installs the packed tarball in a fresh project. To reproduce it locally:
+CI (`.github/workflows/ci.yml`) runs on ubuntu and windows with Node 22, 24 and 26 (only ubuntu + Node 22 builds the docs and sample sites), plus a pack & smoke job that installs the packed tarball in a fresh project. To reproduce it locally:
 
 ```bash
 pnpm typecheck && pnpm build && pnpm --filter slidesaurus test && pnpm --filter slidesaurus test:integration

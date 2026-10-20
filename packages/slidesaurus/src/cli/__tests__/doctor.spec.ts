@@ -31,10 +31,12 @@ import { runDoctor, isSupportedNodeVersion } from "../commands/doctor";
 
 describe("isSupportedNodeVersion", () => {
   it.each([
-    ["20.12.0", true],
-    ["20.19.1", true],
-    ["22.0.0", true],
-    ["20.11.9", false],
+    ["22.12.0", true],
+    ["22.23.3", true],
+    ["24.0.0", true],
+    ["26.12.0", true],
+    ["22.11.0", false],
+    ["20.19.1", false],
     ["18.20.0", false],
     ["nonsense", false],
   ])("%s → %s", (version, expected) => {
