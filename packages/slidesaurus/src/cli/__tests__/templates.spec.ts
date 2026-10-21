@@ -64,10 +64,17 @@ describe("yamlScalar", () => {
     expect(yamlScalar("seriph")).toBe("seriph");
   });
 
-  it.each(["true", "null", "123", "", " padded ", "a: b", "x #y", "@scope/pkg", "- item"])(
-    "quotes ambiguous value %j",
-    (v) => {
-      expect(yamlScalar(v)).toBe(JSON.stringify(v));
-    },
-  );
+  it.each([
+    "true",
+    "null",
+    "123",
+    "",
+    " padded ",
+    "a: b",
+    "x #y",
+    "@scope/pkg",
+    "- item",
+  ])("quotes ambiguous value %j", (v) => {
+    expect(yamlScalar(v)).toBe(JSON.stringify(v));
+  });
 });

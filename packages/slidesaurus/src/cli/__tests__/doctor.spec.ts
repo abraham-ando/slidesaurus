@@ -19,8 +19,12 @@ vi.mock("../config", () => ({
   loadPluginOptions: mocks.loadPluginOptions,
   resolveOptions: mocks.resolveOptions,
 }));
-vi.mock("../../application/scanner", () => ({ scanPresentations: mocks.scanPresentations }));
-vi.mock("../../application/builder", () => ({ checkSlidevInstalled: mocks.checkSlidevInstalled }));
+vi.mock("../../application/scanner", () => ({
+  scanPresentations: mocks.scanPresentations,
+}));
+vi.mock("../../application/builder", () => ({
+  checkSlidevInstalled: mocks.checkSlidevInstalled,
+}));
 vi.mock("../../infrastructure/packages/packageResolver", () => ({
   resolveThemePackageName: mocks.resolveThemePackageName,
   resolveAddonPackageName: mocks.resolveAddonPackageName,
@@ -58,20 +62,42 @@ describe("runDoctor", () => {
     process.chdir(tmpDir);
 
     output = [];
-    vi.spyOn(console, "log").mockImplementation((...args: unknown[]) => { output.push(args.join(" ")); });
+    vi.spyOn(console, "log").mockImplementation((...args: unknown[]) => {
+      output.push(args.join(" "));
+    });
 
-    mocks.findConfigFile.mockReturnValue(path.join(tmpDir, "docusaurus.config.ts"));
-    mocks.loadPluginOptions.mockReturnValue({ options: {}, configFile: "x", pluginFound: true });
-    mocks.resolveOptions.mockReturnValue({ path: "./slidev", routeBasePath: "/slidev", id: "default", theme: "seriph" });
+    mocks.findConfigFile.mockReturnValue(
+      path.join(tmpDir, "docusaurus.config.ts"),
+    );
+    mocks.loadPluginOptions.mockReturnValue({
+      options: {},
+      configFile: "x",
+      pluginFound: true,
+    });
+    mocks.resolveOptions.mockReturnValue({
+      path: "./slidev",
+      routeBasePath: "/slidev",
+      id: "default",
+      theme: "seriph",
+    });
     mocks.checkSlidevInstalled.mockReturnValue(true);
     mocks.scanPresentations.mockResolvedValue({
-      presentations: [{ id: "a", title: "A", theme: "unicorn", addons: ["excalidraw"] }],
+      presentations: [
+        { id: "a", title: "A", theme: "unicorn", addons: ["excalidraw"] },
+      ],
       categories: [],
       playlists: [],
     });
-    mocks.resolveThemePackageName.mockImplementation((t: string) => `resolved:${t}`);
-    mocks.resolveAddonPackageName.mockImplementation((a: string) => `addon:${a}`);
-    mocks.checkPackageAvailable.mockReturnValue({ installed: true, resolvedName: "x" });
+    mocks.resolveThemePackageName.mockImplementation(
+      (t: string) => `resolved:${t}`,
+    );
+    mocks.resolveAddonPackageName.mockImplementation(
+      (a: string) => `addon:${a}`,
+    );
+    mocks.checkPackageAvailable.mockReturnValue({
+      installed: true,
+      resolvedName: "x",
+    });
   });
 
   afterEach(() => {
@@ -84,11 +110,23 @@ describe("runDoctor", () => {
   it("resolves themes and addons through packageResolver (same as the build)", async () => {
     await runDoctor({ pluginId: "default" }).catch(() => undefined);
 
-    expect(mocks.resolveThemePackageName).toHaveBeenCalledWith("seriph", tmpDir);
-    expect(mocks.resolveThemePackageName).toHaveBeenCalledWith("unicorn", tmpDir);
+    expect(mocks.resolveThemePackageName).toHaveBeenCalledWith(
+      "seriph",
+      tmpDir,
+    );
+    expect(mocks.resolveThemePackageName).toHaveBeenCalledWith(
+      "unicorn",
+      tmpDir,
+    );
     expect(mocks.resolveAddonPackageName).toHaveBeenCalledWith("excalidraw");
     const checked = mocks.checkPackageAvailable.mock.calls.map((c) => c[0]);
-    expect(checked).toEqual(expect.arrayContaining(["resolved:seriph", "resolved:unicorn", "addon:excalidraw"]));
+    expect(checked).toEqual(
+      expect.arrayContaining([
+        "resolved:seriph",
+        "resolved:unicorn",
+        "addon:excalidraw",
+      ]),
+    );
   });
 
   it("does not check dev server ports anymore", async () => {
@@ -106,7 +144,9 @@ describe("runDoctor", () => {
       throw new Error("process.exit called");
     }) as never);
 
-    await expect(runDoctor({ pluginId: "default" })).rejects.toThrow("process.exit called");
+    await expect(runDoctor({ pluginId: "default" })).rejects.toThrow(
+      "process.exit called",
+    );
     expect(exitSpy).toHaveBeenCalledWith(1);
     expect(flush()).toContain("unicorn");
   });
@@ -117,7 +157,9 @@ describe("runDoctor", () => {
       throw new Error("process.exit called");
     }) as never);
 
-    await expect(runDoctor({ pluginId: "default" })).rejects.toThrow("process.exit called");
+    await expect(runDoctor({ pluginId: "default" })).rejects.toThrow(
+      "process.exit called",
+    );
     expect(exitSpy).toHaveBeenCalledWith(1);
     expect(mocks.scanPresentations).not.toHaveBeenCalled();
   });

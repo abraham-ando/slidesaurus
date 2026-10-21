@@ -18,11 +18,11 @@ This copies the component into your site's `src/theme/SlidevCard/` directory whe
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-| --- | --- | --- | --- | --- |
-| `presentation` | `Presentation` | Yes | — | Full presentation object from `usePluginData()`. See [`Presentation` type](./types.md#theme-facing-types). |
-| `horizontal` | `boolean` | No | `false` | When `true`, renders the image on the left and metadata on the right (list view layout). |
-| `uiTheme` | `UITheme` | No | `"default"` | Visual layout variant. Set automatically from the plugin's `uiTheme` option by `SlidevOverview`. Built-in values: `"default"` (full card), `"compact"` (smaller preview, no description), `"minimal"` (text-only row). Custom strings are applied as `data-slidev-ui-theme` for CSS targeting. |
+| Prop           | Type           | Required | Default     | Description                                                                                                                                                                                                                                                                                    |
+| -------------- | -------------- | -------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `presentation` | `Presentation` | Yes      | —           | Full presentation object from `usePluginData()`. See [`Presentation` type](./types.md#theme-facing-types).                                                                                                                                                                                     |
+| `horizontal`   | `boolean`      | No       | `false`     | When `true`, renders the image on the left and metadata on the right (list view layout).                                                                                                                                                                                                       |
+| `uiTheme`      | `UITheme`      | No       | `"default"` | Visual layout variant. Set automatically from the plugin's `uiTheme` option by `SlidevOverview`. Built-in values: `"default"` (full card), `"compact"` (smaller preview, no description), `"minimal"` (text-only row). Custom strings are applied as `data-slidev-ui-theme` for CSS targeting. |
 
 ## Behavior
 
@@ -42,9 +42,9 @@ The root element is a `<div>` (not a link). The title `<a class="cardLink">` is 
 
 ## SlidevCard vs SlidevLink
 
-| Component | Use Case |
-| --- | --- |
-| `SlidevCard` | Grid/list card on the overview page — rich metadata, thumbnail preview |
+| Component    | Use Case                                                                    |
+| ------------ | --------------------------------------------------------------------------- |
+| `SlidevCard` | Grid/list card on the overview page — rich metadata, thumbnail preview      |
 | `SlidevLink` | Inline embed inside a documentation page — compact card with iframe preview |
 
 Use `SlidevCard` on overview-style pages. Use `SlidevLink` when cross-referencing a presentation from a doc page.

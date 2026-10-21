@@ -6,10 +6,18 @@ function makeStorage(): Storage {
   const store: Record<string, string> = {};
   return {
     getItem: (k) => store[k] ?? null,
-    setItem: (k, v) => { store[k] = v; },
-    removeItem: (k) => { delete store[k]; },
-    clear: () => { for (const k of Object.keys(store)) delete store[k]; },
-    get length() { return Object.keys(store).length; },
+    setItem: (k, v) => {
+      store[k] = v;
+    },
+    removeItem: (k) => {
+      delete store[k];
+    },
+    clear: () => {
+      for (const k of Object.keys(store)) delete store[k];
+    },
+    get length() {
+      return Object.keys(store).length;
+    },
     key: (i) => Object.keys(store)[i] ?? null,
   } as Storage;
 }
@@ -48,7 +56,9 @@ describe("resume slide — storage key", () => {
 describe("resume slide — readResumeSlide", () => {
   let storage: Storage;
 
-  beforeEach(() => { storage = makeStorage(); });
+  beforeEach(() => {
+    storage = makeStorage();
+  });
 
   it("returns null when nothing is stored", () => {
     expect(readResumeSlide(storage, "talk")).toBeNull();
@@ -88,7 +98,9 @@ describe("resume slide — readResumeSlide", () => {
 describe("resume slide — saveResumeSlide", () => {
   let storage: Storage;
 
-  beforeEach(() => { storage = makeStorage(); });
+  beforeEach(() => {
+    storage = makeStorage();
+  });
 
   it("saves slide number from hash string", () => {
     saveResumeSlide(storage, "talk", "#7");
@@ -125,7 +137,9 @@ describe("resume slide — saveResumeSlide", () => {
 describe("resume slide — clearResumeSlide", () => {
   let storage: Storage;
 
-  beforeEach(() => { storage = makeStorage(); });
+  beforeEach(() => {
+    storage = makeStorage();
+  });
 
   it("removes the stored value", () => {
     storage.setItem("slidev-resume-talk", "4");

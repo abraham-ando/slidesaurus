@@ -10,7 +10,8 @@ const SEPARATOR = "\n---\n\n";
 
 const PLAIN_YAML_SCALAR = /^[A-Za-z0-9][A-Za-z0-9 ._/-]*$/;
 /** Plain scalars that YAML would parse as a non-string (bool / null / number). */
-const YAML_RESERVED = /^(true|false|yes|no|on|off|null|~|[-+]?\d[\d_]*(\.\d*)?([eE][-+]?\d+)?|0x[0-9a-fA-F]+|0o[0-7]+)$/i;
+const YAML_RESERVED =
+  /^(true|false|yes|no|on|off|null|~|[-+]?\d[\d_]*(\.\d*)?([eE][-+]?\d+)?|0x[0-9a-fA-F]+|0o[0-7]+)$/i;
 
 /**
  * Serialise a string as a safe YAML scalar: left plain when unambiguous,
@@ -18,13 +19,21 @@ const YAML_RESERVED = /^(true|false|yes|no|on|off|null|~|[-+]?\d[\d_]*(\.\d*)?([
  * which neutralises `: `, ` #`, leading `@`/`*`/`&`, quotes and newlines.
  */
 export function yamlScalar(value: string): string {
-  if (value !== "" && value === value.trim() && PLAIN_YAML_SCALAR.test(value) && !YAML_RESERVED.test(value)) {
+  if (
+    value !== "" &&
+    value === value.trim() &&
+    PLAIN_YAML_SCALAR.test(value) &&
+    !YAML_RESERVED.test(value)
+  ) {
     return value;
   }
   return JSON.stringify(value);
 }
 
-const FRONTMATTER = (vars: TemplateVars, extra: Record<string, unknown> = {}) => {
+const FRONTMATTER = (
+  vars: TemplateVars,
+  extra: Record<string, unknown> = {},
+) => {
   const lines = [
     "---",
     `title: ${yamlScalar(vars.title)}`,

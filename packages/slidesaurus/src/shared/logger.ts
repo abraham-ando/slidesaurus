@@ -36,4 +36,3 @@ export class PluginLogger {
 
 /** Singleton used throughout the plugin. */
 export const log = new PluginLogger();
-

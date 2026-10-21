@@ -3,10 +3,13 @@ import fs from "node:fs";
 import prompts from "prompts";
 import pc from "picocolors";
 import { loadPluginOptions, resolveOptions } from "../config";
-import { renderTemplate, TEMPLATE_NAMES, type TemplateName } from "../templates";
+import {
+  renderTemplate,
+  TEMPLATE_NAMES,
+  type TemplateName,
+} from "../templates";
 import { cliLogger } from "../output";
 const { success, error, info } = cliLogger;
-import type { PluginOptions } from "../../domain/types";
 import { normalizeRoutePath, validatePackageName } from "../../shared/utils";
 
 interface NewOptions {
@@ -36,18 +39,30 @@ function resolveName(
   rawName: string,
   categoryFlag: string | undefined,
 ): { relativePath: string; id: string } {
-  const segments = rawName.replace(/\\/g, "/").split("/").map((s) => s.trim()).filter(Boolean);
+  const segments = rawName
+    .replace(/\\/g, "/")
+    .split("/")
+    .map((s) => s.trim())
+    .filter(Boolean);
   const last = (segments.pop() ?? "").replace(/\.md$/i, "");
   const fileName = slugify(last);
   if (!fileName) {
-    throw new Error(`Invalid presentation name "${rawName}": it must contain at least one letter or digit.`);
+    throw new Error(
+      `Invalid presentation name "${rawName}": it must contain at least one letter or digit.`,
+    );
   }
 
   let categoryParts: string[];
   if (categoryFlag !== undefined) {
-    categoryParts = categoryFlag.replace(/\\/g, "/").split("/").map(slugify).filter(Boolean);
+    categoryParts = categoryFlag
+      .replace(/\\/g, "/")
+      .split("/")
+      .map(slugify)
+      .filter(Boolean);
     if (categoryParts.length === 0) {
-      throw new Error(`Invalid category "${categoryFlag}": it must contain at least one letter or digit.`);
+      throw new Error(
+        `Invalid category "${categoryFlag}": it must contain at least one letter or digit.`,
+      );
     }
   } else {
     categoryParts = segments.map(slugify).filter(Boolean);
@@ -59,7 +74,8 @@ function resolveName(
 
 /** Human-readable title derived from the last path segment of the name argument. */
 function deriveTitle(rawName: string): string {
-  const last = rawName.replace(/\\/g, "/").split("/").filter(Boolean).pop() ?? rawName;
+  const last =
+    rawName.replace(/\\/g, "/").split("/").filter(Boolean).pop() ?? rawName;
   return last
     .replace(/\.md$/i, "")
     .replace(/[-_]+/g, " ")
@@ -67,10 +83,16 @@ function deriveTitle(rawName: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export async function runNew(rawName: string | undefined, opts: NewOptions): Promise<void> {
+export async function runNew(
+  rawName: string | undefined,
+  opts: NewOptions,
+): Promise<void> {
   const cwd = process.cwd();
-  const { options: pluginOpts, configFile } = loadPluginOptions(cwd, opts.pluginId);
-  const options: PluginOptions & { path: string; routeBasePath: string } = resolveOptions(pluginOpts, opts.pluginId) as PluginOptions & { path: string; routeBasePath: string };
+  const { options: pluginOpts, configFile } = loadPluginOptions(
+    cwd,
+    opts.pluginId,
+  );
+  const options = resolveOptions(pluginOpts, opts.pluginId);
 
   // ── Interactive prompts for missing args ──────────────────────────────────
   const answers = await prompts(
@@ -103,18 +125,24 @@ export async function runNew(rawName: string | undefined, opts: NewOptions): Pro
     error("A presentation name is required.");
     process.exit(1);
   }
-  const template = (opts.template ?? answers.template ?? "basic") as TemplateName;
+  const template = (opts.template ??
+    answers.template ??
+    "basic") as TemplateName;
   const theme = opts.theme ?? answers.theme ?? options.theme ?? "seriph";
 
   if (!TEMPLATE_NAMES.includes(template)) {
-    error(`Unknown template "${template}". Choose one of: ${TEMPLATE_NAMES.join(", ")}`);
+    error(
+      `Unknown template "${template}". Choose one of: ${TEMPLATE_NAMES.join(", ")}`,
+    );
     process.exit(1);
   }
 
   try {
     validatePackageName(theme);
   } catch (err) {
-    error(`Invalid theme "${theme}": ${err instanceof Error ? err.message : String(err)}`);
+    error(
+      `Invalid theme "${theme}": ${err instanceof Error ? err.message : String(err)}`,
+    );
     process.exit(1);
   }
 

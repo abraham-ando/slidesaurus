@@ -180,7 +180,9 @@
   color: var(--ifm-color-success-dark, #16a34a);
   text-decoration: none !important;
   flex-shrink: 0;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .downloadBtn:hover {
@@ -205,7 +207,9 @@
   color: var(--ifm-color-primary);
   text-decoration: none !important;
   flex-shrink: 0;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .presenterBtn:hover {
@@ -226,7 +230,9 @@
   border: none;
   cursor: pointer;
   color: var(--ifm-color-emphasis-400);
-  transition: color 0.15s, transform 0.15s;
+  transition:
+    color 0.15s,
+    transform 0.15s;
   padding: 0.25rem;
   border-radius: 4px;
   flex-shrink: 0;
@@ -253,11 +259,15 @@
   right: 1rem;
   width: 220px;
   border-radius: 6px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18), 0 0 0 1px var(--ifm-color-emphasis-200);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.18),
+    0 0 0 1px var(--ifm-color-emphasis-200);
   overflow: hidden;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.18s ease, transform 0.18s ease;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
   transform: translateY(4px);
   z-index: 100;
   background: var(--ifm-card-background-color);

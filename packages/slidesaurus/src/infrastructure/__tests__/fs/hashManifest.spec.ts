@@ -57,7 +57,10 @@ describe("hashManifest", () => {
       fs.mkdirSync(cacheDir, { recursive: true });
       fs.writeFileSync(
         path.join(cacheDir, MANIFEST_FILE),
-        JSON.stringify({ version: CURRENT_VERSION - 1, hashes: { deck: "abc" } }),
+        JSON.stringify({
+          version: CURRENT_VERSION - 1,
+          hashes: { deck: "abc" },
+        }),
       );
 
       expect(loadHashManifest(cacheDir)).toEqual({});
@@ -118,7 +121,7 @@ describe("hashManifest", () => {
     });
 
     it("round-trips through loadHashManifest", () => {
-      const manifest = { "intro": "hash-1", "advanced/deep": "hash-2" };
+      const manifest = { intro: "hash-1", "advanced/deep": "hash-2" };
 
       saveHashManifest(cacheDir, manifest);
 

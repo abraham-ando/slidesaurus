@@ -2,7 +2,9 @@ import { describe, it, expect, vi } from "vitest";
 import type { PluginContentData, PluginOptions } from "../../domain/types";
 import { registerRoutes, toPublicPluginData } from "../routeBuilder";
 
-function makeContent(overrides: Partial<PluginOptions> = {}): PluginContentData {
+function makeContent(
+  overrides: Partial<PluginOptions> = {},
+): PluginContentData {
   return {
     presentations: [
       {
@@ -11,7 +13,8 @@ function makeContent(overrides: Partial<PluginOptions> = {}): PluginContentData 
         sourcePath: "cat/talk.md",
         sourceAbsolutePath: "/home/me/site/slidev/cat/talk.md",
         url: "/docs/slidev/cat/talk/",
-        outputPath: "/home/me/site/.docusaurus/slidesaurus/default/output/cat/talk",
+        outputPath:
+          "/home/me/site/.docusaurus/slidesaurus/default/output/cat/talk",
         previewUrl: "/docs/slidev/cat/talk/",
         thumbnailUrl: "/docs/slidev/cat/talk/thumbnail.png",
         category: "cat",
@@ -19,7 +22,15 @@ function makeContent(overrides: Partial<PluginOptions> = {}): PluginContentData 
         level: "beginner",
       },
     ],
-    categories: [{ path: "cat", label: "Cat", position: 1, count: 1, url: "/docs/slidev/cat" }],
+    categories: [
+      {
+        path: "cat",
+        label: "Cat",
+        position: 1,
+        count: 1,
+        url: "/docs/slidev/cat",
+      },
+    ],
     playlists: [{ id: "pl", title: "PL", items: ["cat/talk"] }],
     config: {
       path: "./slidev",
@@ -44,7 +55,6 @@ function makeContent(overrides: Partial<PluginOptions> = {}): PluginContentData 
       onBuildComplete: () => undefined,
       ...overrides,
     },
-    isDev: false,
   };
 }
 
@@ -88,7 +98,18 @@ describe("toPublicPluginData", () => {
     });
     expect(data.categories).toEqual(makeContent().categories);
     expect(data.playlists).toEqual(makeContent().playlists);
-    expect(data.isDev).toBe(false);
+    expect(data).not.toHaveProperty("isDev");
+    expect(data).not.toHaveProperty("buildStatusUrl");
+  });
+
+  it("publishes the dev build status URL when set", () => {
+    const content = {
+      ...makeContent(),
+      buildStatusUrl: "/docs/slidev/__slidesaurus__/build-status.json",
+    };
+    expect(toPublicPluginData(content).buildStatusUrl).toBe(
+      "/docs/slidev/__slidesaurus__/build-status.json",
+    );
   });
 });
 
@@ -104,25 +125,41 @@ describe("registerRoutes", () => {
     const actions = makeActions();
     await registerRoutes(makeContent(), actions, "default", "/docs/");
     const paths = actions.addRoute.mock.calls.map(([r]) => r.path);
-    expect(paths).toEqual(["/docs/slidev", "/docs/slidev/cat", "/docs/slidev/cat/talk"]);
+    expect(paths).toEqual([
+      "/docs/slidev",
+      "/docs/slidev/cat",
+      "/docs/slidev/cat/talk",
+    ]);
   });
 
   it("normalises routeBasePath without leading slash", async () => {
     const actions = makeActions();
-    await registerRoutes(makeContent({ routeBasePath: "slidev/" }), actions, "default");
+    await registerRoutes(
+      makeContent({ routeBasePath: "slidev/" }),
+      actions,
+      "default",
+    );
     expect(actions.addRoute.mock.calls[0][0].path).toBe("/slidev");
   });
 
   it("serves the overview at the site root when routeBasePath is '/'", async () => {
     const actions = makeActions();
-    await registerRoutes(makeContent({ routeBasePath: "/" }), actions, "default", "/");
+    await registerRoutes(
+      makeContent({ routeBasePath: "/" }),
+      actions,
+      "default",
+      "/",
+    );
     expect(actions.addRoute.mock.calls[0][0].path).toBe("/");
   });
 
   it("wires the pluginId data module into every route", async () => {
     const actions = makeActions();
     await registerRoutes(makeContent(), actions, "second");
-    expect(actions.createData).toHaveBeenCalledWith("pluginId.json", JSON.stringify("second"));
+    expect(actions.createData).toHaveBeenCalledWith(
+      "pluginId.json",
+      JSON.stringify("second"),
+    );
     for (const [route] of actions.addRoute.mock.calls) {
       expect(route.modules).toEqual({ pluginId: "@generated/pluginId.json" });
     }

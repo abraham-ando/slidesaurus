@@ -31,7 +31,11 @@ describe("runNew", () => {
     slidevDir = path.join(tmpDir, "slidev");
     fs.mkdirSync(slidevDir, { recursive: true });
 
-    mockLoadPluginOptions.mockReturnValue({ options: {}, configFile: null, pluginFound: false });
+    mockLoadPluginOptions.mockReturnValue({
+      options: {},
+      configFile: null,
+      pluginFound: false,
+    });
     mockResolveOptions.mockImplementation((_opts: object, id: string) => ({
       path: slidevDir,
       routeBasePath: "/slidev",
@@ -48,7 +52,11 @@ describe("runNew", () => {
   });
 
   it("creates a basic .md file at the correct path", async () => {
-    await runNew("my-talk", { template: "basic", theme: "seriph", pluginId: "default" });
+    await runNew("my-talk", {
+      template: "basic",
+      theme: "seriph",
+      pluginId: "default",
+    });
 
     const target = path.join(slidevDir, "my-talk.md");
     expect(fs.existsSync(target)).toBe(true);
@@ -58,14 +66,23 @@ describe("runNew", () => {
   });
 
   it("creates nested category/name structure from slash-separated name", async () => {
-    await runNew("intro/getting-started", { template: "basic", theme: "seriph", pluginId: "default" });
+    await runNew("intro/getting-started", {
+      template: "basic",
+      theme: "seriph",
+      pluginId: "default",
+    });
 
     const target = path.join(slidevDir, "intro", "getting-started.md");
     expect(fs.existsSync(target)).toBe(true);
   });
 
   it("uses --category flag to prefix the file path", async () => {
-    await runNew("deep-dive", { category: "advanced", template: "talk", theme: "seriph", pluginId: "default" });
+    await runNew("deep-dive", {
+      category: "advanced",
+      template: "talk",
+      theme: "seriph",
+      pluginId: "default",
+    });
 
     const target = path.join(slidevDir, "advanced", "deep-dive.md");
     expect(fs.existsSync(target)).toBe(true);
@@ -90,7 +107,12 @@ describe("runNew", () => {
     const target = path.join(slidevDir, "existing.md");
     fs.writeFileSync(target, "# Old content");
 
-    await runNew("existing", { template: "tutorial", theme: "seriph", force: true, pluginId: "default" });
+    await runNew("existing", {
+      template: "tutorial",
+      theme: "seriph",
+      force: true,
+      pluginId: "default",
+    });
 
     const content = fs.readFileSync(target, "utf-8");
     expect(content).toContain("Prerequisites");
@@ -98,7 +120,11 @@ describe("runNew", () => {
   });
 
   it("uses tutorial template with level and duration frontmatter", async () => {
-    await runNew("my-tutorial", { template: "tutorial", theme: "seriph", pluginId: "default" });
+    await runNew("my-tutorial", {
+      template: "tutorial",
+      theme: "seriph",
+      pluginId: "default",
+    });
 
     const target = path.join(slidevDir, "my-tutorial.md");
     const content = fs.readFileSync(target, "utf-8");
@@ -107,7 +133,11 @@ describe("runNew", () => {
   });
 
   it("escapes YAML in the title derived from the name", async () => {
-    await runNew("weird: name #1", { template: "basic", theme: "seriph", pluginId: "default" });
+    await runNew("weird: name #1", {
+      template: "basic",
+      theme: "seriph",
+      pluginId: "default",
+    });
 
     const target = path.join(slidevDir, "weird-name-1.md");
     const { data } = matter(fs.readFileSync(target, "utf-8"));
@@ -115,7 +145,11 @@ describe("runNew", () => {
   });
 
   it("does not turn foo.md into foo-md.md", async () => {
-    await runNew("foo.md", { template: "basic", theme: "seriph", pluginId: "default" });
+    await runNew("foo.md", {
+      template: "basic",
+      theme: "seriph",
+      pluginId: "default",
+    });
 
     expect(fs.existsSync(path.join(slidevDir, "foo.md"))).toBe(true);
     expect(fs.existsSync(path.join(slidevDir, "foo-md.md"))).toBe(false);
@@ -134,57 +168,90 @@ describe("runNew", () => {
       exitSpy.mockRestore();
     });
 
-    it.each(["---", "..", "!!!", ".md", "a/../.."])("rejects name %j that slugifies to nothing", async (bad) => {
-      await expect(
-        runNew(bad, { template: "basic", theme: "seriph", pluginId: "default" }),
-      ).rejects.toThrow("process.exit called");
-      expect(exitSpy).toHaveBeenCalledWith(1);
-      expect(fs.readdirSync(slidevDir)).toEqual([]);
-    });
+    it.each(["---", "..", "!!!", ".md", "a/../.."])(
+      "rejects name %j that slugifies to nothing",
+      async (bad) => {
+        await expect(
+          runNew(bad, {
+            template: "basic",
+            theme: "seriph",
+            pluginId: "default",
+          }),
+        ).rejects.toThrow("process.exit called");
+        expect(exitSpy).toHaveBeenCalledWith(1);
+        expect(fs.readdirSync(slidevDir)).toEqual([]);
+      },
+    );
 
     it("rejects a category that slugifies to nothing", async () => {
       await expect(
-        runNew("talk", { category: "!!!", template: "basic", theme: "seriph", pluginId: "default" }),
+        runNew("talk", {
+          category: "!!!",
+          template: "basic",
+          theme: "seriph",
+          pluginId: "default",
+        }),
       ).rejects.toThrow("process.exit called");
       expect(fs.readdirSync(slidevDir)).toEqual([]);
     });
 
     it("rejects an invalid theme name", async () => {
       await expect(
-        runNew("talk", { template: "basic", theme: "bad theme\nx: y", pluginId: "default" }),
+        runNew("talk", {
+          template: "basic",
+          theme: "bad theme\nx: y",
+          pluginId: "default",
+        }),
       ).rejects.toThrow("process.exit called");
       expect(fs.existsSync(path.join(slidevDir, "talk.md"))).toBe(false);
     });
 
     it("rejects an unknown template", async () => {
       await expect(
-        runNew("talk", { template: "nope", theme: "seriph", pluginId: "default" }),
+        runNew("talk", {
+          template: "nope",
+          theme: "seriph",
+          pluginId: "default",
+        }),
       ).rejects.toThrow("process.exit called");
     });
   });
 
   it("asks for the template interactively when --template is omitted", async () => {
-    const prompts = (await import("prompts")).default as unknown as ReturnType<typeof vi.fn>;
+    const prompts = (await import("prompts")).default as unknown as ReturnType<
+      typeof vi.fn
+    >;
     prompts.mockResolvedValueOnce({ template: "tutorial" });
 
     await runNew("asked", { theme: "seriph", pluginId: "default" });
 
-    const questions = prompts.mock.calls.at(-1)?.[0] as Array<{ name: string; type: unknown }>;
+    const questions = prompts.mock.calls.at(-1)?.[0] as Array<{
+      name: string;
+      type: unknown;
+    }>;
     expect(questions.find((q) => q.name === "template")?.type).toBe("select");
-    expect(fs.readFileSync(path.join(slidevDir, "asked.md"), "utf-8")).toContain("Prerequisites");
+    expect(
+      fs.readFileSync(path.join(slidevDir, "asked.md"), "utf-8"),
+    ).toContain("Prerequisites");
   });
 
   it("exits with a non-zero code when a prompt is cancelled", async () => {
-    const prompts = (await import("prompts")).default as unknown as ReturnType<typeof vi.fn>;
+    const prompts = (await import("prompts")).default as unknown as ReturnType<
+      typeof vi.fn
+    >;
     const exitSpy = vi.spyOn(process, "exit").mockImplementation((() => {
       throw new Error("process.exit called");
     }) as never);
-    prompts.mockImplementationOnce(async (_q: unknown, opts: { onCancel: () => void }) => {
-      opts.onCancel();
-      return {};
-    });
+    prompts.mockImplementationOnce(
+      async (_q: unknown, opts: { onCancel: () => void }) => {
+        opts.onCancel();
+        return {};
+      },
+    );
 
-    await expect(runNew(undefined, { pluginId: "default" })).rejects.toThrow("process.exit called");
+    await expect(runNew(undefined, { pluginId: "default" })).rejects.toThrow(
+      "process.exit called",
+    );
     expect(exitSpy).toHaveBeenCalledWith(expect.any(Number));
     expect(exitSpy.mock.calls[0][0]).not.toBe(0);
     exitSpy.mockRestore();

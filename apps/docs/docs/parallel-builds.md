@@ -12,9 +12,9 @@ The plugin builds multiple Slidev presentations concurrently during `docusaurus 
 2. File hashes are computed in parallel and compared against the cache manifest. Unchanged presentations are skipped.
 3. For everything that needs rebuilding, an isolated build directory is prepared (frontmatter patched, co-located assets copied).
 4. Up to `maxParallelBuilds` presentations are built simultaneously by separate `slidev build` processes.
-5. Each build writes to a temporary directory, and the cached output is replaced atomically only on success — if a build fails, the previous output (if any) is kept. The thumbnail is then rendered from the built output, and `pdf`/`pptx` exports are generated from the isolated copy of the deck (see [Thumbnails](#thumbnails)).
+5. Each build writes to a temporary directory, and the cached output is replaced atomically only on success — if a build fails, the previous output (if any) is kept. The thumbnail and the `pdf` export are then rendered from the built output; a `pptx` export is generated from the isolated copy of the deck (see [Thumbnails and PDF](#thumbnails-and-pdf)).
 6. Outputs of deleted or renamed decks, and partial builds, are purged from the cache.
-7. All of this happens in `loadContent`; during `postBuild` the cached outputs are simply copied into the Docusaurus static output.
+7. All of this happens in `loadContent` — awaited by `docusaurus build`, in the background in `docusaurus start` (see [Dev Server](./dev-server.md)); during `postBuild` the cached outputs are simply copied into the Docusaurus static output.
 
 The orchestrator uses a bounded worker pool (`runConcurrently`) for hashing and builds, so the same concurrency cap applies end-to-end.
 
@@ -49,14 +49,14 @@ The option accepts values from 1 to 64, and the effective concurrency is additio
 
 ### Choosing `maxParallelBuilds`
 
-| Scenario | Recommended value |
-| --- | --- |
-| CI with 2 vCPUs | the default (`1`) |
-| Development laptop (4–8 cores) | the default |
-| Build server (16+ cores) | `8`–`12` |
-| Memory-constrained environments | `2`–`3` |
+| Scenario                        | Recommended value |
+| ------------------------------- | ----------------- |
+| CI with 2 vCPUs                 | the default (`1`) |
+| Development laptop (4–8 cores)  | the default       |
+| Build server (16+ cores)        | `8`–`12`          |
+| Memory-constrained environments | `2`–`3`           |
 
-Each Slidev build spawns a Node.js process and a Vite/Rollup compile. Memory usage peaks at roughly 1 GB per concurrent build (measured on a small deck with `@slidev/cli` 52). Thumbnails share a single headless Chromium (~300 MB); each PDF/PPTX export starts its own.
+Each Slidev build spawns a Node.js process and a Vite/Rollup compile. Memory usage peaks at roughly 1 GB per concurrent build (measured on a small deck with `@slidev/cli` 52). Thumbnails and the PDF exports printed by the plugin share a single headless Chromium (~300 MB); `slidev build --download` and each PPTX export (`slidev export`) start their own.
 
 ### Build Timeout
 
@@ -143,11 +143,17 @@ Each presentation builds in its own temporary directory under `.docusaurus/slide
 
 The isolated `.md` is renamed to a `safeId` (slashes replaced with `__`) so Slidev's per-file output folder is unique even when many files coexist in the same root.
 
-## Thumbnails
+## Thumbnails and PDF
 
 The card thumbnail (`thumbnail.png`, first slide) is rendered **from the built output**, not with `slidev export`: the plugin serves the deck's output directory on a loopback port under its `--base` and screenshots slide 1 at 1280×720 in a headless Chromium. One browser is launched per build run and shared by every deck; it is closed when the run ends. A thumbnail takes a few seconds, instead of the ~1 minute (and frequent timeouts) of `slidev export`, which compiles the whole deck again in a Vite dev server.
 
-Before the builds start, the plugin checks once that `playwright-chromium` can be resolved from the site directory and that its Chromium starts. If not, all thumbnails are skipped with a single warning that says what to install (`npm install -D playwright-chromium`, then `npx playwright install chromium`); the cards then fall back to their placeholder. PDF/PPTX exports (`download: true`) still use `slidev export` and are skipped the same way when Playwright is missing.
+Before the builds start, the plugin checks once that `playwright-chromium` can be resolved from the site directory and that its Chromium starts. If not, all thumbnails are skipped with a single warning that says what to install (`npm install -D playwright-chromium`, then `npx playwright install chromium`); the cards then fall back to their placeholder. The **PDF export** (`download: true`, `exportFormats` with `pdf`) never starts a Vite dev server. `slidev build --download` (which also enables the deck's own download button and its `/print` route) already prints the deck from its built output: that file (`slidev-exported.pdf`, or `<exportFilename>.pdf`) is hard-linked as `export.pdf` and kept for the deck's button. When it cannot be used — `exportWithClicks` is set (`slidev build` ignores it) — the shared browser prints the built output itself: the deck's `/print` page and `page.pdf()` with the settings of `slidev export` (canvas page size, one page per slide or per click step, `export.dark`, `export.wait`), then the title/author/keywords metadata through the `pdf-lib` copy shipped with `@slidev/cli` (a few seconds per deck). `slidev export` remains the fallback for a PDF whose headmatter sets `export.withToc` / `export.perSlide`, and is always used for **PPTX**. All exports are skipped the same way when Playwright is missing.
+
+## Icon resolution
+
+Slidev looks up Iconify collections (`@iconify-json/*`) from the deck directory first, then its addons, theme and `@slidev/client`. Failed lookups are not cached by `@iconify/utils`, so with a deck below `.docusaurus/` every icon of a collection that only `@slidev/client` provides — or that is not installed, like the `vscode-icons` code-title icons — walked up the whole `node_modules` chain again: about 190 000 `stat` calls, half of a 40 s `slidev build` on Windows.
+
+Before each build, the plugin therefore adds to the isolated directory a `node_modules/@iconify-json/` with a link to each collection `@slidev/client` provides, and an empty collection for those referenced by the client but installed nowhere. Collections your site, theme or addons resolve are never shadowed, so the output is byte-for-byte identical — only faster (≈ −35 % per build). Run with `verbose: true` to see the linked collections.
 
 ## Theme and addon resolution caching
 
@@ -161,7 +167,8 @@ The Slidev CLI lookup is similarly cached per `siteDir` for the lifetime of the 
 2. **Pre-install themes** — keep `autoInstall: false` (the default) and install themes once via `package.json`. This avoids any package installation during the build hot path.
 3. **Avoid heavy addons in many presentations** — addons increase per-deck startup time.
 4. **Increase `buildTimeout` for CI** — the default (300 s) covers cold builds; very slow CI runners or very large decks may need up to `buildTimeout: 600`.
-5. **Tune `maxParallelBuilds` to your hardware** — too low underuses the machine; too high causes memory pressure and contention. The default (CPU count − 1, capped by free memory) is a sane starting point; only override it when you have a measured reason to, or when several sites build at the same time.
+5. **Exclude the project from real-time antivirus scanning (Windows)** — see [Troubleshooting](./troubleshooting.md#slow-builds-on-windows).
+6. **Tune `maxParallelBuilds` to your hardware** — too low underuses the machine; too high causes memory pressure and contention. The default (CPU count − 1, capped by free memory) is a sane starting point; only override it when you have a measured reason to, or when several sites build at the same time.
 
 ## Build summary and speedup comparison
 
@@ -187,6 +194,12 @@ Enable `verbose: true` to stream the full `slidev build` output for each present
 {
   verbose: true,
 }
+```
+
+Verbose mode also prints where each build spent its time:
+
+```text
+[slidesaurus] Timings `usage/configuration`: isolate+patch 0.1s, slidev build 31.2s, replace output 0.0s, assets 2.4s
 ```
 
 Note that with high concurrency, verbose logs interleave between presentations. For a clean trace of a single deck, set `maxParallelBuilds: 1` and rebuild that one file.

@@ -6,6 +6,7 @@ import {
   collectPresentationDependencies,
   containsPresentations,
   extractReferences,
+  stripCodeFences,
 } from "../../fs/dependencies";
 
 let tmpDir: string;
@@ -25,6 +26,23 @@ function write(rel: string, content = "x"): string {
   return p;
 }
 
+describe("stripCodeFences", () => {
+  it("removes HTML comments, including ones spliced by a previous removal", () => {
+    expect(stripCodeFences("a <!-- x --> b")).toBe("a  b");
+    expect(stripCodeFences("a<!-<!-- x -->- y -->b")).toBe("ab");
+  });
+
+  it("drops an unterminated comment up to the end", () => {
+    expect(stripCodeFences("keep <!-- ![](./hidden.png)")).toBe("keep ");
+  });
+
+  it("removes fenced blocks and inline code", () => {
+    expect(
+      stripCodeFences("x\n```\n![](./a.png)\n```\ny `![](./b.png)` z"),
+    ).toBe("x\n\ny  z");
+  });
+});
+
 describe("extractReferences", () => {
   it("finds images, src/href attributes, backgrounds and src: imports", () => {
     const md = [
@@ -38,12 +56,15 @@ describe("extractReferences", () => {
       "---",
     ].join("\n");
     const refs = extractReferences(md);
-    expect(refs.assets).toEqual(expect.arrayContaining(["./bg.jpg", "./a.png", "../shared/b.svg"]));
+    expect(refs.assets).toEqual(
+      expect.arrayContaining(["./bg.jpg", "./a.png", "../shared/b.svg"]),
+    );
     expect(refs.imports).toEqual(["./pages/intro.md"]);
   });
 
   it("ignores references inside code fences, inline code and comments", () => {
-    const md = "```md\n![x](./in-fence.png)\n```\n`![y](./inline.png)`\n<!-- ![z](./comment.png) -->\n";
+    const md =
+      "```md\n![x](./in-fence.png)\n```\n`![y](./inline.png)`\n<!-- ![z](./comment.png) -->\n";
     expect(extractReferences(md).assets).toEqual([]);
   });
 });
@@ -60,7 +81,10 @@ describe("containsPresentations", () => {
 
 describe("collectPresentationDependencies", () => {
   it("is sorted, excludes the entry and other decks, includes referenced files", () => {
-    const entry = write("talk.md", "![l](./shared/logo.png)\n---\nsrc: ./pages/p.md\n---\n");
+    const entry = write(
+      "talk.md",
+      "![l](./shared/logo.png)\n---\nsrc: ./pages/p.md\n---\n",
+    );
     write("other.md");
     write("_category_.yml", "label: X");
     write("shared/logo.png");
@@ -68,7 +92,9 @@ describe("collectPresentationDependencies", () => {
     write("components/C.vue");
     write("sibling-cat/deck.md");
 
-    const deps = collectPresentationDependencies(entry, tmpDir).map((d) => path.relative(tmpDir, d).replace(/\\/g, "/"));
+    const deps = collectPresentationDependencies(entry, tmpDir).map((d) =>
+      path.relative(tmpDir, d).replace(/\\/g, "/"),
+    );
     expect(deps).toEqual(["components/C.vue", "pages/p.md", "shared/logo.png"]);
   });
 
@@ -78,7 +104,9 @@ describe("collectPresentationDependencies", () => {
     write("parts/b.md", "---\nsrc: ./a.md\n---\n![i](./img.png)\n");
     write("parts/img.png");
 
-    const deps = collectPresentationDependencies(entry, tmpDir).map((d) => path.relative(tmpDir, d).replace(/\\/g, "/"));
+    const deps = collectPresentationDependencies(entry, tmpDir).map((d) =>
+      path.relative(tmpDir, d).replace(/\\/g, "/"),
+    );
     expect(deps).toEqual(["parts/a.md", "parts/b.md", "parts/img.png"]);
   });
 

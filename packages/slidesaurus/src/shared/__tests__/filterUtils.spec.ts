@@ -67,9 +67,29 @@ describe("matchesSearch", () => {
 
 describe("applyFilters", () => {
   const presentations = [
-    makePresentation({ id: "a", title: "Alpha", level: "beginner", author: "Alice", tags: ["ts"], deprecated: false }),
-    makePresentation({ id: "b", title: "Beta", level: "intermediate", author: "Bob", tags: ["ts", "react"] }),
-    makePresentation({ id: "c", title: "Gamma", level: "advanced", author: "Alice", tags: ["docker"], deprecated: true }),
+    makePresentation({
+      id: "a",
+      title: "Alpha",
+      level: "beginner",
+      author: "Alice",
+      tags: ["ts"],
+      deprecated: false,
+    }),
+    makePresentation({
+      id: "b",
+      title: "Beta",
+      level: "intermediate",
+      author: "Bob",
+      tags: ["ts", "react"],
+    }),
+    makePresentation({
+      id: "c",
+      title: "Gamma",
+      level: "advanced",
+      author: "Alice",
+      tags: ["docker"],
+      deprecated: true,
+    }),
   ];
 
   it("returns all presentations when no filters active", () => {
@@ -78,32 +98,50 @@ describe("applyFilters", () => {
   });
 
   it("filters by search query", () => {
-    const result = applyFilters(presentations, { ...noopFilters, searchQuery: "alpha" });
+    const result = applyFilters(presentations, {
+      ...noopFilters,
+      searchQuery: "alpha",
+    });
     expect(result.map((p) => p.id)).toEqual(["a"]);
   });
 
   it("filters by level", () => {
-    const result = applyFilters(presentations, { ...noopFilters, selectedLevel: "beginner" });
+    const result = applyFilters(presentations, {
+      ...noopFilters,
+      selectedLevel: "beginner",
+    });
     expect(result.map((p) => p.id)).toEqual(["a"]);
   });
 
   it("filters by author", () => {
-    const result = applyFilters(presentations, { ...noopFilters, selectedAuthor: "Alice" });
+    const result = applyFilters(presentations, {
+      ...noopFilters,
+      selectedAuthor: "Alice",
+    });
     expect(result.map((p) => p.id)).toEqual(["a", "c"]);
   });
 
   it("filters by single tag", () => {
-    const result = applyFilters(presentations, { ...noopFilters, selectedTags: ["ts"] });
+    const result = applyFilters(presentations, {
+      ...noopFilters,
+      selectedTags: ["ts"],
+    });
     expect(result.map((p) => p.id)).toEqual(["a", "b"]);
   });
 
   it("requires all selected tags (AND logic)", () => {
-    const result = applyFilters(presentations, { ...noopFilters, selectedTags: ["ts", "react"] });
+    const result = applyFilters(presentations, {
+      ...noopFilters,
+      selectedTags: ["ts", "react"],
+    });
     expect(result.map((p) => p.id)).toEqual(["b"]);
   });
 
   it("hides deprecated when hideDeprecated is true", () => {
-    const result = applyFilters(presentations, { ...noopFilters, hideDeprecated: true });
+    const result = applyFilters(presentations, {
+      ...noopFilters,
+      hideDeprecated: true,
+    });
     expect(result.map((p) => p.id)).toEqual(["a", "b"]);
   });
 
@@ -117,18 +155,29 @@ describe("applyFilters", () => {
   });
 
   it("returns empty when no favorites and showFavoritesOnly is true", () => {
-    const result = applyFilters(presentations, { ...noopFilters, showFavoritesOnly: true });
+    const result = applyFilters(presentations, {
+      ...noopFilters,
+      showFavoritesOnly: true,
+    });
     expect(result).toHaveLength(0);
   });
 
   it("filters by playlist id", () => {
     const playlists = [{ id: "track-1", title: "Track 1", items: ["a", "c"] }];
-    const result = applyFilters(presentations, { ...noopFilters, selectedPlaylist: "track-1", playlists });
+    const result = applyFilters(presentations, {
+      ...noopFilters,
+      selectedPlaylist: "track-1",
+      playlists,
+    });
     expect(result.map((p) => p.id)).toEqual(["a", "c"]);
   });
 
   it("returns all presentations when selected playlist id is not found (graceful fallback)", () => {
-    const result = applyFilters(presentations, { ...noopFilters, selectedPlaylist: "unknown", playlists: [] });
+    const result = applyFilters(presentations, {
+      ...noopFilters,
+      selectedPlaylist: "unknown",
+      playlists: [],
+    });
     expect(result).toHaveLength(3);
   });
 
@@ -153,7 +202,11 @@ describe("applyFilters", () => {
 
   it("playlist filter shows all when unknown playlist id selected (graceful fallback)", () => {
     const playlists = [{ id: "track-x", title: "X", items: ["a"] }];
-    const result = applyFilters(presentations, { ...noopFilters, selectedPlaylist: "track-z", playlists });
+    const result = applyFilters(presentations, {
+      ...noopFilters,
+      selectedPlaylist: "track-z",
+      playlists,
+    });
     expect(result).toHaveLength(3);
   });
 });

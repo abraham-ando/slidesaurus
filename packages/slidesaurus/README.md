@@ -27,16 +27,16 @@ Drop un `.md` Slidev dans `./slidev/`. Lancez `docusaurus start`. **C'est en lig
 
 ## 🎯 Pour les développeurs
 
-| Avantage | Concrètement |
-|---|---|
-| 🔍 **Auto-discovery** | Drop un `.md`, il apparaît. Pas de config par présentation. |
-| ⚡ **Builds parallèles + cache** | Hash SHA-256 par fichier, seul le modifié se rebuild. |
-| 🔄 **Dev sans serveur Slidev** | `docusaurus start` construit les decks (cache incrémental) et les sert en statique — ni port, ni proxy, ni HMR Slidev. |
-| 🎨 **Composants embarquables** | `<SlidevLink>`, `<SlidevCard>` directement utilisables en MDX. |
-| 📦 **Auto-install (opt-in)** | `autoInstall: true` installe les thèmes/addons manquants (noms Slidev stricts, sans scripts). Désactivé par défaut. |
-| 🗂️ **Catégories** | Organisation par sous-dossiers + `_category_.yml`. |
-| 🔌 **Hooks** | `transformFrontmatter`, `onPresentationScanned`, `onBuildComplete`. |
-| 🧩 **Multi-instance** | Plusieurs collections (`talks/`, `trainings/`) via l'option `id`. |
+| Avantage                         | Concrètement                                                                                                           |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 🔍 **Auto-discovery**            | Drop un `.md`, il apparaît. Pas de config par présentation.                                                            |
+| ⚡ **Builds parallèles + cache** | Hash SHA-256 par fichier, seul le modifié se rebuild.                                                                  |
+| 🔄 **Dev sans serveur Slidev**   | `docusaurus start` construit les decks (cache incrémental) et les sert en statique — ni port, ni proxy, ni HMR Slidev. |
+| 🎨 **Composants embarquables**   | `<SlidevLink>`, `<SlidevCard>` directement utilisables en MDX.                                                         |
+| 📦 **Auto-install (opt-in)**     | `autoInstall: true` installe les thèmes/addons manquants (noms Slidev stricts, sans scripts). Désactivé par défaut.    |
+| 🗂️ **Catégories**                | Organisation par sous-dossiers + `_category_.yml`.                                                                     |
+| 🔌 **Hooks**                     | `transformFrontmatter`, `onPresentationScanned`, `onBuildComplete`.                                                    |
+| 🧩 **Multi-instance**            | Plusieurs collections (`talks/`, `trainings/`) via l'option `id`.                                                      |
 
 ---
 
@@ -145,7 +145,7 @@ npx docusaurus start
 ## 🎨 Composants à embarquer dans vos pages MDX
 
 ```mdx title="docs/chapter-1.mdx"
-import SlidevLink from '@theme/SlidevLink';
+import SlidevLink from "@theme/SlidevLink";
 
 # Chapitre 1
 
@@ -154,16 +154,17 @@ Pour aller plus loin, voici la présentation associée :
 <SlidevLink link="/presentations/intro" />
 ```
 
-| Composant | Usage |
-|---|---|
-| `SlidevOverview` | Page de listing |
-| `SlidevPresentation` | Iframe d'une présentation |
-| `SlidevCard` | Carte miniature cliquable (utilisée par l'overview) |
-| `SlidevCategoryCard` | Carte de catégorie |
-| `SlidevLink` | Preview inline MDX |
-| `SlidevListItem` | Item compact (vue liste) |
+| Composant            | Usage                                               |
+| -------------------- | --------------------------------------------------- |
+| `SlidevOverview`     | Page de listing                                     |
+| `SlidevPresentation` | Iframe d'une présentation                           |
+| `SlidevCard`         | Carte miniature cliquable (utilisée par l'overview) |
+| `SlidevCategoryCard` | Carte de catégorie                                  |
+| `SlidevLink`         | Preview inline MDX                                  |
+| `SlidevListItem`     | Item compact (vue liste)                            |
 
 **Swizzlables** (sauf `SlidevLink`) :
+
 ```bash
 npx docusaurus swizzle slidesaurus SlidevCard --wrap
 ```

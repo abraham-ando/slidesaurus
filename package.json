@@ -10,6 +10,7 @@
     "build:plugin": "turbo run build --filter=slidesaurus",
     "dev:sample": "turbo run dev --filter=@slidesaurus/sample",
     "dev:docs": "turbo run dev --filter=@slidesaurus/docs",
+    "watch:plugin": "pnpm --filter slidesaurus watch",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "lint": "eslint .",
@@ -18,7 +19,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@slidev/cli": "^52.0.0",
+    "@slidev/cli": "^52.20.1",
     "@slidev/theme-seriph": "*",
     "eslint": "^10.13.0",
     "eslint-config-prettier": "^10.1.8",
@@ -31,13 +32,16 @@
   },
   "pnpm": {
     "overrides": {
-      "webpack": "~5.104.1",
+      "webpack": "^5.112.0",
       "serialize-javascript": ">=7.0.5",
       "dompurify": ">=3.3.4",
       "webpack-dev-server": "^5.2.6",
       "uuid": ">=14.0.0",
       "js-yaml@3": "^3.15.2",
-      "js-yaml@4": "^4.3.2"
+      "js-yaml@4": "^4.3.2",
+      "markdown-it": "^14.3.3",
+      "image-size": ">=2.0.3",
+      "tinypool": ">=2.1.2"
     },
     "onlyBuiltDependencies": [
       "core-js",

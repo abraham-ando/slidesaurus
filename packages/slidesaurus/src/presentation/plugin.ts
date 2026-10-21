@@ -12,7 +12,11 @@
 import path from "node:path";
 import type { LoadContext, Plugin } from "@docusaurus/types";
 import * as utilsValidation from "@docusaurus/utils-validation";
-import type { PluginOptions, PluginContentData } from "../domain/types";
+import type {
+  PluginOptions,
+  PluginContentData,
+  PresentationMetadata,
+} from "../domain/types";
 import { PLUGIN_NAME } from "../domain/constants";
 import { scanPresentations } from "../application/scanner";
 import {
@@ -20,16 +24,29 @@ import {
   buildAllPresentations,
   checkSlidevInstalled,
   collectBuildFailures,
+  getBackgroundBuildQueue,
 } from "../application/builder";
 import { log } from "../shared/logger";
-import { cleanupSourceDirectory } from "../infrastructure/fs/fileSystem";
+import {
+  cleanupSourceDirectory,
+  getSlidevCacheDir,
+} from "../infrastructure/fs/fileSystem";
+import {
+  BuildStatusTracker,
+  getBuildStatusDir,
+  getBuildStatusUrl,
+} from "../infrastructure/fs/buildStatus";
 import {
   getSlidevBuildOutputDir,
   copyBuiltPresentationsToOutput,
   createPresenterFallbacks,
   writeSearchIndex,
 } from "../infrastructure/fs/outputManager";
-import { defaultMaxParallelBuilds, stripSlashes } from "../shared/utils";
+import {
+  buildRouteBase,
+  defaultMaxParallelBuilds,
+  stripSlashes,
+} from "../shared/utils";
 import { registerRoutes } from "./routeBuilder";
 import { registerCliCommands } from "./cliCommands";
 import { buildWebpackDevServerConfig } from "./webpackConfig";
@@ -122,6 +139,45 @@ export default function pluginSlidev(
         ? i18n.currentLocale
         : undefined,
   };
+  // Dev only: builds run in the background and publish their progress here.
+  const buildStatus = isDev
+    ? new BuildStatusTracker(
+        getBuildStatusDir(context.siteDir, options.id, buildContext.locale),
+      )
+    : undefined;
+  const buildStatusUrl = isDev
+    ? getBuildStatusUrl(buildRouteBase(context.baseUrl, options.routeBasePath))
+    : undefined;
+
+  /**
+   * `docusaurus start`: schedule the builds and return at once — the site
+   * opens while Slidev runs; `SlidevPresentation` follows the status file.
+   * Failures are logged (and published), never thrown.
+   */
+  const scheduleDevBuild = (presentations: PresentationMetadata[]): void => {
+    const queue = getBackgroundBuildQueue(
+      getSlidevCacheDir(context.siteDir, options.id, buildContext.locale),
+    );
+    queue.schedule(async () => {
+      buildStatus?.reset(presentations);
+      const results = await buildAllPresentations(
+        presentations,
+        options,
+        buildContext,
+        undefined,
+        undefined,
+        buildStatus,
+      );
+      for (const failure of collectBuildFailures(results)) {
+        log.error(
+          `Presentation "${failure.id}" failed to build: ${failure.error ?? "unknown error"}`,
+        );
+      }
+    });
+    log.info(
+      `Building ${presentations.length} presentation(s) in the background — the site is available meanwhile.`,
+    );
+  };
 
   return {
     name: PLUGIN_NAME,
@@ -161,31 +217,38 @@ export default function pluginSlidev(
             log.info(
               `Dry-run mode: skipping build for ${presentations.length} presentation(s).`,
             );
+            buildStatus?.reset(presentations, "Not built (dryRun)");
+          } else if (isDev) {
+            scheduleDevBuild(presentations);
           } else {
             const results = await buildAllPresentations(
               presentations,
               options,
               buildContext,
             );
-            if (isDev) {
-              for (const failure of collectBuildFailures(results)) {
-                log.error(
-                  `Presentation "${failure.id}" failed to build: ${failure.error ?? "unknown error"}`,
-                );
-              }
-            } else {
-              // A broken deck must fail `docusaurus build`, not ship a 404.
-              assertBuildSucceeded(results);
-            }
+            // A broken deck must fail `docusaurus build`, not ship a 404.
+            assertBuildSucceeded(results);
           }
         } else {
           log.warn(
             `Slidev CLI not installed. Presentations will not be ${isDev ? "available in dev mode" : "built"}. Install with: pnpm add @slidev/cli`,
           );
+          buildStatus?.reset(
+            presentations,
+            "Slidev CLI not installed (pnpm add -D @slidev/cli)",
+          );
         }
+      } else {
+        buildStatus?.reset([]);
       }
 
-      return { presentations, categories, playlists, config: options, isDev };
+      return {
+        presentations,
+        categories,
+        playlists,
+        config: options,
+        buildStatusUrl,
+      };
     },
 
     async contentLoaded({ content, actions }) {
@@ -216,7 +279,11 @@ export default function pluginSlidev(
 
     configureWebpack() {
       if (!isDev) return {};
-      return buildWebpackDevServerConfig(context.siteDir, options, buildContext);
+      return buildWebpackDevServerConfig(
+        context.siteDir,
+        options,
+        buildContext,
+      );
     },
   };
 }

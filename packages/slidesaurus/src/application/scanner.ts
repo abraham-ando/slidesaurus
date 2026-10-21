@@ -3,9 +3,6 @@ import path from "node:path";
 import yaml from "js-yaml";
 import type {
   PluginOptions,
-  ScanOptions,
-  BuildOptions,
-  UIOptions,
   PresentationMetadata,
   CategoryMetadata,
   PlaylistData,
@@ -19,10 +16,20 @@ import type {
  * not the full PluginOptions.  Callers passing the full `PluginOptions` object
  * continue to work because TypeScript checks structural compatibility.
  */
-export type ScannerOptions = ScanOptions
-  & Pick<UIOptions, "routeBasePath">
-  & Pick<BuildOptions, "download" | "exportFormats" | "maxParallelBuilds">
-  & Pick<PluginOptions, "onPresentationScanned" | "transformFrontmatter">;
+export type ScannerOptions = Pick<
+  PluginOptions,
+  "path" | "id" | "routeBasePath"
+> &
+  Partial<
+    Pick<
+      PluginOptions,
+      | "download"
+      | "exportFormats"
+      | "maxParallelBuilds"
+      | "onPresentationScanned"
+      | "transformFrontmatter"
+    >
+  >;
 import { log } from "../shared/logger";
 import { getSlidevBuildOutputDir } from "../infrastructure/fs/outputManager";
 import { buildRouteBase, encodeIdForUrl } from "../shared/utils";
@@ -30,12 +37,19 @@ import { FrontmatterValidator, parseFrontmatter } from "./frontmatterValidator";
 import { runConcurrently } from "../shared/concurrentRunner";
 
 function slugifyPlaylist(name: string): string {
-  return name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
 }
 
 // Use "en" locale explicitly — undefined uses the system locale, which differs
 // between developer machines and CI, causing non-deterministic sort order.
-const NATURAL_COLLATOR = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
+const NATURAL_COLLATOR = new Intl.Collator("en", {
+  numeric: true,
+  sensitivity: "base",
+});
 
 function buildPlaylists(presentations: PresentationMetadata[]): PlaylistData[] {
   const titles = new Map<string, string>();
@@ -56,7 +70,11 @@ function buildPlaylists(presentations: PresentationMetadata[]): PlaylistData[] {
       const posCmp = (a.position ?? Infinity) - (b.position ?? Infinity);
       return posCmp !== 0 ? posCmp : NATURAL_COLLATOR.compare(a.id, b.id);
     });
-    return { id: slug, title: titles.get(slug) ?? slug, items: group.map((p) => p.id) };
+    return {
+      id: slug,
+      title: titles.get(slug) ?? slug,
+      items: group.map((p) => p.id),
+    };
   });
 }
 
@@ -207,9 +225,18 @@ function extractMetadata(
     const { data } = parseFrontmatter(content);
     if (!transformFrontmatter) return data;
     // Pass relative path only — never expose absolute system paths to user hooks
-    const transformed: unknown = transformFrontmatter(data as SlidevFrontmatter, relativePath);
-    if (transformed === null || typeof transformed !== "object" || Array.isArray(transformed)) {
-      log.warn(`transformFrontmatter did not return an object for ${log.path(relativePath)} — ignoring its result`);
+    const transformed: unknown = transformFrontmatter(
+      data as SlidevFrontmatter,
+      relativePath,
+    );
+    if (
+      transformed === null ||
+      typeof transformed !== "object" ||
+      Array.isArray(transformed)
+    ) {
+      log.warn(
+        `transformFrontmatter did not return an object for ${log.path(relativePath)} — ignoring its result`,
+      );
       return data;
     }
     return transformed as Record<string, unknown>;
@@ -245,13 +272,21 @@ export class PresentationCollisionError extends Error {
  *     would be nested in — and wiped by every rebuild of — `foo`'s output.
  * Returns human-readable descriptions (empty when there is no collision).
  */
-export function detectPresentationCollisions(presentations: Pick<PresentationMetadata, "id" | "sourcePath">[]): string[] {
+export function detectPresentationCollisions(
+  presentations: Pick<PresentationMetadata, "id" | "sourcePath">[],
+): string[] {
   const collisions: string[] = [];
-  const byKey = new Map<string, Pick<PresentationMetadata, "id" | "sourcePath">>();
+  const byKey = new Map<
+    string,
+    Pick<PresentationMetadata, "id" | "sourcePath">
+  >();
   for (const p of presentations) {
     const key = p.id.toLowerCase();
     const other = byKey.get(key);
-    if (other) collisions.push(`"${other.sourcePath}" and "${p.sourcePath}" resolve to the same id "${p.id}"`);
+    if (other)
+      collisions.push(
+        `"${other.sourcePath}" and "${p.sourcePath}" resolve to the same id "${p.id}"`,
+      );
     else byKey.set(key, p);
   }
   const keys = [...byKey.keys()].sort();
@@ -282,7 +317,11 @@ export async function scanPresentations(
 ): Promise<ScanResult> {
   const sourceDir = path.resolve(context.siteDir, options.path);
   const routeBase = buildRouteBase(context.baseUrl, options.routeBasePath);
-  const outputRoot = getSlidevBuildOutputDir(context.siteDir, options.id, context.locale);
+  const outputRoot = getSlidevBuildOutputDir(
+    context.siteDir,
+    options.id,
+    context.locale,
+  );
 
   const categoriesMap = scanCategories(
     sourceDir,
@@ -328,14 +367,18 @@ export async function scanPresentations(
         normalizedRelativePath,
         options.transformFrontmatter,
       );
-      const enriched = new FrontmatterValidator(normalizedRelativePath).validate(fm);
-      const title = enriched.title ?? path.basename(normalizedRelativePath, ".md");
+      const enriched = new FrontmatterValidator(
+        normalizedRelativePath,
+      ).validate(fm);
+      const title =
+        enriched.title ?? path.basename(normalizedRelativePath, ".md");
       // Each segment is percent-encoded: ids may contain spaces, "#", "?"…
       const url = `${routeBase}/${encodeIdForUrl(id)}/`;
       const thumbnailUrl = `${url}thumbnail.png`;
-      const exportUrls = options.download && options.exportFormats?.length
-        ? options.exportFormats.map((fmt) => `${url}export.${fmt}`)
-        : undefined;
+      const exportUrls =
+        options.download && options.exportFormats?.length
+          ? options.exportFormats.map((fmt) => `${url}export.${fmt}`)
+          : undefined;
       const outputPath = path.join(outputRoot, id);
 
       return {

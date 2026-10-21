@@ -11,6 +11,10 @@ declare module "js-yaml" {
   export const DEFAULT_SCHEMA: Schema;
   export const FAILSAFE_SCHEMA: Schema;
   export function load(input: string, options?: LoadOptions): unknown;
-  export function loadAll(input: string, iterator: (doc: unknown) => void, options?: LoadOptions): void;
+  export function loadAll(
+    input: string,
+    iterator: (doc: unknown) => void,
+    options?: LoadOptions,
+  ): void;
   export function dump(obj: unknown, options?: object): string;
 }

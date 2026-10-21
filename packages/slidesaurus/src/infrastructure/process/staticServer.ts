@@ -51,16 +51,22 @@ function safeDecode(value: string): string | undefined {
  * the history router). Only used to screenshot the deck: GET/HEAD only, never
  * serves anything outside `rootDir`.
  */
-export function serveStatic(rootDir: string, basePath: string): Promise<StaticServer> {
+export function serveStatic(
+  rootDir: string,
+  basePath: string,
+): Promise<StaticServer> {
   const root = path.resolve(rootDir);
-  const base = safeDecode(basePath.endsWith("/") ? basePath : `${basePath}/`) ?? "/";
+  const base =
+    safeDecode(basePath.endsWith("/") ? basePath : `${basePath}/`) ?? "/";
 
   const server = http.createServer((req, res) => {
     if (req.method !== "GET" && req.method !== "HEAD") {
       res.writeHead(405).end();
       return;
     }
-    const pathname = safeDecode(new URL(req.url ?? "/", "http://localhost").pathname);
+    const pathname = safeDecode(
+      new URL(req.url ?? "/", "http://localhost").pathname,
+    );
     if (pathname === undefined || !`${pathname}/`.startsWith(base)) {
       res.writeHead(404).end();
       return;
@@ -79,12 +85,18 @@ export function serveStatic(rootDir: string, basePath: string): Promise<StaticSe
       }
       file = path.join(root, "index.html");
     }
-    res.writeHead(200, { "Content-Type": CONTENT_TYPES[path.extname(file).toLowerCase()] ?? "application/octet-stream" });
+    res.writeHead(200, {
+      "Content-Type":
+        CONTENT_TYPES[path.extname(file).toLowerCase()] ??
+        "application/octet-stream",
+    });
     if (req.method === "HEAD") {
       res.end();
       return;
     }
-    fs.createReadStream(file).on("error", () => res.destroy()).pipe(res);
+    fs.createReadStream(file)
+      .on("error", () => res.destroy())
+      .pipe(res);
   });
 
   return new Promise((resolve, reject) => {

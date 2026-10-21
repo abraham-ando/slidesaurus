@@ -6,11 +6,11 @@ sidebar_position: 13
 
 Slidesaurus offers three complementary customisation layers — from the simplest (a plugin option) to the most powerful (full component replacement).
 
-| Layer | Mechanism | Best for |
-|---|---|---|
-| 1 | `uiTheme` option | Switching between built-in layouts |
-| 2 | CSS custom properties | Restyling cards/components without touching code |
-| 3 | Component swizzling | Adding extra DOM elements or replacing layout entirely |
+| Layer | Mechanism             | Best for                                               |
+| ----- | --------------------- | ------------------------------------------------------ |
+| 1     | `uiTheme` option      | Switching between built-in layouts                     |
+| 2     | CSS custom properties | Restyling cards/components without touching code       |
+| 3     | Component swizzling   | Adding extra DOM elements or replacing layout entirely |
 
 ---
 
@@ -31,10 +31,10 @@ plugins: [
 
 ### Built-in variants
 
-| Value | Description |
-|---|---|
-| `"default"` | Full cards — 16:9 preview area, description, metadata, badges. |
-| `"compact"` | Narrower preview (80 px height), no description. Same DOM as `default`, pure CSS. |
+| Value       | Description                                                                                 |
+| ----------- | ------------------------------------------------------------------------------------------- |
+| `"default"` | Full cards — 16:9 preview area, description, metadata, badges.                              |
+| `"compact"` | Narrower preview (80 px height), no description. Same DOM as `default`, pure CSS.           |
 | `"minimal"` | Text-only rows, no thumbnails, no sidebar. Different DOM structure — grid view is disabled. |
 
 ### How it works under the hood
@@ -43,8 +43,12 @@ Every component root element receives the attribute `data-slidev-ui-theme="{valu
 
 ```css
 /* Inside SlidevCard/styles.module.css */
-.card[data-slidev-ui-theme="compact"] .preview { height: 80px; }
-.card[data-slidev-ui-theme="compact"] .description { display: none; }
+.card[data-slidev-ui-theme="compact"] .preview {
+  height: 80px;
+}
+.card[data-slidev-ui-theme="compact"] .description {
+  display: none;
+}
 ```
 
 This means **any string** you pass as `uiTheme` is set on the element — custom values are passed through as-is, giving you a CSS extension point without swizzling.
@@ -61,15 +65,15 @@ Override these CSS custom properties in your site's `src/css/custom.css` to rest
 
 ### Card tokens
 
-| Token | Default | Controls |
-|---|---|---|
-| `--slidev-card-bg` | `var(--ifm-card-background-color)` | Card background |
-| `--slidev-card-shadow` | Subtle 1 px border + drop shadow | Card shadow at rest |
-| `--slidev-card-radius` | `8px` | Card corner radius |
-| `--slidev-card-hover-transform` | `translateY(-3px)` | Card lift animation on hover |
-| `--slidev-card-hover-shadow` | Elevated shadow | Card shadow on hover |
-| `--slidev-card-preview-bg` | Gradient using primary colour | Preview area background |
-| `--slidev-card-title-color` | `var(--ifm-heading-color)` | Card title colour |
+| Token                           | Default                            | Controls                     |
+| ------------------------------- | ---------------------------------- | ---------------------------- |
+| `--slidev-card-bg`              | `var(--ifm-card-background-color)` | Card background              |
+| `--slidev-card-shadow`          | Subtle 1 px border + drop shadow   | Card shadow at rest          |
+| `--slidev-card-radius`          | `8px`                              | Card corner radius           |
+| `--slidev-card-hover-transform` | `translateY(-3px)`                 | Card lift animation on hover |
+| `--slidev-card-hover-shadow`    | Elevated shadow                    | Card shadow on hover         |
+| `--slidev-card-preview-bg`      | Gradient using primary colour      | Preview area background      |
+| `--slidev-card-title-color`     | `var(--ifm-heading-color)`         | Card title colour            |
 
 ### Example: brand colour override
 
@@ -106,36 +110,39 @@ plugins: [["slidesaurus", { uiTheme: "glass" }]],
    Use the attribute selector without a tag: card roots are <div> elements
    (SlidevCard, SlidevListItem), while category cards are <a> links. */
 [data-slidev-ui-theme="glass"] {
-  --slidev-card-bg:              rgba(255, 255, 255, 0.55);
-  --slidev-card-shadow:          0 4px 24px rgba(124, 58, 237, 0.08),
-                                 inset 0 0 0 1px rgba(255, 255, 255, 0.7);
-  --slidev-card-radius:          14px;
+  --slidev-card-bg: rgba(255, 255, 255, 0.55);
+  --slidev-card-shadow:
+    0 4px 24px rgba(124, 58, 237, 0.08),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+  --slidev-card-radius: 14px;
   --slidev-card-hover-transform: translateY(-4px) scale(1.01);
-  --slidev-card-hover-shadow:    0 12px 40px rgba(124, 58, 237, 0.22),
-                                 inset 0 0 0 1.5px rgba(124, 58, 237, 0.5);
-  --slidev-card-preview-bg:      linear-gradient(
-                                   135deg,
-                                   rgba(196, 181, 253, 0.4) 0%,
-                                   rgba(167, 139, 250, 0.5) 100%
-                                 );
-  --slidev-card-title-color:     #3b0764;
+  --slidev-card-hover-shadow:
+    0 12px 40px rgba(124, 58, 237, 0.22),
+    inset 0 0 0 1.5px rgba(124, 58, 237, 0.5);
+  --slidev-card-preview-bg: linear-gradient(
+    135deg,
+    rgba(196, 181, 253, 0.4) 0%,
+    rgba(167, 139, 250, 0.5) 100%
+  );
+  --slidev-card-title-color: #3b0764;
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }
 
 /* Dark mode overrides */
 [data-theme="dark"] [data-slidev-ui-theme="glass"] {
-  --slidev-card-bg:           rgba(15, 10, 40, 0.55);
-  --slidev-card-shadow:       0 4px 24px rgba(0, 0, 0, 0.4),
-                              inset 0 0 0 1px rgba(167, 139, 250, 0.15);
-  --slidev-card-hover-shadow: 0 12px 40px rgba(124, 58, 237, 0.4),
-                              inset 0 0 0 1.5px rgba(167, 139, 250, 0.6);
-  --slidev-card-preview-bg:   linear-gradient(
-                                135deg,
-                                rgba(76, 29, 149, 0.5) 0%,
-                                rgba(109, 40, 217, 0.5) 100%
-                              );
-  --slidev-card-title-color:  #e9d5ff;
+  --slidev-card-bg: rgba(15, 10, 40, 0.55);
+  --slidev-card-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(167, 139, 250, 0.15);
+  --slidev-card-hover-shadow:
+    0 12px 40px rgba(124, 58, 237, 0.4),
+    inset 0 0 0 1.5px rgba(167, 139, 250, 0.6);
+  --slidev-card-preview-bg: linear-gradient(
+    135deg,
+    rgba(76, 29, 149, 0.5) 0%,
+    rgba(109, 40, 217, 0.5) 100%
+  );
+  --slidev-card-title-color: #e9d5ff;
 }
 
 /* Gradient title on the overview banner */
@@ -189,10 +196,20 @@ export default function SlidevCard(props: Props) {
   return (
     <div style={{ position: "relative" }}>
       {isNew && (
-        <span style={{ position: "absolute", top: 10, right: 0, zIndex: 10,
-                       background: "var(--ifm-color-primary)", color: "#fff",
-                       padding: "2px 8px", borderRadius: "3px 0 0 3px",
-                       fontSize: "0.65rem", fontWeight: 700 }}>
+        <span
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 0,
+            zIndex: 10,
+            background: "var(--ifm-color-primary)",
+            color: "#fff",
+            padding: "2px 8px",
+            borderRadius: "3px 0 0 3px",
+            fontSize: "0.65rem",
+            fontWeight: 700,
+          }}
+        >
           ✨ New
         </span>
       )}
@@ -216,14 +233,16 @@ Ejected components are **not updated** when the plugin is upgraded. Prefer wrapp
 
 ### Available components
 
-| Component | Description |
-|---|---|
-| `SlidevOverview` | Full overview page — search bar, filters, grid/list, sidebar, cards |
-| `SlidevCard` | Single presentation card (grid view + horizontal list mode) |
-| `SlidevCategoryCard` | Single category card (grid view + horizontal list mode) |
-| `SlidevListItem` | Single row in list view (presentations and categories) |
-| `SlidevPresentation` | Individual presentation page — iframe, presenter link, resume bar, playlist bar |
-| `SlidevLink` | Embeddable inline preview component for MDX pages (importable via `@theme/SlidevLink`; not in the swizzle list) |
+| Component            | Description                                                                                                     |
+| -------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `SlidevOverview`     | Full overview page — search bar, filters, grid/list, sidebar, cards                                             |
+| `SlidevCard`         | Single presentation card (grid view + horizontal list mode)                                                     |
+| `SlidevCategoryCard` | Single category card (grid view + horizontal list mode)                                                         |
+| `SlidevListItem`     | Single row in list view (presentations and categories)                                                          |
+| `SlidevPresentation` | Individual presentation page — iframe, presenter link, resume bar, playlist bar                                 |
+| `SlidevLink`         | Embeddable inline preview component for MDX pages (importable via `@theme/SlidevLink`; not in the swizzle list) |
+
+`SlidevOverview` is composed of internal sub-components (filter bar, sidebar, grid, list) and hooks that live in its folder; they are an implementation detail and are not swizzlable separately. Wrapping `SlidevOverview` (or `SlidevCard`) keeps working unchanged, and the DOM structure and CSS class names described on this page are stable.
 
 All iframes go through the internal `SlidevIframe` component, which applies the single sandbox policy `SLIDEV_IFRAME_SANDBOX` (`allow-scripts allow-same-origin allow-popups allow-forms allow-presentation`). That combination is only safe for content you build and serve yourself; do not use it to embed third-party pages.
 
@@ -240,9 +259,17 @@ export default function SlidevOverview(props: Props) {
     // `children` are rendered inside the page layout, above the overview
     <OriginalSlidevOverview {...props}>
       {/* Custom banner injected above the original overview */}
-      <div style={{ background: "var(--ifm-color-primary-lightest)",
-                    borderRadius: 12, padding: "1rem 2rem", margin: "0 0 0.5rem",
-                    display: "flex", alignItems: "center", gap: "1rem" }}>
+      <div
+        style={{
+          background: "var(--ifm-color-primary-lightest)",
+          borderRadius: 12,
+          padding: "1rem 2rem",
+          margin: "0 0 0.5rem",
+          display: "flex",
+          alignItems: "center",
+          gap: "1rem",
+        }}
+      >
         <span style={{ fontSize: "2rem" }}>🦕</span>
         <div>
           <strong>Engineering Learning Hub</strong>
@@ -250,8 +277,10 @@ export default function SlidevOverview(props: Props) {
             Curated presentations from the team
           </p>
         </div>
-        <Link to="https://github.com/your-org/slidesaurus"
-              style={{ marginLeft: "auto" }}>
+        <Link
+          to="https://github.com/your-org/slidesaurus"
+          style={{ marginLeft: "auto" }}
+        >
           Contribute →
         </Link>
       </div>

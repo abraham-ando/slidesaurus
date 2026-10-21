@@ -1,10 +1,17 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import type { BuildContext, PluginOptions, PresentationMetadata } from "../domain/types";
+import type {
+  BuildContext,
+  PluginOptions,
+  PresentationMetadata,
+} from "../domain/types";
 import type { ICache } from "../domain/interfaces";
 import { computeFileHash } from "../infrastructure/fs/fileSystem";
-import { loadHashManifest, saveHashManifest } from "../infrastructure/fs/hashManifest";
+import {
+  loadHashManifest,
+  saveHashManifest,
+} from "../infrastructure/fs/hashManifest";
 import { hasCachedOutput } from "../infrastructure/fs/outputManager";
 import { collectPresentationDependencies } from "../infrastructure/fs/dependencies";
 import {
@@ -34,7 +41,10 @@ export class FileHashMemo {
     if (h === undefined) {
       try {
         const stat = fs.statSync(filePath);
-        h = stat.size > LARGE_FILE_BYTES ? `${stat.size}:${stat.mtimeMs}` : computeFileHash(filePath);
+        h =
+          stat.size > LARGE_FILE_BYTES
+            ? `${stat.size}:${stat.mtimeMs}`
+            : computeFileHash(filePath);
       } catch {
         h = "missing";
       }
@@ -80,18 +90,33 @@ export function computePresentationFingerprint(
   const { options, context, slidesRoot, optionsFingerprint } = inputs;
   const memo = inputs.memo ?? new FileHashMemo();
 
-  const deps = collectPresentationDependencies(presentation.sourceAbsolutePath, slidesRoot).map(
-    (abs) => `${path.relative(slidesRoot, abs).replace(/\\/g, "/")}=${memo.get(abs)}`,
+  const deps = collectPresentationDependencies(
+    presentation.sourceAbsolutePath,
+    slidesRoot,
+  ).map(
+    (abs) =>
+      `${path.relative(slidesRoot, abs).replace(/\\/g, "/")}=${memo.get(abs)}`,
   );
 
   const themeRaw = presentation.theme || options.theme;
-  const theme = themeRaw ? packageFingerprint(resolveThemePackageName(themeRaw, context.siteDir), context.siteDir) : null;
-  const addons = [...new Set([...(options.addons ?? []), ...(presentation.addons ?? [])])]
+  const theme = themeRaw
+    ? packageFingerprint(
+        resolveThemePackageName(themeRaw, context.siteDir),
+        context.siteDir,
+      )
+    : null;
+  const addons = [
+    ...new Set([...(options.addons ?? []), ...(presentation.addons ?? [])]),
+  ]
     .map((a) => packageFingerprint(resolveAddonPackageName(a), context.siteDir))
     .sort();
 
   // Absolute paths are machine-specific and must not influence the hash.
-  const { sourceAbsolutePath: _src, outputPath: _out, ...metadata } = presentation;
+  const {
+    sourceAbsolutePath: _src,
+    outputPath: _out,
+    ...metadata
+  } = presentation;
 
   return shortHash(
     stableStringify({
@@ -133,7 +158,15 @@ export class BuildCache implements ICache {
    * when the source file is unchanged.
    */
   static computeOptionsFingerprint(
-    options: Pick<PluginOptions, "theme" | "addons" | "download" | "exportFormats" | "exportWithClicks" | "withoutNotes">,
+    options: Pick<
+      PluginOptions,
+      | "theme"
+      | "addons"
+      | "download"
+      | "exportFormats"
+      | "exportWithClicks"
+      | "withoutNotes"
+    >,
     baseUrl: string,
   ): string {
     // Sort keys before serialising — JSON.stringify key order is insertion-order

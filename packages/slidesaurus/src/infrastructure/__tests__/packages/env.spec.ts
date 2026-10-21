@@ -4,7 +4,11 @@ import { filterEnvAllowlist } from "../../packages/env";
 
 describe("filterEnvAllowlist", () => {
   it("passes through allowed keys", () => {
-    const env = { PATH: "/usr/bin", HOME: "/home/user", SECRET_TOKEN: "abc123" };
+    const env = {
+      PATH: "/usr/bin",
+      HOME: "/home/user",
+      SECRET_TOKEN: "abc123",
+    };
     const result = filterEnvAllowlist(env as NodeJS.ProcessEnv);
     expect(result.PATH).toBe("/usr/bin");
     expect(result.HOME).toBe("/home/user");
@@ -19,7 +23,10 @@ describe("filterEnvAllowlist", () => {
   });
 
   it("skips undefined values", () => {
-    const env = { PATH: undefined, HOME: "/home" } as unknown as NodeJS.ProcessEnv;
+    const env = {
+      PATH: undefined,
+      HOME: "/home",
+    } as unknown as NodeJS.ProcessEnv;
     const result = filterEnvAllowlist(env);
     expect(result).not.toHaveProperty("PATH");
     expect(result.HOME).toBe("/home");
@@ -79,7 +86,10 @@ describe("filterEnvAllowlist — network / tooling variables", () => {
   });
 
   it("still blocks tokens", () => {
-    const result = filterEnvAllowlist({ NPM_TOKEN: "x", GITHUB_TOKEN: "y" } as NodeJS.ProcessEnv);
+    const result = filterEnvAllowlist({
+      NPM_TOKEN: "x",
+      GITHUB_TOKEN: "y",
+    } as NodeJS.ProcessEnv);
     expect(result).toEqual({});
   });
 });

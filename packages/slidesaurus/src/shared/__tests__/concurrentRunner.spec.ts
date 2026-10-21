@@ -32,12 +32,16 @@ describe("runConcurrently", () => {
     let maxActive = 0;
     const concurrency = 2;
 
-    const promise = runConcurrently([1, 2, 3, 4, 5, 6], concurrency, async () => {
-      active++;
-      maxActive = Math.max(maxActive, active);
-      await new Promise<void>((r) => setTimeout(r, 10));
-      active--;
-    });
+    const promise = runConcurrently(
+      [1, 2, 3, 4, 5, 6],
+      concurrency,
+      async () => {
+        active++;
+        maxActive = Math.max(maxActive, active);
+        await new Promise<void>((r) => setTimeout(r, 10));
+        active--;
+      },
+    );
     await vi.advanceTimersByTimeAsync(100);
     await promise;
 
@@ -59,7 +63,9 @@ describe("runConcurrently", () => {
       if (item === 2) throw new Error("task 2 failed");
     });
 
-    await expect(runConcurrently([1, 2, 3, 4, 5], 2, fn)).rejects.toThrow("task 2 failed");
+    await expect(runConcurrently([1, 2, 3, 4, 5], 2, fn)).rejects.toThrow(
+      "task 2 failed",
+    );
     // All items must have been attempted despite the failure
     expect(processed.sort()).toEqual([1, 2, 3, 4, 5]);
   });

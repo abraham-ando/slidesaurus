@@ -26,7 +26,9 @@ Given("default plugin options", function () {
 
 Given(
   "plugin options:",
-  function (dataTable: { hashes: () => Array<{ option: string; value: string }> }) {
+  function (dataTable: {
+    hashes: () => Array<{ option: string; value: string }>;
+  }) {
     for (const row of dataTable.hashes()) {
       const num = Number(row.value);
       world.options[row.option] = Number.isNaN(num) ? row.value : num;

@@ -4,10 +4,10 @@
 
 Security patches are provided for the 1.x line of `slidesaurus`.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.x     | ✅ Yes             |
-| < 1.0   | ❌ No              |
+| Version | Supported |
+| ------- | --------- |
+| 1.x     | ✅ Yes    |
+| < 1.0   | ❌ No     |
 
 ## Reporting a Vulnerability
 
@@ -40,12 +40,12 @@ Whichever channel you use, please include:
 
 ### Response Timeline
 
-| Step | Target |
-|------|--------|
-| Acknowledgement | Within 48 hours |
-| Status update | Within 7 days |
-| Patch for critical issues | Within 14 days |
-| Coordinated disclosure | After patch is released |
+| Step                      | Target                  |
+| ------------------------- | ----------------------- |
+| Acknowledgement           | Within 48 hours         |
+| Status update             | Within 7 days           |
+| Patch for critical issues | Within 14 days          |
+| Coordinated disclosure    | After patch is released |
 
 ## Scope
 
@@ -63,6 +63,12 @@ Whichever channel you use, please include:
 - Issues requiring physical access to the machine
 - Social engineering attacks
 - Vulnerabilities in user-authored Slidev presentation content
+
+## Security Hardening
+
+- **Plugin**: no shell for child processes, environment allowlist, `---js` frontmatter refused, opt-in `autoInstall` with `--ignore-scripts`, strict theme/addon name validation. See the [Security documentation page](apps/docs/docs/security.md), including recommended HTTP headers (`frame-ancestors` CSP, `X-Content-Type-Options`, `Referrer-Policy`) and the iframe sandbox policy.
+- **Repository**: CodeQL, OpenSSF Scorecard, `pnpm audit` in CI, pnpm `minimumReleaseAge` / `strictDepBuilds`, Actions pinned by SHA, Renovate updates.
+- **Releases**: published from GitHub Actions with npm provenance (trusted publishing) through a protected `npm` environment.
 
 ## Disclosure Policy
 

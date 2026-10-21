@@ -23,9 +23,16 @@ afterAll(async () => {
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 
-async function get(pathname: string, method = "GET"): Promise<{ status: number; type: string | null; body: string }> {
+async function get(
+  pathname: string,
+  method = "GET",
+): Promise<{ status: number; type: string | null; body: string }> {
   const res = await fetch(`${server.origin}${pathname}`, { method });
-  return { status: res.status, type: res.headers.get("content-type"), body: await res.text() };
+  return {
+    status: res.status,
+    type: res.headers.get("content-type"),
+    body: await res.text(),
+  };
 }
 
 describe("serveStatic", () => {
@@ -40,13 +47,17 @@ describe("serveStatic", () => {
   });
 
   it("falls back to index.html for client-side routes and the base itself", async () => {
-    expect((await get("/training/my%20deck/1?print=true")).body).toBe("<html>deck</html>");
+    expect((await get("/training/my%20deck/1?print=true")).body).toBe(
+      "<html>deck</html>",
+    );
     expect((await get("/training/my%20deck/")).body).toBe("<html>deck</html>");
     expect((await get("/training/my%20deck")).body).toBe("<html>deck</html>");
   });
 
   it("returns 404 for missing assets and paths outside the base", async () => {
-    expect((await get("/training/my%20deck/assets/missing.js")).status).toBe(404);
+    expect((await get("/training/my%20deck/assets/missing.js")).status).toBe(
+      404,
+    );
     expect((await get("/other/index.html")).status).toBe(404);
   });
 

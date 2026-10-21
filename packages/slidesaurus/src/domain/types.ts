@@ -70,7 +70,8 @@ export interface UIOptions {
 }
 
 /** Full plugin options — union of all segregated interfaces. */
-export interface PluginOptions extends ScanOptions, BuildOptions, UIOptions, DevServerOptions {
+export interface PluginOptions
+  extends ScanOptions, BuildOptions, UIOptions, DevServerOptions {
   /**
    * Called once per discovered presentation, before any build starts.
    * May return a Promise. Modifications to `presentation` are applied in-place.
@@ -78,7 +79,9 @@ export interface PluginOptions extends ScanOptions, BuildOptions, UIOptions, Dev
    * Invocations are parallelised (bounded by `maxParallelBuilds`).
    * Called after `transformFrontmatter`.
    */
-  onPresentationScanned?: (presentation: PresentationMetadata) => void | Promise<void>;
+  onPresentationScanned?: (
+    presentation: PresentationMetadata,
+  ) => void | Promise<void>;
   /**
    * Called once after all builds complete — both successful and failed ones.
    * Errors thrown here are logged but do NOT affect the overall build result
@@ -90,7 +93,10 @@ export interface PluginOptions extends ScanOptions, BuildOptions, UIOptions, Dev
    * Must return the (possibly modified) data object. Called before `onPresentationScanned`.
    * The `filePath` parameter receives a relative path only — absolute paths are never exposed.
    */
-  transformFrontmatter?: (data: SlidevFrontmatter, filePath: string) => SlidevFrontmatter;
+  transformFrontmatter?: (
+    data: SlidevFrontmatter,
+    filePath: string,
+  ) => SlidevFrontmatter;
 }
 
 export type PresentationLevel = "beginner" | "intermediate" | "advanced";
@@ -197,7 +203,11 @@ export interface PluginContentData {
   categories: CategoryMetadata[];
   playlists: PlaylistData[];
   config: PluginOptions;
-  isDev: boolean;
+  /**
+   * URL of the dev build status file (`docusaurus start` only — builds run in
+   * the background there). Undefined in `docusaurus build`.
+   */
+  buildStatusUrl?: string;
 }
 
 export interface BuildResult {
@@ -230,7 +240,10 @@ export interface BuildContext {
 // ============================================
 
 /** Presentation data exposed to theme components (subset of PresentationMetadata). */
-export type Presentation = Omit<PresentationMetadata, "sourceAbsolutePath" | "outputPath">;
+export type Presentation = Omit<
+  PresentationMetadata,
+  "sourceAbsolutePath" | "outputPath"
+>;
 
 /** Category data exposed to theme components (alias of CategoryMetadata). */
 export type Category = CategoryMetadata;
@@ -250,5 +263,57 @@ export interface PluginData {
   categories: Category[];
   playlists: PlaylistData[];
   config: PluginConfig;
-  isDev: boolean;
+  /**
+   * `docusaurus start` only: URL of the JSON build status file
+   * (`BuildStatusFile`) polled by `SlidevPresentation` while presentations are
+   * built in the background. Undefined in production, where every
+   * presentation is built before the site.
+   *
+   * Replaces the former `isDev` flag (removed): `Boolean(buildStatusUrl)` is
+   * the equivalent.
+   */
+  buildStatusUrl?: string;
+}
+
+// ============================================
+// Dev build status (`docusaurus start`)
+// ============================================
+
+/**
+ * Build state of one presentation in `docusaurus start`:
+ *  - `pending`  — queued, not built yet in this session;
+ *  - `building` — `slidev build` is running;
+ *  - `ready`    — the output is up to date;
+ *  - `failed`   — the last build failed (`error`), a previous output may still be served.
+ */
+export type PresentationBuildState =
+  "pending" | "building" | "ready" | "failed";
+
+export interface PresentationBuildStatus {
+  state: PresentationBuildState;
+  /** True when a complete output (`index.html`) can be served — possibly a previous build. */
+  hasOutput: boolean;
+  /** Modification time (ms) of the served `index.html` — changes on every rebuild. */
+  builtAt?: number;
+  /** First line of the build error (`failed` only). */
+  error?: string;
+}
+
+/** Content of the dev build status file (`PluginData.buildStatusUrl`). */
+export interface BuildStatusFile {
+  /** Keyed by presentation id. */
+  presentations: Record<string, PresentationBuildStatus>;
+}
+
+/**
+ * Progress callbacks of `buildAllPresentations` — used by the dev server to
+ * publish the build status. Every callback is optional and must not throw.
+ */
+export interface BuildProgressListener {
+  /** `slidev build` starts for this presentation. */
+  onBuildStart?(id: string): void;
+  /** The new output has replaced the previous one (before thumbnails / exports). */
+  onOutputReady?(id: string): void;
+  /** Final result of a presentation (cache hits included). */
+  onResult?(result: BuildResult): void;
 }

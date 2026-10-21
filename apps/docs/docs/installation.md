@@ -43,9 +43,11 @@ yarn add slidesaurus
 
 :::info Monorepo?
 If the plugin lives in the same monorepo, use a workspace reference instead:
+
 ```json
 "slidesaurus": "workspace:*"
 ```
+
 :::
 
 ## 2. Add to Docusaurus Config

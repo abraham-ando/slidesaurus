@@ -28,10 +28,7 @@ declare module "@docusaurus/Link" {
 }
 
 declare module "@docusaurus/useGlobalData" {
-  export function usePluginData(
-    pluginName: string,
-    pluginId?: string,
-  ): unknown;
+  export function usePluginData(pluginName: string, pluginId?: string): unknown;
 }
 
 declare module "@docusaurus/router" {
@@ -53,12 +50,20 @@ declare module "@docusaurus/useBaseUrl" {
     forcePrependBaseUrl?: boolean;
     absolute?: boolean;
   }
-  export default function useBaseUrl(url: string, options?: BaseUrlOptions): string;
+  export default function useBaseUrl(
+    url: string,
+    options?: BaseUrlOptions,
+  ): string;
 }
 
 declare module "@docusaurus/useDocusaurusContext" {
   interface DocusaurusContext {
-    siteConfig: { url: string; baseUrl: string; title: string; [key: string]: unknown };
+    siteConfig: {
+      url: string;
+      baseUrl: string;
+      title: string;
+      [key: string]: unknown;
+    };
     [key: string]: unknown;
   }
   export default function useDocusaurusContext(): DocusaurusContext;

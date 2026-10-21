@@ -10,15 +10,24 @@ interface Props {
   readonly uiTheme?: UITheme;
 }
 
-export default function SlidevCategoryCard({ category, uiTheme = "default" }: Props) {
+export default function SlidevCategoryCard({
+  category,
+  uiTheme = "default",
+}: Props) {
   // Minimal variant — simple text row
   if (uiTheme === "minimal") {
     return (
-      <Link to={category.url} className={styles.cardMinimal} data-slidev-ui-theme={uiTheme}>
+      <Link
+        to={category.url}
+        className={styles.cardMinimal}
+        data-slidev-ui-theme={uiTheme}
+      >
         <FolderIcon className={styles.minimalIcon} width={16} height={16} />
         <span className={styles.minimalTitle}>{category.label}</span>
         <span className={styles.badge}>
-          {category.count === 1 ? "1 presentation" : `${category.count} presentations`}
+          {category.count === 1
+            ? "1 presentation"
+            : `${category.count} presentations`}
         </span>
       </Link>
     );
@@ -26,7 +35,11 @@ export default function SlidevCategoryCard({ category, uiTheme = "default" }: Pr
 
   return (
     // data-slidev-ui-theme is the CSS API for custom variants
-    <Link to={category.url} className={styles.card} data-slidev-ui-theme={uiTheme}>
+    <Link
+      to={category.url}
+      className={styles.card}
+      data-slidev-ui-theme={uiTheme}
+    >
       <div className={styles.folderPreview}>
         <FolderIcon className={styles.folderIcon} />
       </div>
@@ -39,7 +52,9 @@ export default function SlidevCategoryCard({ category, uiTheme = "default" }: Pr
         )}
         <div className={styles.metadata}>
           <span className={styles.badge}>
-            {category.count === 1 ? "1 presentation" : `${category.count} presentations`}
+            {category.count === 1
+              ? "1 presentation"
+              : `${category.count} presentations`}
           </span>
         </div>
       </div>

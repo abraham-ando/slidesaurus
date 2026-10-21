@@ -13,11 +13,11 @@ slidesaurus <command> [options]
 
 ## Global Options
 
-| Option | Description | Default |
-|--------|-------------|---------|
+| Option            | Description                                 | Default     |
+| ----------------- | ------------------------------------------- | ----------- |
 | `--id <pluginId>` | Plugin instance ID (multi-instance support) | `"default"` |
-| `-v, --version` | Print the installed version | |
-| `-h, --help` | Show help for a command | |
+| `-v, --version`   | Print the installed version                 |             |
+| `-h, --help`      | Show help for a command                     |             |
 
 ---
 
@@ -34,28 +34,28 @@ If `name` is omitted, the CLI prompts for it. The template and theme are also as
 
 ### Arguments
 
-| Argument | Description |
-|----------|-------------|
-| `name` | Presentation name, optionally prefixed with `category/` (e.g. `intro/overview`) |
+| Argument | Description                                                                     |
+| -------- | ------------------------------------------------------------------------------- |
+| `name`   | Presentation name, optionally prefixed with `category/` (e.g. `intro/overview`) |
 
 ### Options
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `-c, --category <category>` | Category sub-folder | |
-| `-t, --theme <theme>` | Slidev theme | Asked interactively (default: the plugin `theme`, else `seriph`) |
-| `--template <template>` | Template: `basic`, `tutorial`, or `talk` | Asked interactively (default `basic`) |
-| `--force` | Overwrite if the file already exists | |
+| Option                      | Description                              | Default                                                          |
+| --------------------------- | ---------------------------------------- | ---------------------------------------------------------------- |
+| `-c, --category <category>` | Category sub-folder                      |                                                                  |
+| `-t, --theme <theme>`       | Slidev theme                             | Asked interactively (default: the plugin `theme`, else `seriph`) |
+| `--template <template>`     | Template: `basic`, `tutorial`, or `talk` | Asked interactively (default `basic`)                            |
+| `--force`                   | Overwrite if the file already exists     |                                                                  |
 
 Names are slugified (`My Talk` → `my-talk`) and a trailing `.md` is ignored. A name or category that reduces to nothing, an unknown template or an invalid theme package name is rejected with a clear error. Values written to the frontmatter (title, theme) are YAML-escaped.
 
 ### Templates
 
-| Template | Use case | Extra frontmatter |
-|----------|----------|-------------------|
-| `basic` | General-purpose slide deck | — |
-| `tutorial` | Step-by-step guide | `level: beginner`, `duration: 30` |
-| `talk` | Conference talk | `level: intermediate`, `duration: 45` |
+| Template   | Use case                   | Extra frontmatter                     |
+| ---------- | -------------------------- | ------------------------------------- |
+| `basic`    | General-purpose slide deck | —                                     |
+| `tutorial` | Step-by-step guide         | `level: beginner`, `duration: 30`     |
+| `talk`     | Conference talk            | `level: intermediate`, `duration: 45` |
 
 ### Example output
 
@@ -79,8 +79,8 @@ slidesaurus list --json
 
 ### Options
 
-| Option | Description |
-|--------|-------------|
+| Option   | Description                                                |
+| -------- | ---------------------------------------------------------- |
 | `--json` | Output as JSON (machine-readable, suitable for CI scripts) |
 
 ### Example output (default)
@@ -111,16 +111,16 @@ slidesaurus doctor --id secondary   # for a secondary plugin instance
 
 ### Checks performed
 
-| # | Check | Pass condition |
-|---|-------|----------------|
-| 1 | **Config file found** | `docusaurus.config.ts`, `.js` or `.mjs` exists in cwd |
-| 2 | **Plugin registered** | `slidesaurus` plugin found with the correct `id` |
-| 3 | **Slidev directory exists** | The configured `path` directory exists |
-| 4 | **`@slidev/cli` installed** | Slidev CLI available in `node_modules` (searched up the monorepo tree) |
-| 5 | **Themes & addons installed** | Global `theme`, per-slide themes and all addons are resolvable (same resolution as the build) |
-| 6 | **Cache coherent** | Hash manifest entries have matching output directories (only checked if a cache exists) |
-| 7 | **Node.js version** | Node.js ≥ 22.12 |
-| 8 | **Playwright** | Informational only, never a failure — `playwright-chromium` (the package `slidev export` loads) is optional and only needed for thumbnails and PDF/PPTX exports |
+| #   | Check                         | Pass condition                                                                                                                                                  |
+| --- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Config file found**         | `docusaurus.config.ts`, `.js` or `.mjs` exists in cwd                                                                                                           |
+| 2   | **Plugin registered**         | `slidesaurus` plugin found with the correct `id`                                                                                                                |
+| 3   | **Slidev directory exists**   | The configured `path` directory exists                                                                                                                          |
+| 4   | **`@slidev/cli` installed**   | Slidev CLI available in `node_modules` (searched up the monorepo tree)                                                                                          |
+| 5   | **Themes & addons installed** | Global `theme`, per-slide themes and all addons are resolvable (same resolution as the build)                                                                   |
+| 6   | **Cache coherent**            | Hash manifest entries have matching output directories (only checked if a cache exists)                                                                         |
+| 7   | **Node.js version**           | Node.js ≥ 22.12                                                                                                                                                 |
+| 8   | **Playwright**                | Informational only, never a failure — `playwright-chromium` (the package `slidev export` loads) is optional and only needed for thumbnails and PDF/PPTX exports |
 
 ### Example output
 
@@ -168,10 +168,10 @@ slidesaurus cache clear --presentation intro/getting-started   # single presenta
 
 ### Options
 
-| Option | Description |
-|--------|-------------|
+| Option                    | Description                                                                                            |
+| ------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `-p, --presentation <id>` | Clear cache for a specific presentation only (`--id` is the plugin instance and stays a global option) |
-| `-y, --yes` | Skip the confirmation prompt |
+| `-y, --yes`               | Skip the confirmation prompt                                                                           |
 
 The target must name a presentation inside the cache: an empty value, `.`, `..` or an absolute path is rejected, so a typo can never wipe the whole cache. Cancelling a confirmation prompt (Ctrl+C) exits with code `130`.
 

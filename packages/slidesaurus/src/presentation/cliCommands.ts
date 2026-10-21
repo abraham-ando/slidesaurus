@@ -10,6 +10,17 @@ import type { PluginOptions, BuildContext } from "../domain/types";
 import type { ICliCommand } from "../domain/interfaces";
 import { scanPresentations } from "../application/scanner";
 
+/** A command being declared on the CLI (the subset of commander's `Command` we use). */
+export interface DocusaurusCliCommand {
+  description(text: string): DocusaurusCliCommand;
+  action(handler: () => unknown): DocusaurusCliCommand;
+}
+
+/** The commander instance Docusaurus passes to `extendCli` (subset we use). */
+export interface DocusaurusCli {
+  command(nameAndArgs: string): DocusaurusCliCommand;
+}
+
 /** Lazy-evaluated scan result — shared across all commands in one CLI invocation. */
 export type ScanGetter = () => ReturnType<typeof scanPresentations>;
 
@@ -145,8 +156,7 @@ export const BUILTIN_COMMANDS: ICliCommand[] = [
  * slidev:stats` invocations only scan the file system once.
  */
 export function registerCliCommands(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  cli: any,
+  cli: DocusaurusCli,
   options: PluginOptions,
   context: BuildContext,
   extraCommands: ICliCommand[] = [],

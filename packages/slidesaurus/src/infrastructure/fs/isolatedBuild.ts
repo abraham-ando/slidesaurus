@@ -55,7 +55,9 @@ export function createIsolatedBuild(
   const buildsRoot = path.resolve(cacheDir, "builds");
   const isolatedDir = path.resolve(buildsRoot, safeId);
   if (!isInside(buildsRoot, isolatedDir) || isolatedDir === buildsRoot) {
-    throw new Error(`[Security] Path traversal detected in presentationId: "${presentationId}"`);
+    throw new Error(
+      `[Security] Path traversal detected in presentationId: "${presentationId}"`,
+    );
   }
   // Start from a clean directory — leftovers of a crashed run must not leak in.
   fs.rmSync(isolatedDir, { recursive: true, force: true });
@@ -63,8 +65,12 @@ export function createIsolatedBuild(
 
   const entry = path.resolve(sourceAbsolutePath);
   const sourceDir = path.dirname(entry);
-  const root = slidesRoot && isInside(path.resolve(slidesRoot), entry) ? path.resolve(slidesRoot) : sourceDir;
-  const mirror = (abs: string): string => path.join(isolatedDir, path.relative(root, abs));
+  const root =
+    slidesRoot && isInside(path.resolve(slidesRoot), entry)
+      ? path.resolve(slidesRoot)
+      : sourceDir;
+  const mirror = (abs: string): string =>
+    path.join(isolatedDir, path.relative(root, abs));
 
   const isolatedEntryDir = mirror(sourceDir);
   fs.mkdirSync(isolatedEntryDir, { recursive: true });
@@ -97,14 +103,21 @@ export function createIsolatedBuildDir(
   cacheDir: string,
   slidesRoot?: string,
 ): string {
-  return createIsolatedBuild(sourceAbsolutePath, presentationId, cacheDir, slidesRoot).isolatedSourcePath;
+  return createIsolatedBuild(
+    sourceAbsolutePath,
+    presentationId,
+    cacheDir,
+    slidesRoot,
+  ).isolatedSourcePath;
 }
 
 /**
  * Remove an isolated build directory entirely (sources, copied assets and
  * Slidev artifacts). Safe to call on a non-existent directory.
  */
-export function cleanupIsolatedBuildDir(isolatedDir: string): string | undefined {
+export function cleanupIsolatedBuildDir(
+  isolatedDir: string,
+): string | undefined {
   // Best effort: a leftover dir is purged by the next run (purgeIsolatedBuilds),
   // whereas throwing here would fail an otherwise successful build.
   return removeBestEffort(isolatedDir);

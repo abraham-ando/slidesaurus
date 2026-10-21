@@ -8,28 +8,28 @@ Every Slidev Markdown file can include a YAML frontmatter block at the top. The 
 
 ## Fields
 
-| Field | Type | Required | Default | Description |
-| --- | --- | --- | --- | --- |
-| `title` | `string` | No | File name | Display title of the presentation. Falls back to the file name (without `.md`) when missing or invalid. |
-| `description` | `string` | No | — | Short description shown on the overview card. |
-| `theme` | `string` | No | Plugin `theme` option | Slidev theme for this presentation (non-empty string). Overrides the global `theme` option. If neither is set, Slidev's default theme is used. |
-| `colorSchema` | `"dark" \| "light" \| "auto"` | No | — | Color scheme passed to Slidev during build. Exposed to theme components for iframe styling. |
-| `withoutNotes` | `boolean` | No | Plugin default | When `true`, excludes presenter notes from the build for this presentation only. Overrides the global `withoutNotes` option. |
-| `addons` | `string[]` | No | Plugin `addons` option | Slidev addons for this presentation (non-empty strings, deduplicated). Merged with global `addons`. |
-| `author` | `string` | No | — | Author name displayed on the card. |
-| `tags` | `string[]` | No | `[]` | Tags for categorization and filtering. Values are trimmed, lowercased, and deduplicated automatically. |
-| `date` | `string` | No | — | Publication or last-updated date in `YYYY-MM-DD` format. |
-| `position` | `number` | No | — | Sort order. Must be a non-negative number; lower values appear first, and presentations without a `position` come after those that have one. Ties are broken by source path, then by `title`. |
-| `owner` | `string` | No | — | Team or person responsible for the presentation. Shown in search and filter interfaces. |
-| `level` | `string` | No | — | Difficulty level of the presentation. Must be one of `beginner`, `intermediate`, or `advanced`. Renders a color-coded badge on cards. Invalid values are ignored with a warning. |
-| `duration` | `number` | No | — | Estimated duration in minutes. Must be greater than `0`. Invalid values are ignored. |
-| `lastReviewed` | `string` | No | — | ISO date (`YYYY-MM-DD`) of the last content review. |
-| `deprecated` | `boolean` | No | `false` | Marks the presentation as deprecated. Shows a red "Deprecated" badge. Deprecated presentations can be hidden via the overview filter. |
-| `playlist` | `string \| string[]` | No | — | One or more playlist names this presentation belongs to. Used for sequential navigation between presentations in the same playlist. |
+| Field          | Type                          | Required | Default                | Description                                                                                                                                                                                   |
+| -------------- | ----------------------------- | -------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`        | `string`                      | No       | File name              | Display title of the presentation. Falls back to the file name (without `.md`) when missing or invalid.                                                                                       |
+| `description`  | `string`                      | No       | —                      | Short description shown on the overview card.                                                                                                                                                 |
+| `theme`        | `string`                      | No       | Plugin `theme` option  | Slidev theme for this presentation (non-empty string). Overrides the global `theme` option. If neither is set, Slidev's default theme is used.                                                |
+| `colorSchema`  | `"dark" \| "light" \| "auto"` | No       | —                      | Color scheme passed to Slidev during build. Exposed to theme components for iframe styling.                                                                                                   |
+| `withoutNotes` | `boolean`                     | No       | Plugin default         | When `true`, excludes presenter notes from the build for this presentation only. Overrides the global `withoutNotes` option.                                                                  |
+| `addons`       | `string[]`                    | No       | Plugin `addons` option | Slidev addons for this presentation (non-empty strings, deduplicated). Merged with global `addons`.                                                                                           |
+| `author`       | `string`                      | No       | —                      | Author name displayed on the card.                                                                                                                                                            |
+| `tags`         | `string[]`                    | No       | `[]`                   | Tags for categorization and filtering. Values are trimmed, lowercased, and deduplicated automatically.                                                                                        |
+| `date`         | `string`                      | No       | —                      | Publication or last-updated date in `YYYY-MM-DD` format.                                                                                                                                      |
+| `position`     | `number`                      | No       | —                      | Sort order. Must be a non-negative number; lower values appear first, and presentations without a `position` come after those that have one. Ties are broken by source path, then by `title`. |
+| `owner`        | `string`                      | No       | —                      | Team or person responsible for the presentation. Shown in search and filter interfaces.                                                                                                       |
+| `level`        | `string`                      | No       | —                      | Difficulty level of the presentation. Must be one of `beginner`, `intermediate`, or `advanced`. Renders a color-coded badge on cards. Invalid values are ignored with a warning.              |
+| `duration`     | `number`                      | No       | —                      | Estimated duration in minutes. Must be greater than `0`. Invalid values are ignored.                                                                                                          |
+| `lastReviewed` | `string`                      | No       | —                      | ISO date (`YYYY-MM-DD`) of the last content review.                                                                                                                                           |
+| `deprecated`   | `boolean`                     | No       | `false`                | Marks the presentation as deprecated. Shows a red "Deprecated" badge. Deprecated presentations can be hidden via the overview filter.                                                         |
+| `playlist`     | `string \| string[]`          | No       | —                      | One or more playlist names this presentation belongs to. Used for sequential navigation between presentations in the same playlist.                                                           |
 
 ## Complete Example
 
-```md title="slidev/my-presentation.md"
+````md title="slidev/my-presentation.md"
 ---
 title: Advanced TypeScript Patterns
 description: Deep dive into conditional types, template literals, and mapped types
@@ -58,6 +58,7 @@ Welcome!
 ```ts
 type IsString<T> = T extends string ? true : false;
 ```
+````
 
 ---
 
@@ -66,6 +67,7 @@ type IsString<T> = T extends string ? true : false;
 ```ts
 type EventName = `on${Capitalize<string>}`;
 ```
+
 ```
 
 ## Validation
@@ -99,3 +101,4 @@ The plugin validates certain frontmatter fields and normalizes others at scan ti
 | Timeout | Global build timeout | Not configurable per-presentation |
 | Download | Global download button toggle | Not configurable per-presentation |
 | Dry Run | Global toggle for CI validation mode | Not configurable per-presentation |
+```

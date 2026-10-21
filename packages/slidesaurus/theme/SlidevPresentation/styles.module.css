@@ -177,7 +177,10 @@
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 4px;
   margin-right: 0.5rem;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s;
 }
 
 .downloadLink:hover {
@@ -194,7 +197,10 @@
   padding: 0.2rem 0.5rem;
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 4px;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s;
 }
 
 .presenterLink:hover {
@@ -250,7 +256,9 @@
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
 }
 
 .resumeBtnSecondary:hover {
@@ -310,7 +318,10 @@
   padding: 0.15rem 0.5rem;
   border: 1px solid rgba(255, 255, 255, 0.25);
   border-radius: 4px;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s;
   white-space: nowrap;
   max-width: 160px;
   overflow: hidden;
@@ -330,10 +341,11 @@
   white-space: nowrap;
 }
 
-/* ── Dev mode launcher (lazy start + new tab) ──────────────────────────────── */
+/* ── Dev build state (`docusaurus start`: first build queued / failed) ─────── */
 
 .devLauncherContainer {
-  min-height: calc(100vh - var(--ifm-navbar-height));
+  flex: 1;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -405,7 +417,9 @@
 
 /* Spinner */
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .devSpinner {

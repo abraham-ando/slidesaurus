@@ -37,7 +37,9 @@ export function loadHashManifest(cacheDir: string): Record<string, string> {
       raw === null ||
       (raw as Record<string, unknown>).version !== CACHE_MANIFEST_VERSION
     ) {
-      log.info("Cache manifest version mismatch — rebuilding all presentations");
+      log.info(
+        "Cache manifest version mismatch — rebuilding all presentations",
+      );
       return {};
     }
     return (raw as HashManifest).hashes ?? {};
@@ -50,9 +52,15 @@ export function loadHashManifest(cacheDir: string): Record<string, string> {
 /**
  * Save the hash manifest to the cache directory, creating it if absent.
  */
-export function saveHashManifest(cacheDir: string, manifest: Record<string, string>): void {
+export function saveHashManifest(
+  cacheDir: string,
+  manifest: Record<string, string>,
+): void {
   fs.mkdirSync(cacheDir, { recursive: true });
-  const data: HashManifest = { version: CACHE_MANIFEST_VERSION, hashes: manifest };
+  const data: HashManifest = {
+    version: CACHE_MANIFEST_VERSION,
+    hashes: manifest,
+  };
   fs.writeFileSync(
     path.join(cacheDir, HASH_MANIFEST),
     JSON.stringify(data, null, 2),

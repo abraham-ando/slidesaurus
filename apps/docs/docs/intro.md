@@ -15,16 +15,16 @@ Instead of maintaining a separate repository or deployment for your slide decks,
 
 ## Key Features
 
-| Feature | Description |
-|---|---|
-| **Auto-Discovery** | Drop `.md` files into a `slidev/` directory and they are picked up automatically — no per-file registration required. |
-| **Parallel Builds** | Presentations are compiled concurrently during `docusaurus build`, with a configurable concurrency limit and a SHA-256 incremental cache. See [Parallel Builds](./parallel-builds.md). |
-| **[Theme & Addon Support](./themes-addons.md)** | Set a default Slidev theme globally or override it per-presentation via frontmatter. |
-| **Zero-Config Start** | A single plugin entry in your Docusaurus config is all you need to get started. |
-| **[Embeddable Previews](./slidev-link.md)** | Use `<SlidevLink>` to embed a scaled-down preview of any presentation inside any MDX page. |
-| **[Categories](./categories.md)** | Organize presentations into groups using subdirectories and `_category_.yml` files. |
-| **[Playlists](./playlists.md)** | Define ordered sequences of presentations for sequential navigation. |
-| **[UI Themes](./custom-styling.md)** | Switch between `default`, `compact`, and `minimal` layouts — or write a fully custom CSS theme — via the `uiTheme` option. |
+| Feature                                         | Description                                                                                                                                                                            |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Auto-Discovery**                              | Drop `.md` files into a `slidev/` directory and they are picked up automatically — no per-file registration required.                                                                  |
+| **Parallel Builds**                             | Presentations are compiled concurrently during `docusaurus build`, with a configurable concurrency limit and a SHA-256 incremental cache. See [Parallel Builds](./parallel-builds.md). |
+| **[Theme & Addon Support](./themes-addons.md)** | Set a default Slidev theme globally or override it per-presentation via frontmatter.                                                                                                   |
+| **Zero-Config Start**                           | A single plugin entry in your Docusaurus config is all you need to get started.                                                                                                        |
+| **[Embeddable Previews](./slidev-link.md)**     | Use `<SlidevLink>` to embed a scaled-down preview of any presentation inside any MDX page.                                                                                             |
+| **[Categories](./categories.md)**               | Organize presentations into groups using subdirectories and `_category_.yml` files.                                                                                                    |
+| **[Playlists](./playlists.md)**                 | Define ordered sequences of presentations for sequential navigation.                                                                                                                   |
+| **[UI Themes](./custom-styling.md)**            | Switch between `default`, `compact`, and `minimal` layouts — or write a fully custom CSS theme — via the `uiTheme` option.                                                             |
 
 ## Architecture
 
@@ -46,14 +46,14 @@ graph TD
 
 ## Glossary
 
-| Term | Meaning |
-|---|---|
-| **Presentation** | A Slidev Markdown file (`*.md`) that defines a sequence of slides. |
-| **Slide** | A single page within a presentation, separated from adjacent slides by a `---` line. |
-| **Overview page** | The auto-generated browsable index of all presentations, served at `routeBasePath`. |
-| **Category** | A logical group of presentations defined by a subdirectory + `_category_.yml` file. |
-| **Playlist** | An ordered sequence of presentations navigable in sequence, defined via frontmatter. |
-| **uiTheme** | The visual layout variant of the plugin's UI components (`default`, `compact`, `minimal`, or a custom string). |
+| Term              | Meaning                                                                                                        |
+| ----------------- | -------------------------------------------------------------------------------------------------------------- |
+| **Presentation**  | A Slidev Markdown file (`*.md`) that defines a sequence of slides.                                             |
+| **Slide**         | A single page within a presentation, separated from adjacent slides by a `---` line.                           |
+| **Overview page** | The auto-generated browsable index of all presentations, served at `routeBasePath`.                            |
+| **Category**      | A logical group of presentations defined by a subdirectory + `_category_.yml` file.                            |
+| **Playlist**      | An ordered sequence of presentations navigable in sequence, defined via frontmatter.                           |
+| **uiTheme**       | The visual layout variant of the plugin's UI components (`default`, `compact`, `minimal`, or a custom string). |
 
 ---
 

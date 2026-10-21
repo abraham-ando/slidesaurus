@@ -18,7 +18,11 @@ import { PLUGIN_NAME } from "../../domain/constants";
 export const SLIDEV_CACHE_DIR = PLUGIN_NAME;
 
 /** Artifacts Slidev generates in source/build directories. */
-export const SLIDEV_BUILD_ARTIFACTS = ["index.html", ".slidev", "dist"] as const;
+export const SLIDEV_BUILD_ARTIFACTS = [
+  "index.html",
+  ".slidev",
+  "dist",
+] as const;
 
 /** Allowed characters for plugin ids and locale names used as path segments. */
 const SAFE_SEGMENT = /^[a-zA-Z0-9_-]+$/;
@@ -46,12 +50,18 @@ export function validatePluginId(pluginId: string): void {
  * Callers pass `locale` only for non-default locales, which keeps the
  * single-locale layout unchanged.
  */
-export function getSlidevCacheDir(siteDir: string, pluginId: string, locale?: string): string {
+export function getSlidevCacheDir(
+  siteDir: string,
+  pluginId: string,
+  locale?: string,
+): string {
   validatePluginId(pluginId);
   const base = path.join(siteDir, ".docusaurus", SLIDEV_CACHE_DIR, pluginId);
   if (!locale) return base;
   if (!SAFE_SEGMENT.test(locale)) {
-    throw new Error(`[Security] Invalid locale "${locale}": must contain only letters, digits, underscores and dashes.`);
+    throw new Error(
+      `[Security] Invalid locale "${locale}": must contain only letters, digits, underscores and dashes.`,
+    );
   }
   return path.join(base, "i18n", locale);
 }

@@ -1,7 +1,10 @@
 import { themes as prismThemes } from "prism-react-renderer";
 import type { Config } from "@docusaurus/types";
 import type * as Preset from "@docusaurus/preset-classic";
-import { defaultMaxParallelBuilds, type SlidesaurusPluginOptions } from "slidesaurus";
+import {
+  defaultMaxParallelBuilds,
+  type SlidesaurusPluginOptions,
+} from "slidesaurus";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -17,7 +20,10 @@ const slidesaurusPluginOptions: SlidesaurusPluginOptions = {
   // `pnpm build` (turbo) builds this site and apps/sample at the same time, so
   // the default budget (free cores and free memory) is shared in proportion
   // to the number of decks: 6 here, 3 in apps/sample.
-  maxParallelBuilds: Math.max(1, Math.round((defaultMaxParallelBuilds() * 2) / 3)),
+  maxParallelBuilds: Math.max(
+    1,
+    Math.round((defaultMaxParallelBuilds() * 2) / 3),
+  ),
 };
 
 const config: Config = {

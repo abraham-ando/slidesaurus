@@ -14,7 +14,10 @@ vi.mock("../../../shared/logger", () => ({
   },
 }));
 
-import { isCompleteBuildOutput, purgeStaleOutputs } from "../../fs/outputManager";
+import {
+  isCompleteBuildOutput,
+  purgeStaleOutputs,
+} from "../../fs/outputManager";
 
 let outputRoot: string;
 
@@ -53,13 +56,19 @@ describe("purgeStaleOutputs", () => {
     const removed = purgeStaleOutputs(outputRoot, ["kept", "cat/kept"]);
 
     expect(removed.sort()).toEqual(["cat/renamed", "deleted", "old-category"]);
-    expect(fs.existsSync(path.join(outputRoot, "kept", "index.html"))).toBe(true);
-    expect(fs.existsSync(path.join(outputRoot, "cat", "kept", "index.html"))).toBe(true);
+    expect(fs.existsSync(path.join(outputRoot, "kept", "index.html"))).toBe(
+      true,
+    );
+    expect(
+      fs.existsSync(path.join(outputRoot, "cat", "kept", "index.html")),
+    ).toBe(true);
   });
 
   it("removes partial builds (no or empty index.html) of current presentations", () => {
     build("partial", "");
-    fs.mkdirSync(path.join(outputRoot, "crashed", "assets"), { recursive: true });
+    fs.mkdirSync(path.join(outputRoot, "crashed", "assets"), {
+      recursive: true,
+    });
 
     purgeStaleOutputs(outputRoot, ["partial", "crashed"]);
     expect(fs.existsSync(path.join(outputRoot, "partial"))).toBe(false);
@@ -72,14 +81,18 @@ describe("purgeStaleOutputs", () => {
     fs.writeFileSync(path.join(outputRoot, "talk", "thumbnail.png"), "png");
     purgeStaleOutputs(outputRoot, ["talk"]);
     expect(fs.existsSync(path.join(outputRoot, "talk", "assets"))).toBe(true);
-    expect(fs.existsSync(path.join(outputRoot, "talk", "thumbnail.png"))).toBe(true);
+    expect(fs.existsSync(path.join(outputRoot, "talk", "thumbnail.png"))).toBe(
+      true,
+    );
   });
 
   it("removes stray files at category level", () => {
     build("cat/talk");
     fs.writeFileSync(path.join(outputRoot, "cat", "stray.txt"), "x");
     purgeStaleOutputs(outputRoot, ["cat/talk"]);
-    expect(fs.existsSync(path.join(outputRoot, "cat", "stray.txt"))).toBe(false);
+    expect(fs.existsSync(path.join(outputRoot, "cat", "stray.txt"))).toBe(
+      false,
+    );
   });
 
   it("is a no-op when the output root does not exist", () => {
