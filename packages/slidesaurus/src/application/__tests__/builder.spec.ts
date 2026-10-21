@@ -73,8 +73,14 @@ function makePresentation(
 ): PresentationMetadata {
   const mdFile = path.join(tmpDir, "slidev", `${id}.md`);
   fs.mkdirSync(path.dirname(mdFile), { recursive: true });
-  if (!fs.existsSync(mdFile))
-    fs.writeFileSync(mdFile, `---\ntitle: ${id}\n---\n\n# ${id}`);
+  // "wx": create only if absent, atomically (no exists-then-write race).
+  try {
+    fs.writeFileSync(mdFile, `---\ntitle: ${id}\n---\n\n# ${id}`, {
+      flag: "wx",
+    });
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
+  }
   return {
     id,
     title: id,

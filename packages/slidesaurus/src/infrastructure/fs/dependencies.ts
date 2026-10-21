@@ -114,10 +114,17 @@ function collectColocated(
  * (e.g. example paths inside ``` code fences).
  */
 export function stripCodeFences(md: string): string {
-  return md
+  let out = md
     .replace(/^```[\s\S]*?^```/gm, "") // fenced blocks (``` ... ```)
-    .replace(/`[^`\n]+`/g, "") // inline code (`...`)
-    .replace(/<!--[\s\S]*?-->/g, ""); // HTML comments
+    .replace(/`[^`\n]+`/g, ""); // inline code (`...`)
+  // HTML comments: repeat until stable, so a removal cannot splice a new
+  // `<!--` together, then drop an unterminated one up to the end (as HTML does).
+  let previous: string;
+  do {
+    previous = out;
+    out = out.replace(/<!--[\s\S]*?-->/g, "");
+  } while (out !== previous);
+  return out.replace(/<!--[\s\S]*$/, "");
 }
 
 /**

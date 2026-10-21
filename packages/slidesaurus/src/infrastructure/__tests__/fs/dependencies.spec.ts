@@ -6,6 +6,7 @@ import {
   collectPresentationDependencies,
   containsPresentations,
   extractReferences,
+  stripCodeFences,
 } from "../../fs/dependencies";
 
 let tmpDir: string;
@@ -24,6 +25,23 @@ function write(rel: string, content = "x"): string {
   fs.writeFileSync(p, content);
   return p;
 }
+
+describe("stripCodeFences", () => {
+  it("removes HTML comments, including ones spliced by a previous removal", () => {
+    expect(stripCodeFences("a <!-- x --> b")).toBe("a  b");
+    expect(stripCodeFences("a<!-<!-- x -->- y -->b")).toBe("ab");
+  });
+
+  it("drops an unterminated comment up to the end", () => {
+    expect(stripCodeFences("keep <!-- ![](./hidden.png)")).toBe("keep ");
+  });
+
+  it("removes fenced blocks and inline code", () => {
+    expect(
+      stripCodeFences("x\n```\n![](./a.png)\n```\ny `![](./b.png)` z"),
+    ).toBe("x\n\ny  z");
+  });
+});
 
 describe("extractReferences", () => {
   it("finds images, src/href attributes, backgrounds and src: imports", () => {
