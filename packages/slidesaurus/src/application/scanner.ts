@@ -3,9 +3,6 @@ import path from "node:path";
 import yaml from "js-yaml";
 import type {
   PluginOptions,
-  ScanOptions,
-  BuildOptions,
-  UIOptions,
   PresentationMetadata,
   CategoryMetadata,
   PlaylistData,
@@ -19,10 +16,8 @@ import type {
  * not the full PluginOptions.  Callers passing the full `PluginOptions` object
  * continue to work because TypeScript checks structural compatibility.
  */
-export type ScannerOptions = ScanOptions
-  & Pick<UIOptions, "routeBasePath">
-  & Pick<BuildOptions, "download" | "exportFormats" | "maxParallelBuilds">
-  & Pick<PluginOptions, "onPresentationScanned" | "transformFrontmatter">;
+export type ScannerOptions = Pick<PluginOptions, "path" | "id" | "routeBasePath">
+  & Partial<Pick<PluginOptions, "download" | "exportFormats" | "maxParallelBuilds" | "onPresentationScanned" | "transformFrontmatter">>;
 import { log } from "../shared/logger";
 import { getSlidevBuildOutputDir } from "../infrastructure/fs/outputManager";
 import { buildRouteBase, encodeIdForUrl } from "../shared/utils";

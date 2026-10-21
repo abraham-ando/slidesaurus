@@ -34,6 +34,9 @@ const defaultOptions: PluginOptions = {
   dryRun: false,
   devServerBasePort: 8600,
   devServerTimeout: 10000,
+  withoutNotes: false,
+  exportWithClicks: false,
+  uiTheme: "default",
 };
 
 function makeFrontmatter(title: string): string {

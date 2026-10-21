@@ -7,7 +7,8 @@ function readFavorites(): Set<string> {
   if (typeof window === "undefined") return new Set();
   try {
     const raw = localStorage.getItem(FAVORITES_KEY);
-    return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : []);
   } catch {
     return new Set();
   }

@@ -71,10 +71,7 @@ export async function runDoctor(opts: DoctorOptions): Promise<void> {
   // ── Check 4: Themes and addons resolvable ─────────────────────────────────
   if (dirExists) {
     try {
-      const result = await scanPresentations(
-        options as Parameters<typeof scanPresentations>[0],
-        { siteDir: cwd, baseUrl: "/" },
-      );
+      const result = await scanPresentations(options, { siteDir: cwd, baseUrl: "/" });
       const { presentations } = result;
 
       // Themes are resolved with the same function as the build (packageResolver),

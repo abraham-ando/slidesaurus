@@ -23,7 +23,7 @@ export async function runList(opts: ListOptions): Promise<void> {
     warn(`Plugin "slidesaurus" (id="${opts.pluginId}") not found in config — using defaults.`);
   }
 
-  const result = await scanPresentations(options as Parameters<typeof scanPresentations>[0], {
+  const result = await scanPresentations(options, {
     siteDir: cwd,
     baseUrl: "/",
   });
