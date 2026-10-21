@@ -30,7 +30,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        node: ['22.x', '24.x', '26.x']
+        node: ["22.x", "24.x", "26.x"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -102,6 +102,9 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Check formatting
+        run: pnpm format:check
+
       # Fails on high/critical advisories. Advisories with no available fix
       # must be listed (with justification) in pnpm-workspace.yaml
       # `auditConfig.ignoreGhsas` rather than disabling this step.
@@ -115,7 +118,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: ['22.x', '24.x', '26.x']
+        node: ["22.x", "24.x", "26.x"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
