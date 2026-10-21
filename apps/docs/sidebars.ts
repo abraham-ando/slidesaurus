@@ -33,6 +33,7 @@ const sidebars: SidebarsConfig = {
         "dev-server",
         "custom-styling",
         "troubleshooting",
+        "security",
       ],
     },
     {
