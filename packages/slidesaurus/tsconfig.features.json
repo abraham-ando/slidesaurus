@@ -1,0 +1,13 @@
+{
+  // Type-checks the Cucumber step definitions (never emitted: tsx runs them).
+  // `pnpm typecheck:features` -> tsc -p tsconfig.features.json
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "rootDir": "."
+  },
+  "include": ["features/**/*.ts", "src/**/*.d.ts"]
+}

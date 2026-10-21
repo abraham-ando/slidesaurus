@@ -8,6 +8,7 @@
     "build": "docusaurus build",
     "serve": "docusaurus serve",
     "clear": "docusaurus clear",
+    "typecheck": "tsc --noEmit",
     "clean": "node -e \"for (const d of ['build','.docusaurus']) require('node:fs').rmSync(d,{recursive:true,force:true})\""
   },
   "dependencies": {
@@ -24,6 +25,7 @@
     "@docusaurus/module-type-aliases": "3.10.2",
     "@docusaurus/tsconfig": "3.10.2",
     "@docusaurus/types": "3.10.2",
+    "@types/react": "^19.2.14",
     "typescript": "^7.0.2"
   },
   "engines": {

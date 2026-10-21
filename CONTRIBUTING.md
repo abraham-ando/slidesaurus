@@ -114,6 +114,14 @@ pnpm dev  # Rollup watch — rebuilds on every save (including the compiled them
 
 Unit tests live next to each layer in `src/**/__tests__/`. Dependencies point inwards (`presentation`/`cli` → `application` → `infrastructure` → `domain`); `shared` can be used by every layer. See [CLAUDE.md](CLAUDE.md) for the role of each module.
 
+### Theme organization (`packages/slidesaurus/theme/`)
+
+- **One folder per swizzlable component** (`SlidevOverview/`, `SlidevCard/`, …): `index.tsx` is the component, `styles.module.css` its styles. Only the components listed in `getSwizzleComponentList` are public; adding a folder does not make it swizzlable.
+- **Split large components inside their folder.** `SlidevOverview/` keeps `index.tsx` as a thin composition and puts the rest next to it: hooks (`useUrlFilters`, `useOverviewPreferences`, `useCategoryNavigation`, `usePresentationList`), pure helpers (`urlParams.ts`) and presentational sub-components (`OverviewFilterBar`, `OverviewSidebar`, `OverviewControls`, `OverviewGrid`, `OverviewList`, `OverviewEmptyState`). Sub-components reuse the parent's `styles.module.css` so the CSS class names and the DOM stay the same.
+- **Shared code lives at the root of `theme/`**: `types.ts` (re-exports the plugin's types), `icons.tsx`, `filterUtils.ts` (pure filter/sort functions, unit-testable), `useFavorites.ts`, `useUITheme.ts`.
+- **Keep the DOM and CSS classes stable**: `data-slidev-ui-theme` and the class names are the public styling API (see `custom-styling.md`). Refactors must not change them.
+- Theme sources are compiled by `scripts/build-theme.mjs` (no type-check) and type-checked by `pnpm typecheck` through `theme/tsconfig.json`. The sites in `apps/` are type-checked too (`pnpm typecheck` at the root runs every package's `typecheck` script), after `pnpm build:plugin`.
+
 ---
 
 ## Making Changes

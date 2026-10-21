@@ -116,11 +116,14 @@ function describeLoadError(err: unknown): string {
   return message.split(/\r?\n/)[0];
 }
 
+/** Options as the CLI sees them: whatever the config sets, plus the defaults it needs. */
+export type CliOptions = Partial<PluginOptions> & typeof CONFIG_DEFAULTS;
+
 /** Merge loaded config with defaults. */
-export function resolveOptions(loaded: Partial<PluginOptions>, pluginId: string): PluginOptions & typeof CONFIG_DEFAULTS {
+export function resolveOptions(loaded: Partial<PluginOptions>, pluginId: string): CliOptions {
   return {
     ...CONFIG_DEFAULTS,
     id: pluginId,
     ...loaded,
-  } as PluginOptions & typeof CONFIG_DEFAULTS;
+  };
 }

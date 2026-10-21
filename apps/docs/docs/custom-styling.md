@@ -225,6 +225,8 @@ Ejected components are **not updated** when the plugin is upgraded. Prefer wrapp
 | `SlidevPresentation` | Individual presentation page — iframe, presenter link, resume bar, playlist bar |
 | `SlidevLink` | Embeddable inline preview component for MDX pages (importable via `@theme/SlidevLink`; not in the swizzle list) |
 
+`SlidevOverview` is composed of internal sub-components (filter bar, sidebar, grid, list) and hooks that live in its folder; they are an implementation detail and are not swizzlable separately. Wrapping `SlidevOverview` (or `SlidevCard`) keeps working unchanged, and the DOM structure and CSS class names described on this page are stable.
+
 All iframes go through the internal `SlidevIframe` component, which applies the single sandbox policy `SLIDEV_IFRAME_SANDBOX` (`allow-scripts allow-same-origin allow-popups allow-forms allow-presentation`). That combination is only safe for content you build and serve yourself; do not use it to embed third-party pages.
 
 ### Wrap example — team banner above the overview

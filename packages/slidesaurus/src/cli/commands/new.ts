@@ -6,7 +6,6 @@ import { loadPluginOptions, resolveOptions } from "../config";
 import { renderTemplate, TEMPLATE_NAMES, type TemplateName } from "../templates";
 import { cliLogger } from "../output";
 const { success, error, info } = cliLogger;
-import type { PluginOptions } from "../../domain/types";
 import { normalizeRoutePath, validatePackageName } from "../../shared/utils";
 
 interface NewOptions {
@@ -70,7 +69,7 @@ function deriveTitle(rawName: string): string {
 export async function runNew(rawName: string | undefined, opts: NewOptions): Promise<void> {
   const cwd = process.cwd();
   const { options: pluginOpts, configFile } = loadPluginOptions(cwd, opts.pluginId);
-  const options: PluginOptions & { path: string; routeBasePath: string } = resolveOptions(pluginOpts, opts.pluginId) as PluginOptions & { path: string; routeBasePath: string };
+  const options = resolveOptions(pluginOpts, opts.pluginId);
 
   // ── Interactive prompts for missing args ──────────────────────────────────
   const answers = await prompts(
