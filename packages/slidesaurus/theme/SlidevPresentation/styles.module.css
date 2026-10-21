@@ -330,10 +330,11 @@
   white-space: nowrap;
 }
 
-/* ── Dev mode launcher (lazy start + new tab) ──────────────────────────────── */
+/* ── Dev build state (`docusaurus start`: first build queued / failed) ─────── */
 
 .devLauncherContainer {
-  min-height: calc(100vh - var(--ifm-navbar-height));
+  flex: 1;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;

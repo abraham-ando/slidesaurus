@@ -10,6 +10,7 @@
     "build:plugin": "turbo run build --filter=slidesaurus",
     "dev:sample": "turbo run dev --filter=@slidesaurus/sample",
     "dev:docs": "turbo run dev --filter=@slidesaurus/docs",
+    "watch:plugin": "pnpm --filter slidesaurus watch",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "lint": "eslint .",
@@ -31,7 +32,7 @@
   },
   "pnpm": {
     "overrides": {
-      "webpack": "~5.104.1",
+      "webpack": "^5.112.0",
       "serialize-javascript": ">=7.0.5",
       "dompurify": ">=3.3.4",
       "webpack-dev-server": "^5.2.6",

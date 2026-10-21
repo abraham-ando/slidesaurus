@@ -39,7 +39,7 @@
   },
   "scripts": {
     "build": "rollup -c rollup.config.mjs",
-    "dev": "rollup -c rollup.config.mjs --watch",
+    "watch": "rollup -c rollup.config.mjs --watch",
     "clean": "node -e \"require('node:fs').rmSync('lib',{recursive:true,force:true})\"",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc -p theme/tsconfig.json",
     "test": "vitest run",

@@ -13,6 +13,27 @@ export interface PlaywrightLocator {
   count(): Promise<number>;
   waitFor(options?: { state?: "attached" | "detached" | "visible" | "hidden"; timeout?: number }): Promise<void>;
   screenshot(options?: { path?: string; timeout?: number }): Promise<unknown>;
+  getAttribute(name: string): Promise<string | null>;
+  evaluate<R>(fn: (node: HTMLElementLike) => R): Promise<R>;
+}
+
+/** The few DOM members the plugin touches inside `evaluate` callbacks. */
+export interface HTMLElementLike {
+  style: { display: string };
+}
+
+export interface PlaywrightFrame {
+  waitForLoadState(state?: "load" | "domcontentloaded" | "networkidle"): Promise<void>;
+}
+
+/** Subset of Playwright's `page.pdf()` options. Numbers are CSS pixels. */
+export interface PlaywrightPdfOptions {
+  path?: string;
+  width?: number | string;
+  height?: number | string;
+  margin?: { top?: number; right?: number; bottom?: number; left?: number };
+  printBackground?: boolean;
+  preferCSSPageSize?: boolean;
 }
 
 export interface PlaywrightPage {
@@ -20,6 +41,13 @@ export interface PlaywrightPage {
   emulateMedia(options: { colorScheme?: "light" | "dark"; media?: "screen" | "print" }): Promise<void>;
   locator(selector: string): PlaywrightLocator;
   setDefaultTimeout(timeout: number): void;
+  setViewportSize(size: { width: number; height: number }): Promise<void>;
+  waitForLoadState(state?: "load" | "domcontentloaded" | "networkidle"): Promise<void>;
+  waitForTimeout(ms: number): Promise<void>;
+  /** Evaluate a JS expression (string: page code is not type-checked against Node libs). */
+  evaluate<R>(expression: string): Promise<R>;
+  frames(): PlaywrightFrame[];
+  pdf(options?: PlaywrightPdfOptions): Promise<unknown>;
 }
 
 export interface PlaywrightBrowserContext {

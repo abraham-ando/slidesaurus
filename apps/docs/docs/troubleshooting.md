@@ -36,7 +36,27 @@ If using a monorepo, ensure `@slidev/cli` is installed in the workspace root or 
 }
 ```
 
-You can also enable `verbose: true` to see where the build gets stuck.
+You can also enable `verbose: true` to see where the build gets stuck (it prints per-phase timings).
+
+---
+
+## Slow Builds on Windows
+
+**Symptom:** a single `slidev build` takes 1–3 minutes although Vite reports `built in ~20s`, and the first build after `pnpm install` is much slower than the next ones.
+
+**Cause:** most of the time outside Vite is file-system access: Node resolving and loading thousands of modules from `node_modules`, and Slidev resolving icon collections (the plugin already removes most of those lookups — see [Icon resolution](./parallel-builds.md#icon-resolution)). On Windows, the real-time antivirus (Microsoft Defender, Defender for Endpoint) scans every one of those reads; after an install the files are new and nothing is cached yet. Measured on a Defender-protected machine: the same deck takes 25–40 s when the machine is idle and up to 115 s while other builds or scans run.
+
+**Solution:** ask your administrator (it needs admin rights, and may be a corporate policy) to exclude the development folders from real-time scanning — or use a [Dev Drive](https://learn.microsoft.com/windows/dev-drive/), whose performance mode scans asynchronously:
+
+```powershell
+# Run as administrator — adapt the paths
+Add-MpPreference -ExclusionPath "C:\src\my-site\node_modules"
+Add-MpPreference -ExclusionPath "C:\src\my-site\.docusaurus"
+Add-MpPreference -ExclusionPath "$env:LOCALAPPDATA\pnpm\store"   # pnpm content-addressable store
+Add-MpPreference -ExclusionProcess "node.exe"                       # optional, broader
+```
+
+Exclude only folders you trust (your own projects, the package store). Also keep `maxParallelBuilds` within the free memory (the default already does), since swapping slows every build down.
 
 ---
 
@@ -74,7 +94,7 @@ Check the theme name spelling. Official themes use `@slidev/theme-*`, community 
 2. **Build failed** — in `docusaurus start` a failed build is only logged. Enable `verbose: true` to see the Slidev output.
 3. **`dryRun: true`** — builds are skipped, so there is nothing to show.
 4. **Wrong base URL** — presentations embed the site `baseUrl` at build time. If you changed `baseUrl` or `routeBasePath`, rebuild (the cache detects the change automatically).
-5. **Stale cache from CI** — see [CI caching warning](./parallel-builds.md#ci-caching-warning).
+5. **Stale cache from CI** — see [Caching in CI](./parallel-builds.md#caching-in-ci).
 
 Presentations are built in `docusaurus start` too (and served as static files) — see [Dev Server](./dev-server.md).
 
@@ -228,7 +248,7 @@ Enable `verbose: true` to see full validation output during a build.
 
 **Symptom:** The download button is missing, or the PDF/PPTX file is not created.
 
-**Cause:** `download: true` requires Playwright. When `playwright-chromium` is missing, every export is skipped with a single warning (checked once before the build).
+**Cause:** `download: true` requires Playwright: the PDF is printed by Chromium from the built presentation, the PPTX by `slidev export`. When `playwright-chromium` is missing, every export is skipped with a single warning (checked once before the build).
 
 **Solution:**
 

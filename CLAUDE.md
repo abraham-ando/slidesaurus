@@ -20,6 +20,7 @@ This is a **pnpm monorepo** (pnpm 10, Node >= 22.12; dev version Node 24 LTS in 
 ```bash
 pnpm build              # Build all packages in dependency order
 pnpm build:plugin       # Build only the plugin package
+pnpm watch:plugin       # Rollup watch of the plugin (run next to dev:docs / dev:sample)
 pnpm dev:sample         # Dev server for sample app (port 3000)
 pnpm dev:docs           # Dev server for docs site (port 3001)
 pnpm lint               # ESLint
@@ -34,7 +35,7 @@ pnpm clean              # Remove all build artifacts
 
 ```bash
 pnpm build              # Rollup build → lib/ (CJS + ESM + .d.ts + compiled theme)
-pnpm dev                # Rollup watch mode
+pnpm watch              # Rollup watch mode (not `dev`: `turbo run dev` already builds the plugin once)
 pnpm typecheck          # tsc --noEmit (src) + tsc (theme)
 pnpm test               # Vitest unit tests
 pnpm test:integration   # Cucumber BDD integration tests
@@ -52,7 +53,7 @@ pnpm test -- --reporter=verbose src/application/__tests__/builder.spec.ts
 pnpm test:integration -- features/scanning.feature
 ```
 
-> **Note:** `pnpm build:plugin` must run before `pnpm dev:sample` or `pnpm dev:docs` because Turbo requires the plugin to be built first (declared in `turbo.json` `dependsOn`).
+> **Note:** `pnpm dev:sample` / `pnpm dev:docs` build the plugin first (`turbo.json` `dependsOn: ["^build"]`, cached by Turbo). The plugin has no `dev` script on purpose — a `rollup --watch` started by `turbo run dev` would compile it a second time; run `pnpm watch:plugin` yourself when working on the plugin. Turbo caches `lib/**` (plugin) and `build/**` (sites) only — never `.docusaurus/` (the Slidev cache).
 
 ---
 
@@ -63,11 +64,11 @@ pnpm test:integration -- features/scanning.feature
 The plugin implements the standard Docusaurus plugin interface (`src/presentation/plugin.ts`, re-exported by `src/index.ts`):
 
 1. **`validateOptions`** — Joi schema validation; maps deprecated aliases (`sourceDir` → `path`, `overviewPath` → `routeBasePath`, …); rejects unsafe `path`, `routeBasePath` and `id`.
-2. **`loadContent`** — Scans slides, then **builds** them (incremental, parallel). Runs in both `docusaurus build` and `docusaurus start`. A failed presentation fails `docusaurus build` (`PresentationBuildError`); in dev it is only logged.
+2. **`loadContent`** — Scans slides, then **builds** them (incremental, parallel). In `docusaurus build` it waits for the builds and a failed presentation fails the build (`PresentationBuildError`). In `docusaurus start` the builds run **in the background** (`BackgroundBuildQueue`, one run at a time per cache dir) and `loadContent` returns at once; progress is written to `status/build-status.json` (`BuildStatusTracker`), published as `PluginData.buildStatusUrl` and polled by `SlidevPresentation`.
 3. **`contentLoaded`** — Registers routes (overview, category pages, presentation pages) and a reduced public global-data DTO for theme components (no absolute paths).
 4. **`postBuild`** — Copies built presentations from the cache into the final static output, writes presenter fallbacks and `presentations-index.json`.
 
-In `docusaurus start` there are no Slidev dev servers: `configureWebpack` serves the cache output as static files and `getPathsToWatch` triggers rebuilds. `getThemePath()` points to the compiled theme (`lib/theme`); `getTypeScriptThemePath()` to the TSX sources (swizzle `--typescript`).
+In `docusaurus start` there are no Slidev dev servers: `configureWebpack` serves the cache output (and the status dir under `{routeBase}/__slidesaurus__/`) as static files, unwatched, and `getPathsToWatch` triggers rebuilds. `getThemePath()` points to the compiled theme (`lib/theme`); `getTypeScriptThemePath()` to the TSX sources (swizzle `--typescript`).
 
 ### Source layers (`packages/slidesaurus/src/`)
 
@@ -77,8 +78,8 @@ Dependencies point inwards: `presentation`/`cli` → `application` → `infrastr
 |---|---|
 | `domain/` | `types.ts` (`PluginOptions`, `PresentationMetadata`, `BuildResult`, `BuildContext`…), `interfaces.ts` (`ICache`, `IAssetPostProcessor`, `ICliCommand`), `constants.ts` |
 | `application/` | `scanner.ts` (discovery, `_category_.*`, frontmatter, `PresentationCollisionError`), `builder.ts` (parallel orchestration, atomic output replace, `PresentationBuildError`), `buildCache.ts` (incremental fingerprint), `frontmatterValidator.ts` (validation, `---js` refused, addon/theme patching) |
-| `infrastructure/fs/` | `fileSystem.ts` (cache dirs, hashing), `dependencies.ts` (files a deck depends on — drives both the isolated copy and the hash), `isolatedBuild.ts`, `hashManifest.ts`, `outputManager.ts` (cache output, orphan purge, final copy), `fsUtils.ts` |
-| `infrastructure/process/` | `buildRunner.ts` (spawn `slidev build` without shell, kill process tree on timeout), `assetGenerator.ts` (thumbnails rendered from the built output by one shared Chromium, PDF/PPTX via `slidev export`; Playwright checked once in `prepare`, failures are warnings), `playwright.ts` (optional `playwright-chromium` loader), `staticServer.ts` (loopback server of a built deck) |
+| `infrastructure/fs/` | `fileSystem.ts` (cache dirs, hashing), `dependencies.ts` (files a deck depends on — drives both the isolated copy and the hash), `isolatedBuild.ts`, `iconCollections.ts` (links / empty `@iconify-json/*` in the isolated dir so Slidev's icon lookups stop walking `node_modules`), `hashManifest.ts`, `outputManager.ts` (cache output, orphan purge, final copy), `buildStatus.ts` (dev build status file), `fsUtils.ts` |
+| `infrastructure/process/` | `buildRunner.ts` (spawn `slidev build` without shell, kill process tree on timeout), `assetGenerator.ts` (`SharedBrowser`: one Chromium per run, thumbnails rendered from the built output; PDF = the file `slidev build --download` printed, hard-linked as `export.pdf`, re-printed from the built output by the shared browser when `exportWithClicks` is set; PPTX via `slidev export`; Playwright checked once, failures are warnings), `pdfRenderer.ts` (`/print` → `page.pdf()`, headmatter export settings), `playwright.ts` (optional `playwright-chromium` loader), `staticServer.ts` (loopback server of a built deck) |
 | `infrastructure/packages/` | `packageResolver.ts` (theme/addon shorthand, strict name validation, shell-free `--ignore-scripts` auto-install), `env.ts` (env allowlist for child processes) |
 | `presentation/` | `plugin.ts` (lifecycle), `routeBuilder.ts`, `cliCommands.ts` (`slidev:list|stats|validate`), `webpackConfig.ts` (dev static serving) |
 | `shared/` | `logger.ts`, `utils.ts`, `concurrentRunner.ts` |
@@ -88,7 +89,7 @@ Dependencies point inwards: `presentation`/`cli` → `application` → `infrastr
 
 React components (TSX sources; compiled to `lib/theme` by `scripts/build-theme.mjs` during the Rollup build):
 - `SlidevOverview` — landing page (accepts `children` rendered inside the Layout)
-- `SlidevPresentation` — presentation viewer (iframe, resume bar, playlist bar, SEO tags)
+- `SlidevPresentation` — presentation viewer (iframe, resume bar, playlist bar, SEO tags; in dev, "building"/"failed" state and iframe reload via `useBuildStatus`)
 - `SlidevCard` / `SlidevCategoryCard` / `SlidevListItem` — cards and rows (root `div` + stretched `.cardLink::after`)
 - `SlidevLink` — embeddable inline preview (`link` is given without `baseUrl`)
 - `SlidevIframe` — shared iframe wrapper owning the single sandbox policy `SLIDEV_IFRAME_SANDBOX`
@@ -101,6 +102,7 @@ Stored in `.docusaurus/slidesaurus/{id}/` (non-default locales: `.../{id}/i18n/{
 ```
 output/{presentationId}/   ← Slidev static build (index.html, assets/)
 builds/                    ← Temporary isolated build dirs (cleaned after build)
+status/build-status.json   ← Dev build status (docusaurus start only, never published)
 build-hashes.json          ← Hash manifest
 ```
 

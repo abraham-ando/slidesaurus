@@ -7,8 +7,10 @@ function options(overrides: Partial<PluginOptions> = {}): PluginOptions {
   return { id: "default", routeBasePath: "/slidev", ...overrides } as PluginOptions;
 }
 
-function staticEntry(config: Record<string, unknown>) {
-  return (config.devServer as { static: Array<{ directory: string; publicPath: string }> }).static[0];
+type StaticEntry = { directory: string; publicPath: string; watch: unknown };
+
+function staticEntry(config: Record<string, unknown>, index = 0): StaticEntry {
+  return (config.devServer as { static: StaticEntry[] }).static[index];
 }
 
 describe("buildWebpackDevServerConfig", () => {
@@ -37,5 +39,22 @@ describe("buildWebpackDevServerConfig", () => {
   it("uses '/' when both baseUrl and routeBasePath are the root", () => {
     const entry = staticEntry(buildWebpackDevServerConfig("/site", options({ routeBasePath: "/" })));
     expect(entry.publicPath).toBe("/");
+  });
+
+  it("does not watch the output (no full-page reload when a build finishes)", () => {
+    const config = buildWebpackDevServerConfig("/site", options());
+    expect(staticEntry(config).watch).toBe(false);
+    expect(staticEntry(config, 1).watch).toBe(false);
+  });
+
+  it("serves the build status directory under routeBasePath/__slidesaurus__", () => {
+    const entry = staticEntry(buildWebpackDevServerConfig("/site", options(), { baseUrl: "/docs/" }), 1);
+    expect(entry.publicPath).toBe("/docs/slidev/__slidesaurus__");
+    expect(entry.directory).toBe(path.join("/site", ".docusaurus", "slidesaurus", "default", "status"));
+  });
+
+  it("serves the status directory at the root when routeBasePath is '/'", () => {
+    const entry = staticEntry(buildWebpackDevServerConfig("/site", options({ routeBasePath: "/" })), 1);
+    expect(entry.publicPath).toBe("/__slidesaurus__");
   });
 });

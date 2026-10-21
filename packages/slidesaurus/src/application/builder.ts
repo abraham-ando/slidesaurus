@@ -6,6 +6,7 @@ import type {
   PluginOptions,
   BuildResult,
   BuildContext,
+  BuildProgressListener,
 } from "../domain/types";
 import type { ICache, IAssetPostProcessor } from "../domain/interfaces";
 import { log } from "../shared/logger";
@@ -28,9 +29,10 @@ import {
   ensureThemeAvailable,
   ensureAddonsAvailable,
 } from "../infrastructure/packages/packageResolver";
-import { runSlidevBuild } from "../infrastructure/process/buildRunner";
+import { resolveSlidevCli, runSlidevBuild } from "../infrastructure/process/buildRunner";
+import { findPackageDir, prepareIconCollections } from "../infrastructure/fs/iconCollections";
 import { runConcurrently } from "../shared/concurrentRunner";
-import { defaultMaxParallelBuilds, walkUpTree } from "../shared/utils";
+import { defaultMaxParallelBuilds, isLocalPath, walkUpTree } from "../shared/utils";
 import { TREE_WALK_MAX_DEPTH } from "../domain/constants";
 
 // ── Failure aggregation ───────────────────────────────────────────────────────
@@ -109,11 +111,13 @@ async function patchIsolatedSource(
   presentation: PresentationMetadata,
   options: PluginOptions,
   context: BuildContext,
-): Promise<void> {
+): Promise<{ theme?: string; addons: string[] }> {
   // Slidev reads addons from frontmatter, not CLI flags
   const mergedAddons = [...new Set([...(options.addons ?? []), ...(presentation.addons ?? [])])];
+  let resolvedAddons: string[] = [];
+  let resolvedTheme: string | undefined;
   if (mergedAddons.length > 0) {
-    const resolvedAddons = await ensureAddonsAvailable(mergedAddons, context.siteDir, options.autoInstall);
+    resolvedAddons = await ensureAddonsAvailable(mergedAddons, context.siteDir, options.autoInstall);
     patchFrontmatterAddons(isolatedSourcePath, resolvedAddons);
     if (options.verbose) log.info(`Patched addons (${resolvedAddons.length}) in ${log.code(presentation.id)}`);
   }
@@ -122,11 +126,39 @@ async function patchIsolatedSource(
   // written directly — this enables per-presentation theme overrides.
   const themeRaw = presentation.theme || options.theme;
   if (themeRaw) {
-    const resolvedTheme = await ensureThemeAvailable(themeRaw, context.siteDir, options.autoInstall);
+    resolvedTheme = await ensureThemeAvailable(themeRaw, context.siteDir, options.autoInstall);
     patchFrontmatterTheme(isolatedSourcePath, resolvedTheme, Boolean(presentation.theme));
     if (options.verbose && presentation.theme) {
       log.info(`Theme override ${log.code(resolvedTheme)} for ${log.code(presentation.id)}`);
     }
+  }
+  return { theme: resolvedTheme, addons: resolvedAddons };
+}
+
+/**
+ * Make the Iconify collections cheap to resolve for this deck (see
+ * `iconCollections.ts`). Skipped — Slidev then resolves as usual — when a
+ * Slidev root (client, theme, an addon) cannot be located.
+ */
+function speedUpIconResolution(
+  isolatedDir: string,
+  resolved: { theme?: string; addons: string[] },
+  context: BuildContext,
+  verbose: boolean,
+  id: string,
+): void {
+  const cli = resolveSlidevCli(context.siteDir);
+  const clientDir = cli ? findPackageDir(path.dirname(cli.entry), "@slidev/client") : undefined;
+  if (!clientDir) return;
+  const packageDirs: string[] = [];
+  for (const name of [resolved.theme ?? "@slidev/theme-default", ...resolved.addons]) {
+    const dir = isLocalPath(name) ? path.resolve(context.siteDir, name) : findPackageDir(context.siteDir, name);
+    if (!dir || !fs.existsSync(dir)) return;
+    packageDirs.push(dir);
+  }
+  const { linked, stubbed } = prepareIconCollections(isolatedDir, { siteDir: context.siteDir, packageDirs, clientDir });
+  if (verbose && (linked.length || stubbed.length)) {
+    log.info(`Icon collections for ${log.code(id)}: linked [${linked.join(", ")}], empty [${stubbed.join(", ")}]`);
   }
 }
 
@@ -177,6 +209,16 @@ interface BuildEnv {
   outputRoot: string;
   slidesRoot: string;
   processors: IAssetPostProcessor[];
+  listener?: BuildProgressListener;
+}
+
+/** Call a listener callback — a throwing listener never breaks a build. */
+function notify(fn: (() => void) | undefined): void {
+  try {
+    fn?.();
+  } catch (err) {
+    log.warn(`Build progress listener threw: ${err instanceof Error ? err.message : String(err)}`);
+  }
 }
 
 /**
@@ -192,6 +234,14 @@ async function buildPresentation(presentation: PresentationMetadata, env: BuildE
   const { options, context, cacheDir, outputRoot, slidesRoot, processors } = env;
   const startTime = Date.now();
   const elapsed = (): number => (Date.now() - startTime) / 1000;
+  // Phase durations, logged with `verbose` (where does a build spend its time?).
+  const phases: string[] = [];
+  let phaseStart = startTime;
+  const phase = (name: string): void => {
+    const now = Date.now();
+    phases.push(`${name} ${((now - phaseStart) / 1000).toFixed(1)}s`);
+    phaseStart = now;
+  };
   let isolated: IsolatedBuildDir | undefined;
   let tmpOut: string | undefined;
 
@@ -204,7 +254,9 @@ async function buildPresentation(presentation: PresentationMetadata, env: BuildE
 
     isolated = createIsolatedBuild(presentation.sourceAbsolutePath, presentation.id, cacheDir, slidesRoot);
     if (options.verbose) log.info(`Isolated: ${log.path(isolated.isolatedDir)}`);
-    await patchIsolatedSource(isolated.isolatedSourcePath, presentation, options, context);
+    const resolved = await patchIsolatedSource(isolated.isolatedSourcePath, presentation, options, context);
+    speedUpIconResolution(isolated.isolatedDir, resolved, context, options.verbose, presentation.id);
+    phase("isolate+patch");
 
     // `safeId` never contains a dot, so `{safeId}.out` cannot clash with another isolated dir.
     tmpOut = path.join(cacheDir, "builds", `${isolated.safeId}.out`);
@@ -213,6 +265,8 @@ async function buildPresentation(presentation: PresentationMetadata, env: BuildE
     log.info(`Building ${log.code(presentation.id)} …`);
     const base = presentation.url.endsWith("/") ? presentation.url : `${presentation.url}/`;
     const args = ["build", isolated.isolatedSourcePath, "--out", tmpOut, "--base", base];
+    // Enables the deck's download button and `/print` route; Slidev then
+    // prints `slidev-exported.pdf` itself from the built output.
     if (options.download) args.push("--download");
     if (presentation.withoutNotes ?? options.withoutNotes) args.push("--without-notes");
 
@@ -232,9 +286,14 @@ async function buildPresentation(presentation: PresentationMetadata, env: BuildE
       log.error(`Error building ${log.code(presentation.id)}: ${error}`);
       return { id: presentation.id, success: false, error, duration: elapsed() };
     }
+    phase("slidev build");
     replaceDir(tmpOut, outputPath);
+    phase("replace output");
+    notify(() => env.listener?.onOutputReady?.(presentation.id));
 
     const warnings = await runPostProcessors(presentation, isolated, processors, options, context);
+    phase("assets");
+    if (options.verbose) log.info(`Timings ${log.code(presentation.id)}: ${phases.join(", ")}`);
     return {
       id: presentation.id,
       success: true,
@@ -277,6 +336,8 @@ export async function buildAllPresentations(
    * Add custom processors to extend without modifying this file (OCP).
    */
   postProcessors?: IAssetPostProcessor[],
+  /** Progress callbacks (dev build status). */
+  listener?: BuildProgressListener,
 ): Promise<BuildResult[]> {
   const totalStart = Date.now();
   const total = presentations.length;
@@ -334,14 +395,16 @@ export async function buildAllPresentations(
     // (separate dir, no shared port) so up to `concurrency` builds run in parallel.
     log.info(`Building ${toBuild.length}/${total} presentation(s) — concurrency: ${concurrency}`);
     const processors = postProcessors ?? createDefaultPostProcessors();
-    const env: BuildEnv = { options, context, cacheDir, outputRoot, slidesRoot, processors };
+    const env: BuildEnv = { options, context, cacheDir, outputRoot, slidesRoot, processors, listener };
     // One-time checks / shared resources (Playwright browser) BEFORE the builds.
     await Promise.all(processors.map((p) => callLifecycle(p, "prepare", () => p.prepare?.(options, context))));
     let completed = 0;
     let results: BuildResult[];
     try {
       results = await runConcurrently(toBuild, concurrency, async (p) => {
+        notify(() => listener?.onBuildStart?.(p.id));
         const result = await buildPresentation(p, env);
+        notify(() => listener?.onResult?.(result));
         // Increment AFTER build completes so the counter reflects finished presentations.
         process.stdout.write(
           `\r  Built [${++completed}/${toBuild.length}] ${p.id}${result.success ? " ✓" : " ✗"}\x1b[K`,
@@ -372,6 +435,9 @@ export async function buildAllPresentations(
     if (skipped.has(p.id)) return { id: p.id, success: true, duration: 0, cacheHit: true };
     return buildResults.get(p.id) ?? { id: p.id, success: false, error: "Not built" };
   });
+  for (const r of allResults) {
+    if (!buildResults.has(r.id)) notify(() => listener?.onResult?.(r));
+  }
 
   if (options.onBuildComplete) {
     try {
@@ -382,6 +448,66 @@ export async function buildAllPresentations(
   }
 
   return allResults;
+}
+
+// ── Background builds (`docusaurus start`) ────────────────────────────────────
+
+/**
+ * Serialises background build runs of ONE cache directory.
+ *
+ * `docusaurus start` must not wait for Slidev: `loadContent` schedules a run
+ * and returns at once. Runs never overlap (they share `builds/`, `output/`
+ * and the hash manifest): a run requested while another is in progress is
+ * queued, and only the LATEST request is kept — a burst of file saves
+ * triggers at most one extra run.
+ */
+export class BackgroundBuildQueue {
+  private next: (() => Promise<unknown>) | undefined;
+  private running: Promise<void> | undefined;
+
+  /** Queue `run` (replacing any queued, not yet started run). */
+  schedule(run: () => Promise<unknown>): void {
+    this.next = run;
+    this.running ??= this.drain();
+  }
+
+  /** Resolves when no run is in progress or queued. */
+  whenIdle(): Promise<void> {
+    return this.running ?? Promise.resolve();
+  }
+
+  private async drain(): Promise<void> {
+    try {
+      while (this.next) {
+        const run = this.next;
+        this.next = undefined;
+        try {
+          await run();
+        } catch (err) {
+          log.error(`Background Slidev build failed: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+    } finally {
+      this.running = undefined;
+    }
+  }
+}
+
+const backgroundQueues = new Map<string, BackgroundBuildQueue>();
+
+/**
+ * The queue of a cache directory — shared by every plugin object created for
+ * it, so a site reload (new plugin instance) never builds concurrently with
+ * a run started by the previous instance.
+ */
+export function getBackgroundBuildQueue(cacheDir: string): BackgroundBuildQueue {
+  const key = path.resolve(cacheDir);
+  let queue = backgroundQueues.get(key);
+  if (!queue) {
+    queue = new BackgroundBuildQueue();
+    backgroundQueues.set(key, queue);
+  }
+  return queue;
 }
 
 /**
