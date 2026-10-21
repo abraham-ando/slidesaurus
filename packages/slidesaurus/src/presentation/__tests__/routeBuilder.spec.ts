@@ -44,7 +44,6 @@ function makeContent(overrides: Partial<PluginOptions> = {}): PluginContentData 
       onBuildComplete: () => undefined,
       ...overrides,
     },
-    isDev: false,
   };
 }
 
@@ -88,7 +87,13 @@ describe("toPublicPluginData", () => {
     });
     expect(data.categories).toEqual(makeContent().categories);
     expect(data.playlists).toEqual(makeContent().playlists);
-    expect(data.isDev).toBe(false);
+    expect(data).not.toHaveProperty("isDev");
+    expect(data).not.toHaveProperty("buildStatusUrl");
+  });
+
+  it("publishes the dev build status URL when set", () => {
+    const content = { ...makeContent(), buildStatusUrl: "/docs/slidev/__slidesaurus__/build-status.json" };
+    expect(toPublicPluginData(content).buildStatusUrl).toBe("/docs/slidev/__slidesaurus__/build-status.json");
   });
 });
 

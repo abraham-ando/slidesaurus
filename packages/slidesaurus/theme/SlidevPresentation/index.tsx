@@ -6,9 +6,11 @@ import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import { usePluginData } from "@docusaurus/useGlobalData";
 import { useLocation } from "@docusaurus/router";
 import type { PluginData, Presentation, PlaylistData } from "../types";
+import type { PresentationBuildStatus } from "../../src/domain/types";
 import { PLUGIN_NAME } from "../types";
 import SlidevIframe from "../SlidevIframe";
 import { PlaylistIcon, DownloadIcon } from "../icons";
+import { useBuildStatus } from "./useBuildStatus";
 
 function exportLabel(url: string): string {
   const ext = url.split(".").pop()?.toUpperCase() ?? "FILE";
@@ -96,8 +98,45 @@ function PresentationHead({ p, url, imageUrl }: { p: Presentation; url: string; 
   );
 }
 
+/**
+ * `docusaurus start` only: shown instead of the iframe while the presentation
+ * has no output yet (first build queued / running) or its build failed.
+ */
+function DevBuildState({ presentation, status }: { presentation: Presentation; status: PresentationBuildStatus | null }) {
+  const failed = status?.state === "failed";
+  return (
+    <div className={styles.devLauncherContainer}>
+      <div className={styles.devLauncherCard}>
+        {presentation.category && <div className={styles.devLauncherCategory}>{presentation.category}</div>}
+        <div className={styles.devLauncherTitle}>{presentation.title}</div>
+        <div className={styles.devLauncherStatus} role="status" aria-live="polite">
+          {failed ? (
+            <>
+              <svg className={styles.devErrorIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <path strokeLinecap="round" d="M12 7v6m0 4h.01" />
+              </svg>
+              <p className={styles.devLauncherStatusText}>This presentation failed to build.</p>
+              {status?.error && <code className={styles.devElapsed}>{status.error}</code>}
+              <p className={styles.devLauncherHint}>See the terminal for details — it is rebuilt when you save the file.</p>
+            </>
+          ) : (
+            <>
+              <div className={styles.devSpinner} aria-hidden="true" />
+              <p className={styles.devLauncherStatusText}>
+                {status?.state === "building" ? "Building this presentation…" : "Waiting for the Slidev build…"}
+              </p>
+              <p className={styles.devLauncherHint}>It opens automatically when the build is ready.</p>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SlidevPresentation({ pluginId = "default" }: { readonly pluginId?: string }) {
-  const { presentations, playlists, config } = usePluginData(PLUGIN_NAME, pluginId) as PluginData;
+  const { presentations, playlists, config, buildStatusUrl } = usePluginData(PLUGIN_NAME, pluginId) as PluginData;
   const uiTheme = config?.uiTheme ?? "default";
   const location = useLocation();
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -133,6 +172,24 @@ export default function SlidevPresentation({ pluginId = "default" }: { readonly 
       index,
     };
   }, [presentation?.id, playlists, presentations]);
+
+  // `docusaurus start` builds in the background: follow the build status
+  // (undefined in production, where the output always exists).
+  const buildStatus = useBuildStatus(buildStatusUrl, presentation?.id);
+  const builtAt = buildStatus?.builtAt;
+  const lastBuiltAtRef = useRef<number | undefined>(undefined);
+  const [iframeKey, setIframeKey] = useState<number | undefined>(undefined);
+  // A rebuild changes `builtAt`: the iframe is remounted (key) and brought
+  // back to the slide it was showing.
+  useEffect(() => {
+    if (builtAt === undefined) return;
+    if (lastBuiltAtRef.current !== undefined && lastBuiltAtRef.current !== builtAt && presentation) {
+      const slide = readSlide(iframeRef.current?.contentWindow, presentation.url);
+      if (slide !== null && slide > 1) pendingSlideRef.current = slide;
+      setIframeKey(builtAt);
+    }
+    lastBuiltAtRef.current = builtAt;
+  }, [builtAt]);
 
   // Dev mode serves the same static build output as production, so the
   // iframe always loads `presentation.url`; only the resume offer is computed here.
@@ -273,6 +330,21 @@ export default function SlidevPresentation({ pluginId = "default" }: { readonly 
     </div>
   );
 
+  const devBuildState =
+    buildStatus === undefined ? null : (
+      <DevBuildState presentation={presentation} status={buildStatus} />
+    );
+  // `pending` (queued, maybe a cache hit) keeps the current build without a banner.
+  const rebuildBanner = buildStatus?.hasOutput && (buildStatus.state === "building" || buildStatus.state === "failed") && (
+    <div className={styles.resumeBar} role="status">
+      <span>
+        {buildStatus.state === "failed"
+          ? `Last rebuild failed — showing the previous build. ${buildStatus.error ?? ""}`
+          : "Rebuilding this presentation… it will reload when ready."}
+      </span>
+    </div>
+  );
+
   return (
     <Layout title={presentation.title} description={presentation.description}>
       <PresentationHead
@@ -299,16 +371,22 @@ export default function SlidevPresentation({ pluginId = "default" }: { readonly 
             </a>
           </div>
         )}
+        {rebuildBanner}
         {resumeBar}
         {uiTheme !== "minimal" && playlistBar}
-        <SlidevIframe
-          ref={iframeRef}
-          src={presentation.url}
-          className={styles.presentationIframe}
-          title={presentation.title}
-          allowFullScreen
-          onLoad={applyPendingSlide}
-        />
+        {buildStatus === undefined || buildStatus?.hasOutput ? (
+          <SlidevIframe
+            key={iframeKey ?? "output"}
+            ref={iframeRef}
+            src={presentation.url}
+            className={styles.presentationIframe}
+            title={presentation.title}
+            allowFullScreen
+            onLoad={applyPendingSlide}
+          />
+        ) : (
+          devBuildState
+        )}
       </div>
     </Layout>
   );

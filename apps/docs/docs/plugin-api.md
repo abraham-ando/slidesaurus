@@ -21,11 +21,11 @@ Runs during the content-loading phase, in both `docusaurus build` and `docusauru
 3. Reads `_category_.yml` / `.yaml` / `.json` files for category metadata.
 4. Throws a `PresentationCollisionError` when two presentations would share a route (e.g. `foo.md` next to a `foo/` directory, or ids differing only by case).
 5. **Builds the presentations** (unless `dryRun` is set or `@slidev/cli` is missing): hashes each deck, skips unchanged ones, builds the rest with up to `maxParallelBuilds` concurrent `slidev build` processes, generates thumbnails and optional PDF/PPTX exports, and calls `onBuildComplete`.
-6. In `docusaurus build`, throws a `PresentationBuildError` listing every presentation that failed; in `docusaurus start` it only logs the errors.
+6. In `docusaurus build`, waits for the builds and throws a `PresentationBuildError` listing every presentation that failed. In `docusaurus start`, step 5 runs **in the background**: `loadContent` returns right after the scan, so the site opens without waiting for Slidev; runs are queued (never concurrent), errors are logged and published in the build status file (`PluginContentData.buildStatusUrl`, see [Dev Server](./dev-server.md)).
 
 ```ts
 async loadContent(): Promise<PluginContentData> {
-  // Scan → build (incremental, parallel) → return presentations, categories, playlists
+  // Scan → build (incremental, parallel; background in dev) → return presentations, categories, playlists
 }
 ```
 
@@ -35,7 +35,7 @@ Receives the content from `loadContent` and registers Docusaurus routes:
 
 1. **Overview route** — at `{baseUrl}{routeBasePath}`, rendering `SlidevOverview`; plus one route per category.
 2. **Presentation routes** — one route per presentation, rendering `SlidevPresentation`. Ids are percent-encoded in the URL.
-3. **Global data** — a reduced, public DTO (presentations without `sourceAbsolutePath` / `outputPath`, categories, playlists, and only the UI-relevant config). Absolute filesystem paths, hooks and build options are never serialised into the client bundle.
+3. **Global data** — a reduced, public DTO (presentations without `sourceAbsolutePath` / `outputPath`, categories, playlists, only the UI-relevant config, and in dev the `buildStatusUrl`). Absolute filesystem paths, hooks and build options are never serialised into the client bundle.
 
 ### `postBuild`
 
@@ -51,7 +51,7 @@ Tells Docusaurus which files trigger a `loadContent()` reload in dev mode: `.md`
 
 ### `configureWebpack`
 
-In dev mode only, serves the cache output directory as static files under `{baseUrl}{routeBasePath}`. See [Dev Server](./dev-server.md).
+In dev mode only, serves the cache output directory as static files under `{baseUrl}{routeBasePath}`, and the build status directory under `{baseUrl}{routeBasePath}/__slidesaurus__/`. Neither is watched by webpack (a finished build does not reload the open pages). See [Dev Server](./dev-server.md).
 
 ### `getThemePath` / `getTypeScriptThemePath`
 
@@ -138,12 +138,15 @@ packages/slidesaurus/
         dependencies.ts             # Files a deck depends on (copy + cache hash)
         hashManifest.ts             # Read/write build-hashes.json
         isolatedBuild.ts            # Isolated per-presentation build dirs
+        iconCollections.ts          # Fast @iconify-json resolution in the isolated dir
+        buildStatus.ts              # Dev build status file (docusaurus start)
         outputManager.ts            # Cache output, orphan purge, final copy, search index
       process/
         buildRunner.ts              # Spawn `slidev build` (no shell, kills process tree)
-        assetGenerator.ts           # Thumbnail (shared browser) and PDF/PPTX generation
+        assetGenerator.ts           # Shared browser: thumbnail + PDF from the built output; PPTX via slidev export
+        pdfRenderer.ts              # /print → page.pdf(), headmatter export settings
         playwright.ts               # Optional playwright-chromium loader
-        staticServer.ts             # Loopback server of a built deck (thumbnails)
+        staticServer.ts             # Loopback server of a built deck (thumbnails, PDF)
       packages/
         packageResolver.ts          # Theme/addon resolution and auto-install
         env.ts                      # Environment variable allowlist (security)

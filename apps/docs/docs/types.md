@@ -287,7 +287,8 @@ interface PluginContentData {
   categories: CategoryMetadata[];
   playlists: PlaylistData[];
   config: PluginOptions;
-  isDev: boolean;
+  /** `docusaurus start` only: URL of the build status file (see below). */
+  buildStatusUrl?: string;
 }
 ```
 
@@ -320,9 +321,43 @@ interface PluginData {
   categories: Category[];
   playlists: PlaylistData[];
   config: PluginConfig;
-  isDev: boolean;
+  /**
+   * `docusaurus start` only: URL of the JSON build status file polled by
+   * `SlidevPresentation` while presentations build in the background.
+   * Undefined in production.
+   */
+  buildStatusUrl?: string;
 }
 ```
+
+:::caution `isDev` removed
+`PluginData.isDev` (and `PluginContentData.isDev`) no longer exist. Use `Boolean(buildStatusUrl)` instead — see [Dev Server](./dev-server.md#what-the-presentation-page-shows).
+:::
+
+### Dev build status
+
+Shape of the file at `buildStatusUrl` (`{baseUrl}{routeBasePath}/__slidesaurus__/build-status.json`):
+
+```ts
+type PresentationBuildState = "pending" | "building" | "ready" | "failed";
+
+interface PresentationBuildStatus {
+  state: PresentationBuildState;
+  /** A complete output can be served (possibly a previous build). */
+  hasOutput: boolean;
+  /** mtime (ms) of the served index.html — changes on every rebuild. */
+  builtAt?: number;
+  /** First line of the build error (`failed` only). */
+  error?: string;
+}
+
+interface BuildStatusFile {
+  /** Keyed by presentation id. */
+  presentations: Record<string, PresentationBuildStatus>;
+}
+```
+
+Fetch it with `Accept: application/json` — otherwise the dev server answers a not-yet-written file with the site's HTML fallback. These types are not exported by the package entry point; copy them in a swizzled component if you need them.
 
 ---
 

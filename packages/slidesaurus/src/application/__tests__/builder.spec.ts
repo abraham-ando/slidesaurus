@@ -43,7 +43,9 @@ import { getSlidevCacheDir } from "../../infrastructure/fs/fileSystem";
 import { loadHashManifest } from "../../infrastructure/fs/hashManifest";
 import {
   assertBuildSucceeded,
+  BackgroundBuildQueue,
   buildAllPresentations,
+  getBackgroundBuildQueue,
   checkSlidevInstalled,
   collectBuildFailures,
   PresentationBuildError,
@@ -186,6 +188,7 @@ describe("buildAllPresentations", () => {
     expect(extraEnv).toEqual({ SLIDEV_SITE_DIR: tmpDir });
   });
 
+
   it("isolates a failing preparation: other presentations still build and dirs are cleaned", async () => {
     vi.mocked(ensureThemeAvailable).mockImplementation(async (theme: string) => {
       if (theme === "missing-theme") throw new Error("Theme 'missing-theme' not found");
@@ -326,6 +329,87 @@ describe("buildAllPresentations", () => {
   });
 });
 
+describe("buildAllPresentations — progress listener", () => {
+  it("reports start, output ready and result for built presentations, result only for cache hits", async () => {
+    const events: string[] = [];
+    const listener = {
+      onBuildStart: (id: string) => events.push(`start:${id}`),
+      onOutputReady: (id: string) => {
+        // The new output is already in place when the listener is told.
+        expect(fs.existsSync(path.join(cacheDir(), "output", id, "index.html"))).toBe(true);
+        events.push(`ready:${id}`);
+      },
+      onResult: (r: BuildResult) => events.push(`result:${r.id}:${r.success}${r.cacheHit ? ":cached" : ""}`),
+    };
+    const a = makePresentation("a");
+    await buildAllPresentations([a], makeOptions({ maxParallelBuilds: 1 }), makeContext(), undefined, NO_ASSETS, listener);
+    expect(events).toEqual(["start:a", "ready:a", "result:a:true"]);
+
+    events.length = 0;
+    await buildAllPresentations([a], makeOptions({ maxParallelBuilds: 1 }), makeContext(), undefined, NO_ASSETS, listener);
+    expect(events).toEqual(["result:a:true:cached"]);
+  });
+
+  it("reports failures and survives a throwing listener", async () => {
+    vi.mocked(runSlidevBuild).mockResolvedValue({ success: false, error: "boom", failureKind: "exit" });
+    const results: BuildResult[] = [];
+    const listener = {
+      onBuildStart: () => {
+        throw new Error("listener bug");
+      },
+      onResult: (r: BuildResult) => results.push(r),
+    };
+    const out = await buildAllPresentations([makePresentation("x")], makeOptions(), makeContext(), undefined, NO_ASSETS, listener);
+    expect(out[0].success).toBe(false);
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({ id: "x", success: false });
+  });
+});
+
+describe("BackgroundBuildQueue", () => {
+  function deferred() {
+    let resolve!: () => void;
+    const promise = new Promise<void>((r) => (resolve = r));
+    return { promise, resolve };
+  }
+
+  it("never overlaps runs and only keeps the latest queued request", async () => {
+    const queue = new BackgroundBuildQueue();
+    const calls: string[] = [];
+    const first = deferred();
+    queue.schedule(async () => {
+      calls.push("1");
+      await first.promise;
+    });
+    queue.schedule(async () => calls.push("2 (superseded)"));
+    queue.schedule(async () => calls.push("3"));
+    await Promise.resolve();
+    expect(calls).toEqual(["1"]);
+    first.resolve();
+    await queue.whenIdle();
+    expect(calls).toEqual(["1", "3"]);
+  });
+
+  it("logs a throwing run and keeps draining", async () => {
+    const queue = new BackgroundBuildQueue();
+    const ran = vi.fn();
+    queue.schedule(async () => {
+      throw new Error("boom");
+    });
+    queue.schedule(async () => ran());
+    await queue.whenIdle();
+    expect(ran).toHaveBeenCalledTimes(1);
+    queue.schedule(async () => ran());
+    await queue.whenIdle();
+    expect(ran).toHaveBeenCalledTimes(2);
+  });
+
+  it("is shared per cache directory", () => {
+    expect(getBackgroundBuildQueue(path.join(tmpDir, "c"))).toBe(getBackgroundBuildQueue(path.join(tmpDir, "c", ".")));
+    expect(getBackgroundBuildQueue(path.join(tmpDir, "c"))).not.toBe(getBackgroundBuildQueue(path.join(tmpDir, "d")));
+  });
+});
+
 describe("assertBuildSucceeded", () => {
   const ok: BuildResult = { id: "ok", success: true, warnings: ["Thumb: asset not generated"] };
   const ko: BuildResult = { id: "ko", success: false, error: "Slidev exited with code 1\nstack" };
@@ -349,3 +433,4 @@ describe("assertBuildSucceeded", () => {
     expect(e.message).toContain("ko: Slidev exited with code 1");
   });
 });
+

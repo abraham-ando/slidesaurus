@@ -3,8 +3,20 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", "theme/**"],
-      "outputs": ["lib/**", "build/**", ".docusaurus/**"]
+      "outputs": ["lib/**", "build/**"]
+    },
+    "slidesaurus#build": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "src/**",
+        "!src/**/__tests__/**",
+        "theme/**",
+        "scripts/**",
+        "rollup.config.mjs",
+        "package.json",
+        "tsconfig.json"
+      ],
+      "outputs": ["lib/**"]
     },
     "dev": {
       "dependsOn": ["^build"],

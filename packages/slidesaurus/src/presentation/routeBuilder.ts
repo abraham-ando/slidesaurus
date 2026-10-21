@@ -39,7 +39,7 @@ export function toPublicPluginData(content: PluginContentData): PluginData {
     categories: content.categories,
     playlists: content.playlists,
     config: { routeBasePath, path, pageTitle, pageTagline, uiTheme },
-    isDev: content.isDev,
+    ...(content.buildStatusUrl ? { buildStatusUrl: content.buildStatusUrl } : {}),
   };
 }
 
