@@ -1,5 +1,0 @@
-# Formatting-only commits, skipped by `git blame`.
-# Enable locally: git config blame.ignoreRevsFile .git-blame-ignore-revs
-
-# style: apply Prettier to the whole repository
-d903acdce6ea8159b36297d4be7fca61e16f5eb5
