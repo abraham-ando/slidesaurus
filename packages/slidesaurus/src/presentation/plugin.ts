@@ -43,7 +43,9 @@ const DEFAULT_OPTIONS: PluginOptions = {
   pageTagline: "Interactive presentation overview",
   id: "default",
   addons: [],
-  buildTimeout: 120,
+  // Seconds per presentation. A cold `slidev build` (first run after an
+  // install, Windows antivirus, several builds in parallel) often exceeds 2 min.
+  buildTimeout: 300,
   verbose: false,
   maxParallelBuilds: defaultMaxParallelBuilds(),
   // OWASP A05 — Principle of Least Privilege: auto-installing packages (pnpm add) must

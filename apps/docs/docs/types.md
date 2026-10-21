@@ -241,6 +241,7 @@ interface BuildOptions {
   /** Default theme. No built-in default: decks fall back to their own frontmatter theme or Slidev's default. */
   theme?: string;
   addons?: string[];
+  /** Maximum duration of one presentation build, in seconds (10–600, default 300). */
   buildTimeout: number;
   verbose: boolean;
   maxParallelBuilds: number;

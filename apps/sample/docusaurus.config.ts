@@ -74,8 +74,8 @@ const config: Config = {
         // apps/docs at the same time, so the default budget is shared in
         // proportion to the number of decks: 3 here, 6 in apps/docs.
         maxParallelBuilds: Math.max(1, Math.floor(defaultMaxParallelBuilds() / 3)),
-        // Build timeout in seconds
-        buildTimeout: 120,
+        // Build timeout in seconds (default 300)
+        buildTimeout: 300,
       },
     ],
   ],

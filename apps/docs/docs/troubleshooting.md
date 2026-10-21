@@ -24,15 +24,15 @@ If using a monorepo, ensure `@slidev/cli` is installed in the workspace root or 
 
 ## Build Timeout
 
-**Error:** `Build timed out after 120 seconds`
+**Error:** `Build timed out after 300s` (or the value of your `buildTimeout`)
 
-**Cause:** A presentation is too large, the build environment is slow, or too many builds run at once. Each `slidev build` peaks at about 1 GB of memory: when concurrent builds exceed the free memory, every build swaps and they all time out together. This also happens when several sites are built at the same time (a monorepo built by Turbo), since each site computes its own concurrency.
+**Cause:** A presentation is too large, the build environment is slow, or too many builds run at once. The first build after `pnpm install` is the slowest (cold caches, antivirus scanning the new `node_modules` on Windows): a single deck can take well over 2 minutes on its own. Each `slidev build` peaks at about 1 GB of memory: when concurrent builds exceed the free memory, every build swaps and they all time out together. This also happens when several sites are built at the same time (a monorepo built by Turbo), since each site computes its own concurrency.
 
 **Solution:** Lower `maxParallelBuilds` (the default already caps it by free memory — see [Parallel Builds](./parallel-builds.md#configuration)), or increase the `buildTimeout` option:
 
 ```ts
 {
-  buildTimeout: 300,  // 5 minutes
+  buildTimeout: 600,  // 10 minutes (maximum; default 300)
 }
 ```
 
