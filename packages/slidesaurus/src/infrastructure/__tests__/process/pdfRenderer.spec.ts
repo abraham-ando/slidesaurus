@@ -58,17 +58,39 @@ describe("readDeckExportSettings", () => {
   });
 
   it("lets the exportWithClicks option force clicks", () => {
-    expect(readDeckExportSettings(deck("---\ntitle: x\n---\n"), true).withClicks).toBe(true);
+    expect(
+      readDeckExportSettings(deck("---\ntitle: x\n---\n"), true).withClicks,
+    ).toBe(true);
   });
 
   it("delegates withToc / perSlide to slidev export", () => {
-    expect(readDeckExportSettings(deck("---\nexport:\n  withToc: true\n---\n"), false).needsSlidevExport).toBe(true);
-    expect(readDeckExportSettings(deck("---\nexport:\n  perSlide: true\n---\n"), false).needsSlidevExport).toBe(true);
+    expect(
+      readDeckExportSettings(
+        deck("---\nexport:\n  withToc: true\n---\n"),
+        false,
+      ).needsSlidevExport,
+    ).toBe(true);
+    expect(
+      readDeckExportSettings(
+        deck("---\nexport:\n  perSlide: true\n---\n"),
+        false,
+      ).needsSlidevExport,
+    ).toBe(true);
   });
 
   it("never evaluates a ---js headmatter and survives invalid YAML", () => {
-    expect(readDeckExportSettings(deck("---js\n{ title: process.exit(1) }\n---\n"), false).title).toBeUndefined();
-    expect(readDeckExportSettings(deck("---\n: : bad\n  - [\n---\n"), false).routerMode).toBe("history");
-    expect(readDeckExportSettings(path.join(tmpDir, "missing.md"), false).withClicks).toBe(false);
+    expect(
+      readDeckExportSettings(
+        deck("---js\n{ title: process.exit(1) }\n---\n"),
+        false,
+      ).title,
+    ).toBeUndefined();
+    expect(
+      readDeckExportSettings(deck("---\n: : bad\n  - [\n---\n"), false)
+        .routerMode,
+    ).toBe("history");
+    expect(
+      readDeckExportSettings(path.join(tmpDir, "missing.md"), false).withClicks,
+    ).toBe(false);
   });
 });

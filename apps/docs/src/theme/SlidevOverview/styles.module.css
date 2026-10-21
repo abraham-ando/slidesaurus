@@ -84,7 +84,9 @@
   font-size: 0.8rem;
   font-weight: 600;
   text-decoration: none !important;
-  transition: background 0.15s, transform 0.1s;
+  transition:
+    background 0.15s,
+    transform 0.1s;
   white-space: nowrap;
 }
 

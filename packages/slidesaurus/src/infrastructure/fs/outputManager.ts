@@ -20,7 +20,11 @@ import type { PresentationMetadata } from "../../domain/types";
  * Each presentation is a sub-directory: `{outputDir}/{presentationId}/`.
  * `locale` selects the per-locale cache (see `getSlidevCacheDir`).
  */
-export function getSlidevBuildOutputDir(siteDir: string, pluginId: string, locale?: string): string {
+export function getSlidevBuildOutputDir(
+  siteDir: string,
+  pluginId: string,
+  locale?: string,
+): string {
   return path.join(getSlidevCacheDir(siteDir, pluginId, locale), "output");
 }
 
@@ -41,7 +45,10 @@ export function isCompleteBuildOutput(dir: string): boolean {
  *
  * @throws `[Security]` error for absolute-path or traversal presentationIds.
  */
-export function hasCachedOutput(cacheDir: string, presentationId: string): boolean {
+export function hasCachedOutput(
+  cacheDir: string,
+  presentationId: string,
+): boolean {
   const outputRoot = path.join(cacheDir, "output");
   const outputDir = path.join(outputRoot, presentationId);
   const rel = path.relative(outputRoot, outputDir);
@@ -53,7 +60,9 @@ export function hasCachedOutput(cacheDir: string, presentationId: string): boole
     rel.startsWith("..") ||
     path.isAbsolute(rel)
   ) {
-    throw new Error(`[Security] Path traversal detected in presentationId: "${presentationId}"`);
+    throw new Error(
+      `[Security] Path traversal detected in presentationId: "${presentationId}"`,
+    );
   }
   return isCompleteBuildOutput(outputDir);
 }
@@ -68,12 +77,16 @@ export function hasCachedOutput(cacheDir: string, presentationId: string): boole
  * Directories that are ancestors of a current presentation (categories) are
  * kept and recursed into. Returns the relative paths removed.
  */
-export function purgeStaleOutputs(outputRoot: string, presentationIds: Iterable<string>): string[] {
+export function purgeStaleOutputs(
+  outputRoot: string,
+  presentationIds: Iterable<string>,
+): string[] {
   const ids = new Set([...presentationIds].map((id) => id.replace(/\\/g, "/")));
   const ancestors = new Set<string>();
   for (const id of ids) {
     const parts = id.split("/");
-    for (let i = 1; i < parts.length; i++) ancestors.add(parts.slice(0, i).join("/"));
+    for (let i = 1; i < parts.length; i++)
+      ancestors.add(parts.slice(0, i).join("/"));
   }
   const removed: string[] = [];
   if (!fs.existsSync(outputRoot)) return removed;
@@ -102,7 +115,9 @@ export function purgeStaleOutputs(outputRoot: string, presentationIds: Iterable<
   };
   walk(outputRoot, "");
   if (removed.length > 0) {
-    log.info(`Removed ${removed.length} stale output entr${removed.length > 1 ? "ies" : "y"} from the cache`);
+    log.info(
+      `Removed ${removed.length} stale output entr${removed.length > 1 ? "ies" : "y"} from the cache`,
+    );
   }
   return removed;
 }
@@ -134,7 +149,10 @@ export function createPresenterFallbacks(
   for (const p of presentations) {
     const presDir = path.join(finalOutputDir, p.id, "presenter");
     const indexHtml = path.join(finalOutputDir, p.id, "index.html");
-    if (fs.existsSync(indexHtml) && !fs.existsSync(path.join(presDir, "index.html"))) {
+    if (
+      fs.existsSync(indexHtml) &&
+      !fs.existsSync(path.join(presDir, "index.html"))
+    ) {
       fs.mkdirSync(presDir, { recursive: true });
       fs.copyFileSync(indexHtml, path.join(presDir, "index.html"));
     }

@@ -33,30 +33,45 @@ export interface DeckExportSettings {
 }
 
 /** First frontmatter block (headmatter). */
-const HEADMATTER_RE = /^(?:\uFEFF)?---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
+const HEADMATTER_RE =
+  /^(?:\uFEFF)?---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
 
 /**
  * Read the export-related settings of a deck from its headmatter. YAML only,
  * never evaluated (a `---js` block is not YAML: defaults apply).
  * The `exportWithClicks` plugin option forces `withClicks`.
  */
-export function readDeckExportSettings(sourcePath: string, exportWithClicks: boolean): DeckExportSettings {
+export function readDeckExportSettings(
+  sourcePath: string,
+  exportWithClicks: boolean,
+): DeckExportSettings {
   let data: Record<string, unknown> = {};
   try {
     const match = HEADMATTER_RE.exec(fs.readFileSync(sourcePath, "utf-8"));
     const parsed = match ? yaml.load(match[1]) : undefined;
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) data = parsed as Record<string, unknown>;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed))
+      data = parsed as Record<string, unknown>;
   } catch {
     // Unreadable file / invalid YAML: Slidev's defaults.
   }
-  const exp = (data.export && typeof data.export === "object" ? data.export : {}) as Record<string, unknown>;
-  const str = (v: unknown): string | undefined => (typeof v === "string" && v.trim() ? v : undefined);
-  const keywords = Array.isArray(data.keywords) ? data.keywords.map(String) : str(data.keywords)?.split(",");
+  const exp = (
+    data.export && typeof data.export === "object" ? data.export : {}
+  ) as Record<string, unknown>;
+  const str = (v: unknown): string | undefined =>
+    typeof v === "string" && v.trim() ? v : undefined;
+  const keywords = Array.isArray(data.keywords)
+    ? data.keywords.map(String)
+    : str(data.keywords)?.split(",");
   const exportFilename = str(data.exportFilename);
   return {
     withClicks: exportWithClicks || exp.withClicks === true,
     headmatterWithClicks: exp.withClicks === true,
-    exportFilename: exportFilename && /^[\w. -]+$/.test(exportFilename) && !exportFilename.startsWith(".") ? exportFilename : undefined,
+    exportFilename:
+      exportFilename &&
+      /^[\w. -]+$/.test(exportFilename) &&
+      !exportFilename.startsWith(".")
+        ? exportFilename
+        : undefined,
     dark: exp.dark === true || data.colorSchema === "dark",
     routerMode: data.routerMode === "hash" ? "hash" : "history",
     wait: typeof exp.wait === "number" && exp.wait > 0 ? exp.wait : 0,
@@ -97,7 +112,11 @@ async function waitForSlidesRendered(page: PlaywrightPage): Promise<void> {
   for (let i = 0, n = await waitFors.count(); i < n; i++) {
     const element = waitFors.nth(i);
     const selector = await element.getAttribute("data-waitfor");
-    if (selector) await element.locator(selector).waitFor({ state: "visible" }).catch(() => undefined);
+    if (selector)
+      await element
+        .locator(selector)
+        .waitFor({ state: "visible" })
+        .catch(() => undefined);
   }
   await Promise.all(page.frames().map((frame) => frame.waitForLoadState()));
   const mermaid = body.locator("#mermaid-rendering-container");
@@ -126,22 +145,38 @@ export async function renderPdf(
 ): Promise<void> {
   const server = await serveStatic(presentation.outputPath, presentation.url);
   // deviceScaleFactor 2 = `slidev export`'s default `scale`.
-  const browserContext = await browser.newContext({ viewport: { ...INITIAL_VIEWPORT }, deviceScaleFactor: 2 });
+  const browserContext = await browser.newContext({
+    viewport: { ...INITIAL_VIEWPORT },
+    deviceScaleFactor: 2,
+  });
   try {
     const page: PlaywrightPage = await browserContext.newPage();
     page.setDefaultTimeout(timeoutMs);
-    const base = presentation.url.endsWith("/") ? presentation.url : `${presentation.url}/`;
+    const base = presentation.url.endsWith("/")
+      ? presentation.url
+      : `${presentation.url}/`;
     const query = `print=${settings.withClicks ? "clicks" : "true"}`;
     const url =
-      settings.routerMode === "hash" ? `${server.origin}${base}?${query}#print` : `${server.origin}${base}print?${query}`;
+      settings.routerMode === "hash"
+        ? `${server.origin}${base}?${query}#print`
+        : `${server.origin}${base}print?${query}`;
     await page.goto(url, { waitUntil: "load" });
-    await page.emulateMedia({ colorScheme: settings.dark ? "dark" : "light", media: "screen" });
+    await page.emulateMedia({
+      colorScheme: settings.dark ? "dark" : "light",
+      media: "screen",
+    });
     await page.locator(".print-slide-container").first().waitFor();
     // The print layout scales slides to the window width: use the canvas
     // width (and a viewport as tall as every page), like `slidev export`.
-    const size = (await page.evaluate<{ width: number; height: number } | null>(PAGE_SIZE_EXPRESSION)) ?? DEFAULT_CANVAS;
+    const size =
+      (await page.evaluate<{ width: number; height: number } | null>(
+        PAGE_SIZE_EXPRESSION,
+      )) ?? DEFAULT_CANVAS;
     const pages = await page.locator(".print-slide-container").count();
-    await page.setViewportSize({ width: size.width, height: size.height * Math.max(1, pages) });
+    await page.setViewportSize({
+      width: size.width,
+      height: size.height * Math.max(1, pages),
+    });
     await page.waitForLoadState("networkidle");
     await waitForSlidesRendered(page);
     if (settings.wait) await page.waitForTimeout(settings.wait);

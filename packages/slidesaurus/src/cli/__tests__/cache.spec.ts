@@ -3,7 +3,9 @@ import path from "node:path";
 import fs from "node:fs";
 import os from "node:os";
 
-vi.mock("prompts", () => ({ default: vi.fn().mockResolvedValue({ confirmed: true }) }));
+vi.mock("prompts", () => ({
+  default: vi.fn().mockResolvedValue({ confirmed: true }),
+}));
 
 const { mockLoadPluginOptions, mockResolveOptions } = vi.hoisted(() => ({
   mockLoadPluginOptions: vi.fn(),
@@ -29,7 +31,11 @@ describe("runCacheClear", () => {
     cacheDir = path.join(tmpDir, ".docusaurus", "slidesaurus", "default");
     fs.mkdirSync(cacheDir, { recursive: true });
 
-    mockLoadPluginOptions.mockReturnValue({ options: {}, configFile: null, pluginFound: false });
+    mockLoadPluginOptions.mockReturnValue({
+      options: {},
+      configFile: null,
+      pluginFound: false,
+    });
     mockResolveOptions.mockReturnValue({
       path: "./slidev",
       routeBasePath: "/slidev",
@@ -65,23 +71,38 @@ describe("runCacheClear", () => {
         "advanced/deep-dive": "hash-b",
       },
     };
-    fs.writeFileSync(path.join(cacheDir, "build-hashes.json"), JSON.stringify(manifest));
+    fs.writeFileSync(
+      path.join(cacheDir, "build-hashes.json"),
+      JSON.stringify(manifest),
+    );
 
-    await runCacheClear({ presentation: "intro/getting-started", yes: true, pluginId: "default" });
+    await runCacheClear({
+      presentation: "intro/getting-started",
+      yes: true,
+      pluginId: "default",
+    });
 
     // Output dir should be gone
     expect(fs.existsSync(outputDir)).toBe(false);
 
     // Manifest should still have the other entry
-    const saved = JSON.parse(fs.readFileSync(path.join(cacheDir, "build-hashes.json"), "utf-8"));
+    const saved = JSON.parse(
+      fs.readFileSync(path.join(cacheDir, "build-hashes.json"), "utf-8"),
+    );
     expect(saved.hashes?.["intro/getting-started"]).toBeUndefined();
     expect(saved.hashes?.["advanced/deep-dive"]).toBe("hash-b");
   });
 
   it("warns when the targeted presentation has no cached output", async () => {
     const logSpy = vi.spyOn(console, "log");
-    await runCacheClear({ presentation: "nonexistent", yes: true, pluginId: "default" });
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("No cached output"));
+    await runCacheClear({
+      presentation: "nonexistent",
+      yes: true,
+      pluginId: "default",
+    });
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.stringContaining("No cached output"),
+    );
     logSpy.mockRestore();
   });
 
@@ -89,7 +110,9 @@ describe("runCacheClear", () => {
     fs.rmSync(cacheDir, { recursive: true });
     const logSpy = vi.spyOn(console, "log");
     await runCacheClear({ yes: true, pluginId: "default" });
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("already empty"));
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.stringContaining("already empty"),
+    );
     logSpy.mockRestore();
   });
 
@@ -117,7 +140,9 @@ describe("runCacheClear", () => {
           runCacheClear({ presentation: bad, yes: true, pluginId: "default" }),
         ).rejects.toThrow("process.exit called");
         expect(exitSpy).toHaveBeenCalledWith(1);
-        expect(fs.existsSync(path.join(outputRoot, "keep-me", "index.html"))).toBe(true);
+        expect(
+          fs.existsSync(path.join(outputRoot, "keep-me", "index.html")),
+        ).toBe(true);
       },
     );
   });

@@ -42,7 +42,10 @@ export default tseslint.config(
   },
   {
     // React theme components (plugin theme + swizzled overrides in the apps).
-    files: ["packages/slidesaurus/theme/**/*.{ts,tsx}", "apps/*/src/**/*.{ts,tsx}"],
+    files: [
+      "packages/slidesaurus/theme/**/*.{ts,tsx}",
+      "apps/*/src/**/*.{ts,tsx}",
+    ],
     plugins: { "react-hooks": reactHooks },
     languageOptions: {
       globals: { ...globals.browser },

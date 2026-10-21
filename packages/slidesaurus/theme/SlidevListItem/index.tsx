@@ -1,6 +1,15 @@
 import React from "react";
 import Link from "@docusaurus/Link";
-import { PresentationIcon, FolderIcon, AuthorIcon, ClockIcon, StarIcon, PresenterIcon, DownloadIcon, PlaylistIcon } from "../icons";
+import {
+  PresentationIcon,
+  FolderIcon,
+  AuthorIcon,
+  ClockIcon,
+  StarIcon,
+  PresenterIcon,
+  DownloadIcon,
+  PlaylistIcon,
+} from "../icons";
 import type { Presentation, Category, UITheme } from "../types";
 import { LEVEL_LABELS } from "../types";
 import { useFavorites } from "../useFavorites";
@@ -28,7 +37,11 @@ export default function SlidevListItem(props: Props) {
   if (props.type === "category") {
     const { category } = props;
     return (
-      <Link to={category.url} className={`${styles.listItem} ${styles.categoryItem}`} data-slidev-ui-theme={uiTheme}>
+      <Link
+        to={category.url}
+        className={`${styles.listItem} ${styles.categoryItem}`}
+        data-slidev-ui-theme={uiTheme}
+      >
         <div className={styles.titleSection}>
           <FolderIcon className={styles.icon} width={18} height={18} />
           <span className={styles.title}>{category.label}</span>
@@ -38,7 +51,9 @@ export default function SlidevListItem(props: Props) {
         </div>
         <div className={styles.metaSection}>
           <span className={styles.badge}>
-            {category.count === 1 ? "1 presentation" : `${category.count} presentations`}
+            {category.count === 1
+              ? "1 presentation"
+              : `${category.count} presentations`}
           </span>
         </div>
       </Link>
@@ -71,18 +86,26 @@ export default function SlidevListItem(props: Props) {
       </div>
       <div className={styles.metaSection}>
         {presentation.deprecated && (
-          <span className={`${styles.metaBadge} ${styles.badgeDeprecated}`}>Deprecated</span>
+          <span className={`${styles.metaBadge} ${styles.badgeDeprecated}`}>
+            Deprecated
+          </span>
         )}
         {presentation.level && (
-          <span className={`${styles.metaBadge} ${LEVEL_CLASS[presentation.level] ?? ""}`}>
+          <span
+            className={`${styles.metaBadge} ${LEVEL_CLASS[presentation.level] ?? ""}`}
+          >
             {LEVEL_LABELS[presentation.level] ?? presentation.level}
           </span>
         )}
         {presentation.playlist && presentation.playlist.length > 0 && (
-          <span className={`${styles.metaBadge} ${styles.badgePlaylist}`} title={presentation.playlist.join(", ")}>
+          <span
+            className={`${styles.metaBadge} ${styles.badgePlaylist}`}
+            title={presentation.playlist.join(", ")}
+          >
             <PlaylistIcon width={9} height={9} />
             {presentation.playlist[0]}
-            {presentation.playlist.length > 1 && ` +${presentation.playlist.length - 1}`}
+            {presentation.playlist.length > 1 &&
+              ` +${presentation.playlist.length - 1}`}
           </span>
         )}
         {presentation.duration !== undefined && (
@@ -131,7 +154,11 @@ export default function SlidevListItem(props: Props) {
       </div>
       {presentation.thumbnailUrl && (
         <div className={styles.hoverPreview} aria-hidden="true">
-          <img src={presentation.thumbnailUrl} alt="" className={styles.hoverPreviewImg} />
+          <img
+            src={presentation.thumbnailUrl}
+            alt=""
+            className={styles.hoverPreviewImg}
+          />
         </div>
       )}
     </div>

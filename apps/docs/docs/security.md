@@ -50,11 +50,11 @@ The data exposed to the browser through Docusaurus global data contains no absol
 
 Set these on your hosting (Netlify `_headers`, nginx, Cloudflare, GitHub Pages is limited to meta tags — prefer a real host for headers).
 
-| Header | Value | Why |
-|---|---|---|
+| Header                    | Value                                           | Why                                                                |
+| ------------------------- | ----------------------------------------------- | ------------------------------------------------------------------ |
 | `Content-Security-Policy` | `frame-ancestors 'self'` (plus your own policy) | Stops other sites from framing your decks and site (clickjacking). |
-| `X-Content-Type-Options` | `nosniff` | Prevents MIME sniffing of scripts and styles. |
-| `Referrer-Policy` | `strict-origin-when-cross-origin` | Limits referrer leakage. |
+| `X-Content-Type-Options`  | `nosniff`                                       | Prevents MIME sniffing of scripts and styles.                      |
+| `Referrer-Policy`         | `strict-origin-when-cross-origin`               | Limits referrer leakage.                                           |
 
 :::warning `frame-ancestors` must be an HTTP header
 Browsers ignore `frame-ancestors` in a `<meta http-equiv="Content-Security-Policy">` tag. It only works as a response header.

@@ -70,11 +70,11 @@ getTypeScriptThemePath(): string {
 
 Registers three commands, available via `npx docusaurus`. They scan the configured `path` directory without triggering a build:
 
-| Command | Description |
-| --- | --- |
-| `slidev:list` | Lists discovered presentations (category/file → title, author, level, duration, deprecation) |
-| `slidev:stats` | Prints totals: authors, tags, levels, deprecated and incomplete presentations, playlists |
-| `slidev:validate` | Reports metadata issues (missing description or author, deprecated decks) |
+| Command           | Description                                                                                  |
+| ----------------- | -------------------------------------------------------------------------------------------- |
+| `slidev:list`     | Lists discovered presentations (category/file → title, author, level, duration, deprecation) |
+| `slidev:stats`    | Prints totals: authors, tags, levels, deprecated and incomplete presentations, playlists     |
+| `slidev:validate` | Reports metadata issues (missing description or author, deprecated decks)                    |
 
 ```bash
 npx docusaurus slidev:list
@@ -100,13 +100,13 @@ getSwizzleComponentList(): string[] {
 }
 ```
 
-| Component | Description |
-| --- | --- |
-| `SlidevOverview` | The overview page (search, filters, grid/list toggle, sidebar) |
-| `SlidevCard` | Card component used in the grid view |
-| `SlidevListItem` | Row component used in the list view |
-| `SlidevCategoryCard` | Category card used in grid and list views |
-| `SlidevPresentation` | The individual presentation page with iframe and metadata |
+| Component            | Description                                                    |
+| -------------------- | -------------------------------------------------------------- |
+| `SlidevOverview`     | The overview page (search, filters, grid/list toggle, sidebar) |
+| `SlidevCard`         | Card component used in the grid view                           |
+| `SlidevListItem`     | Row component used in the list view                            |
+| `SlidevCategoryCard` | Category card used in grid and list views                      |
+| `SlidevPresentation` | The individual presentation page with iframe and metadata      |
 
 `SlidevLink` and `SlidevIframe` ship in the theme and can be imported via `@theme/SlidevLink` / `@theme/SlidevIframe`, but are not in the swizzle list.
 

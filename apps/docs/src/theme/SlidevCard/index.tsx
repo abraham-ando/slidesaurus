@@ -66,7 +66,10 @@ export default function SlidevCard(props: Props) {
         </span>
       )}
       {showFeatured && (
-        <span className={styles.ribbonFeatured} aria-label="Featured presentation">
+        <span
+          className={styles.ribbonFeatured}
+          aria-label="Featured presentation"
+        >
           ★ Featured
         </span>
       )}

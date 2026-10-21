@@ -6,7 +6,11 @@ import type { PresentationLevel } from "../domain/types";
 type ColorSchema = "dark" | "light" | "auto";
 const VALID_COLOR_SCHEMAS: ColorSchema[] = ["dark", "light", "auto"];
 
-const VALID_LEVELS: PresentationLevel[] = ["beginner", "intermediate", "advanced"];
+const VALID_LEVELS: PresentationLevel[] = [
+  "beginner",
+  "intermediate",
+  "advanced",
+];
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
@@ -17,7 +21,9 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
  * the Docusaurus process. Both engines are replaced by one that refuses to run.
  */
 function refuseJsEngine(): never {
-  throw new Error("JavaScript front-matter (---js) is not supported for security reasons");
+  throw new Error(
+    "JavaScript front-matter (---js) is not supported for security reasons",
+  );
 }
 export const SAFE_MATTER_OPTIONS = {
   engines: {
@@ -27,7 +33,10 @@ export const SAFE_MATTER_OPTIONS = {
 };
 
 /** Parse frontmatter with the hardened engine set (no `---js` evaluation). */
-export function parseFrontmatter(content: string): { data: Record<string, unknown>; content: string } {
+export function parseFrontmatter(content: string): {
+  data: Record<string, unknown>;
+  content: string;
+} {
   return matter(content, SAFE_MATTER_OPTIONS);
 }
 
@@ -63,26 +72,29 @@ export class FrontmatterValidator {
 
   validate(fm: Record<string, unknown>): ValidatedFields {
     return {
-      title:        this.validateNonEmptyString("title", fm.title),
-      description:  this.validateString("description", fm.description),
-      author:       this.validateString("author", fm.author),
-      theme:        this.validateNonEmptyString("theme", fm.theme),
-      addons:       this.validateAddons(fm.addons),
-      tags:         this.validateTags(fm.tags),
-      date:         this.validateDate("date", fm.date),
-      position:     this.validatePosition(fm.position),
-      owner:        this.validateString("owner", fm.owner),
-      level:        this.validateLevel(fm.level),
-      duration:     this.validateDuration(fm.duration),
+      title: this.validateNonEmptyString("title", fm.title),
+      description: this.validateString("description", fm.description),
+      author: this.validateString("author", fm.author),
+      theme: this.validateNonEmptyString("theme", fm.theme),
+      addons: this.validateAddons(fm.addons),
+      tags: this.validateTags(fm.tags),
+      date: this.validateDate("date", fm.date),
+      position: this.validatePosition(fm.position),
+      owner: this.validateString("owner", fm.owner),
+      level: this.validateLevel(fm.level),
+      duration: this.validateDuration(fm.duration),
       lastReviewed: this.validateDate("lastReviewed", fm.lastReviewed),
-      deprecated:   this.validateBoolean("deprecated", fm.deprecated),
-      colorSchema:  this.validateColorSchema(fm.colorSchema),
+      deprecated: this.validateBoolean("deprecated", fm.deprecated),
+      colorSchema: this.validateColorSchema(fm.colorSchema),
       withoutNotes: this.validateBoolean("withoutNotes", fm.withoutNotes),
-      playlist:     this.validatePlaylist(fm.playlist),
+      playlist: this.validatePlaylist(fm.playlist),
     };
   }
 
-  private validateNonEmptyString(field: string, raw: unknown): string | undefined {
+  private validateNonEmptyString(
+    field: string,
+    raw: unknown,
+  ): string | undefined {
     if (raw === undefined || raw === null) return undefined;
     if (typeof raw === "string" && raw.trim()) return raw.trim();
     this.warn(`Invalid "${field}": must be a non-empty string`);
@@ -98,7 +110,10 @@ export class FrontmatterValidator {
     const valid: string[] = [];
     for (const item of raw) {
       if (typeof item === "string" && item.trim()) valid.push(item.trim());
-      else this.warn(`Invalid addon item: each addon must be a non-empty string, got ${typeof item}`);
+      else
+        this.warn(
+          `Invalid addon item: each addon must be a non-empty string, got ${typeof item}`,
+        );
     }
     return valid.length > 0 ? [...new Set(valid)] : undefined;
   }
@@ -115,7 +130,9 @@ export class FrontmatterValidator {
         const normalized = item.trim().toLowerCase();
         if (normalized) valid.push(normalized);
       } else {
-        this.warn(`Invalid tag item: each tag must be a string, got ${typeof item}`);
+        this.warn(
+          `Invalid tag item: each tag must be a string, got ${typeof item}`,
+        );
       }
     }
     const deduped = [...new Set(valid)];
@@ -126,7 +143,8 @@ export class FrontmatterValidator {
   private validateDate(field: string, raw: unknown): string | undefined {
     if (raw === undefined) return undefined;
     const coerced = raw instanceof Date ? raw.toISOString().slice(0, 10) : raw;
-    if (typeof coerced === "string" && ISO_DATE_RE.test(coerced)) return coerced;
+    if (typeof coerced === "string" && ISO_DATE_RE.test(coerced))
+      return coerced;
     this.warn(`Invalid "${field}": must be an ISO date string (YYYY-MM-DD)`);
     return undefined;
   }
@@ -170,8 +188,11 @@ export class FrontmatterValidator {
 
   private validateColorSchema(raw: unknown): ColorSchema | undefined {
     if (raw === undefined) return undefined;
-    if ((VALID_COLOR_SCHEMAS as unknown[]).includes(raw)) return raw as ColorSchema;
-    this.warn(`Invalid "colorSchema": must be one of ${VALID_COLOR_SCHEMAS.join(", ")}`);
+    if ((VALID_COLOR_SCHEMAS as unknown[]).includes(raw))
+      return raw as ColorSchema;
+    this.warn(
+      `Invalid "colorSchema": must be one of ${VALID_COLOR_SCHEMAS.join(", ")}`,
+    );
     return undefined;
   }
 
@@ -183,7 +204,9 @@ export class FrontmatterValidator {
       if (typeof item === "string" && item.trim()) {
         names.push(item.trim());
       } else {
-        this.warn(`Invalid "playlist" entry: each playlist name must be a non-empty string`);
+        this.warn(
+          `Invalid "playlist" entry: each playlist name must be a non-empty string`,
+        );
       }
     }
     return names.length > 0 ? names : undefined;
@@ -204,7 +227,10 @@ export class FrontmatterValidator {
  * merged with the global ones, resolved to full package names — keeping the raw
  * shorthands would load the same addon twice.
  */
-export function patchFrontmatterAddons(filePath: string, addons: string[]): void {
+export function patchFrontmatterAddons(
+  filePath: string,
+  addons: string[],
+): void {
   const content = fs.readFileSync(filePath, "utf-8");
   const parsed = parseFrontmatter(content);
   parsed.data.addons = [...new Set(addons)];
@@ -221,11 +247,19 @@ export function patchFrontmatterAddons(filePath: string, addons: string[]): void
  *   the presentation metadata AFTER `transformFrontmatter` / `onPresentationScanned`,
  *   which may differ from the raw file). Otherwise only fills a missing theme.
  */
-export function patchFrontmatterTheme(filePath: string, theme: string, force = false): void {
+export function patchFrontmatterTheme(
+  filePath: string,
+  theme: string,
+  force = false,
+): void {
   const content = fs.readFileSync(filePath, "utf-8");
   const parsed = parseFrontmatter(content);
   if (force ? parsed.data.theme !== theme : !parsed.data.theme) {
     parsed.data.theme = theme;
-    fs.writeFileSync(filePath, matter.stringify(parsed.content, parsed.data), "utf-8");
+    fs.writeFileSync(
+      filePath,
+      matter.stringify(parsed.content, parsed.data),
+      "utf-8",
+    );
   }
 }

@@ -11,7 +11,9 @@ export interface UrlFiltersState {
   selectedTags: string[];
   toggleTag: (tag: string) => void;
   hideDeprecated: boolean;
-  setHideDeprecated: (value: boolean | ((previous: boolean) => boolean)) => void;
+  setHideDeprecated: (
+    value: boolean | ((previous: boolean) => boolean),
+  ) => void;
   selectedPlaylist: string;
   setSelectedPlaylist: (value: string) => void;
   /** Clears every URL-backed filter. */
@@ -53,11 +55,25 @@ export function useUrlFilters(): UrlFiltersState {
       hideDeprecated,
       playlist: selectedPlaylist,
     });
-    window.history.replaceState(null, "", window.location.pathname + search + window.location.hash);
-  }, [hydrated, searchQuery, selectedLevel, selectedAuthor, selectedTags, hideDeprecated, selectedPlaylist]);
+    window.history.replaceState(
+      null,
+      "",
+      window.location.pathname + search + window.location.hash,
+    );
+  }, [
+    hydrated,
+    searchQuery,
+    selectedLevel,
+    selectedAuthor,
+    selectedTags,
+    hideDeprecated,
+    selectedPlaylist,
+  ]);
 
   const toggleTag = useCallback((tag: string) => {
-    setSelectedTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
   }, []);
 
   const resetUrlFilters = useCallback(() => {

@@ -30,10 +30,15 @@ const COLLECTION_NAME_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const SCAN_EXTENSIONS = new Set([".vue", ".ts", ".js", ".mjs", ".md"]);
 
 /** Package directory of `name` resolved like Node from `fromDir` (walking up), or undefined. */
-export function findPackageDir(fromDir: string, name: string): string | undefined {
+export function findPackageDir(
+  fromDir: string,
+  name: string,
+): string | undefined {
   return walkUpTree(fromDir, TREE_WALK_MAX_DEPTH * 2, (dir) => {
     const candidate = path.join(dir, "node_modules", ...name.split("/"));
-    return fs.existsSync(path.join(candidate, "package.json")) ? fs.realpathSync(candidate) : undefined;
+    return fs.existsSync(path.join(candidate, "package.json"))
+      ? fs.realpathSync(candidate)
+      : undefined;
   });
 }
 
@@ -43,7 +48,8 @@ function installedCollections(packageDir: string): string[] {
   walkUpTree(packageDir, TREE_WALK_MAX_DEPTH * 2, (dir) => {
     const scopeDir = path.join(dir, "node_modules", SCOPE);
     try {
-      for (const entry of fs.readdirSync(scopeDir)) if (COLLECTION_NAME_RE.test(entry)) names.add(entry);
+      for (const entry of fs.readdirSync(scopeDir))
+        if (COLLECTION_NAME_RE.test(entry)) names.add(entry);
     } catch {
       // no such scope here
     }
@@ -61,11 +67,16 @@ function referencedCollections(clientDir: string): string[] {
   const names = new Set<string>();
   const walk = (dir: string): void => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (entry.name === "node_modules" || entry.name.startsWith(".") && entry.name !== ".generated") continue;
+      if (
+        entry.name === "node_modules" ||
+        (entry.name.startsWith(".") && entry.name !== ".generated")
+      )
+        continue;
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(full);
       else if (SCAN_EXTENSIONS.has(path.extname(entry.name))) {
-        for (const m of fs.readFileSync(full, "utf-8").matchAll(COLON_ICON_RE)) names.add(m[1]);
+        for (const m of fs.readFileSync(full, "utf-8").matchAll(COLON_ICON_RE))
+          names.add(m[1]);
       }
     }
   };
@@ -105,25 +116,42 @@ export function prepareIconCollections(
   const linked: string[] = [];
   const stubbed: string[] = [];
   const scopeDir = path.join(isolatedDir, "node_modules", SCOPE);
-  const names = new Set([...installedCollections(roots.clientDir), ...referencedCollections(roots.clientDir)]);
+  const names = new Set([
+    ...installedCollections(roots.clientDir),
+    ...referencedCollections(roots.clientDir),
+  ]);
   for (const name of names) {
     // Found before the client by Slidev's own order: leave it alone.
-    if ([roots.siteDir, ...roots.packageDirs].some((dir) => resolvable(dir, name))) continue;
+    if (
+      [roots.siteDir, ...roots.packageDirs].some((dir) => resolvable(dir, name))
+    )
+      continue;
     const target = path.join(scopeDir, name);
     try {
       fs.mkdirSync(scopeDir, { recursive: true });
       const fromClient = findPackageDir(roots.clientDir, `${SCOPE}/${name}`);
       if (fromClient) {
         // A junction needs no privilege on Windows; a plain dir symlink elsewhere.
-        fs.symlinkSync(fromClient, target, process.platform === "win32" ? "junction" : "dir");
+        fs.symlinkSync(
+          fromClient,
+          target,
+          process.platform === "win32" ? "junction" : "dir",
+        );
         linked.push(name);
       } else {
         fs.mkdirSync(target, { recursive: true });
         fs.writeFileSync(
           path.join(target, "package.json"),
-          JSON.stringify({ name: `${SCOPE}/${name}`, version: "0.0.0", private: true }),
+          JSON.stringify({
+            name: `${SCOPE}/${name}`,
+            version: "0.0.0",
+            private: true,
+          }),
         );
-        fs.writeFileSync(path.join(target, "icons.json"), JSON.stringify({ prefix: name, icons: {} }));
+        fs.writeFileSync(
+          path.join(target, "icons.json"),
+          JSON.stringify({ prefix: name, icons: {} }),
+        );
         stubbed.push(name);
       }
     } catch {

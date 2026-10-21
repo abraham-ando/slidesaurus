@@ -15,30 +15,32 @@ Vous avez de la doc. Vous avez des slides. Aujourd'hui, ils vivent sur deux mond
 
 **Slidesaurus comble le fossé.**
 
-| Sans Slidesaurus | Avec Slidesaurus |
-|---|---|
-| Builder chaque deck avec `slidev build` | Drop un `.md`, c'est en ligne |
-| Copier les outputs dans `static/` à la main | Pipeline auto, cache SHA-256, builds parallèles |
-| Liens en dur entre docs et slides | Routing unifié, recherche commune |
-| Iframe maison pour embarquer une preview | `<SlidevLink link="/slidev/intro" />` en MDX |
-| Rebuild complet à chaque changement | Cache incrémental — seul le modifié se rebuild |
-| Lancer `slidev dev` à part, port à port | `docusaurus start` construit les decks (cache incrémental) et les sert en statique |
+| Sans Slidesaurus                            | Avec Slidesaurus                                                                   |
+| ------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Builder chaque deck avec `slidev build`     | Drop un `.md`, c'est en ligne                                                      |
+| Copier les outputs dans `static/` à la main | Pipeline auto, cache SHA-256, builds parallèles                                    |
+| Liens en dur entre docs et slides           | Routing unifié, recherche commune                                                  |
+| Iframe maison pour embarquer une preview    | `<SlidevLink link="/slidev/intro" />` en MDX                                       |
+| Rebuild complet à chaque changement         | Cache incrémental — seul le modifié se rebuild                                     |
+| Lancer `slidev dev` à part, port à port     | `docusaurus start` construit les decks (cache incrémental) et les sert en statique |
 
 ---
 
 ## 🎯 La valeur pour les développeurs
 
 ### Productivité maximale
+
 - **Auto-discovery** — déposez un `.md` Slidev, il apparaît dans le site. Pas de config, pas de boilerplate.
 - **Builds parallèles + cache incrémental** — un build complet de 10 présentations en quelques secondes sur incrémental.
 - **Dev simple** — `docusaurus start` construit les présentations avec le même pipeline que la prod (cache incrémental) et les sert en statique : pas de serveur Slidev, pas de port, pas de proxy (donc pas de HMR Slidev ; lancez `slidev` à côté pour éditer un deck en direct).
 - **Auto-install optionnel** des thèmes/addons Slidev manquants (`autoInstall: true`, désactivé par défaut).
 
 ### Doc vivante
+
 Embarquez une présentation dans n'importe quelle page MDX :
 
 ```mdx
-import SlidevLink from '@theme/SlidevLink';
+import SlidevLink from "@theme/SlidevLink";
 
 <SlidevLink link="/slidev/intro-to-rust" />
 ```
@@ -46,24 +48,26 @@ import SlidevLink from '@theme/SlidevLink';
 Vos slides deviennent des **objets de première classe** du contenu : citables, embarquables, indexables.
 
 ### À l'échelle
+
 - **Catégories** par sous-dossier (`_category_.yml`) pour organiser les decks par thème, équipe ou cours.
 - **Multi-instance** (option `id`) — plusieurs collections distinctes (`talks/`, `trainings/`, `internal/`) sur le même site.
 - **Frontmatter structuré** (`tags`, `author`, `date`, `position`) — base pour filtrer, trier, rechercher.
 
 ### Cohérence visuelle
+
 Thème Slidev par défaut au niveau du projet (option `theme`, sinon chaque deck garde son thème ou celui par défaut de Slidev) → tous les decks alignés sur votre branding. Composants `SlidevOverview`, `SlidevCard`, `SlidevCategoryCard`, `SlidevListItem`, `SlidevPresentation` swizzlables pour matcher votre design system.
 
 ---
 
 ## 👥 Pour qui c'est un game-changer
 
-| Profil | Gain principal |
-|---|---|
-| 🎤 **DevRel / Developer Advocate** | Centraliser docs et talks dans un seul portail, embed inline dans les guides |
-| 🎓 **Équipes formation / training** | Catégoriser les modules, capitaliser les decks dans la knowledge base |
-| 📦 **Mainteneurs OSS** | Slides de release notes ou conférences alignés à la doc officielle |
-| 🏢 **Équipes internes** | Onboarding unifié : doc + slides au même endroit, search commune |
-| 📚 **Auteurs techniques** | Compléter un tutoriel par sa présentation embarquée |
+| Profil                              | Gain principal                                                               |
+| ----------------------------------- | ---------------------------------------------------------------------------- |
+| 🎤 **DevRel / Developer Advocate**  | Centraliser docs et talks dans un seul portail, embed inline dans les guides |
+| 🎓 **Équipes formation / training** | Catégoriser les modules, capitaliser les decks dans la knowledge base        |
+| 📦 **Mainteneurs OSS**              | Slides de release notes ou conférences alignés à la doc officielle           |
+| 🏢 **Équipes internes**             | Onboarding unifié : doc + slides au même endroit, search commune             |
+| 📚 **Auteurs techniques**           | Compléter un tutoriel par sa présentation embarquée                          |
 
 ---
 
@@ -98,9 +102,9 @@ const config: Config = {
     [
       "slidesaurus",
       {
-        path: "./slidev",                // dossier des présentations
-        routeBasePath: "/presentations",  // URL de base (défaut: /slidev)
-        theme: "seriph",                  // thème Slidev par défaut
+        path: "./slidev", // dossier des présentations
+        routeBasePath: "/presentations", // URL de base (défaut: /slidev)
+        theme: "seriph", // thème Slidev par défaut
       },
     ],
   ],
@@ -142,14 +146,14 @@ Visitez **http://localhost:3000/presentations** — votre talk est là. C'est to
 
 ## 🎨 Composants embarquables
 
-| Composant | Usage |
-|---|---|
-| `SlidevOverview` | Page de listing complète |
-| `SlidevPresentation` | Visionneuse iframe individuelle |
-| `SlidevCard` | Carte miniature cliquable |
-| `SlidevCategoryCard` | Carte de catégorie |
-| `SlidevLink` | Aperçu inline pour MDX (`@theme/SlidevLink`, non swizzlable) |
-| `SlidevListItem` | Item de liste compact |
+| Composant            | Usage                                                        |
+| -------------------- | ------------------------------------------------------------ |
+| `SlidevOverview`     | Page de listing complète                                     |
+| `SlidevPresentation` | Visionneuse iframe individuelle                              |
+| `SlidevCard`         | Carte miniature cliquable                                    |
+| `SlidevCategoryCard` | Carte de catégorie                                           |
+| `SlidevLink`         | Aperçu inline pour MDX (`@theme/SlidevLink`, non swizzlable) |
+| `SlidevListItem`     | Item de liste compact                                        |
 
 Tous **swizzlables** :
 
@@ -161,17 +165,17 @@ npx docusaurus swizzle slidesaurus SlidevCard --wrap
 
 ## 🔧 Options principales
 
-| Option | Type | Défaut | Description |
-|---|---|---|---|
-| `path` | `string` | `"./slidev"` | Dossier des fichiers `.md` Slidev |
-| `routeBasePath` | `string` | `"/slidev"` | URL de base des présentations |
-| `theme` | `string` | _(aucun)_ | Thème Slidev par défaut (sinon : thème du deck ou thème par défaut de Slidev) |
-| `addons` | `string[]` | `[]` | Addons Slidev globaux |
-| `download` | `boolean` | `false` | Générer les exports PDF/PPTX et afficher les boutons de téléchargement (nécessite Playwright) |
-| `pageTitle` | `string` | `"Slidev Presentations"` | Titre de la page d'overview |
-| `maxParallelBuilds` | `number` | `CPU − 1` (min. 1) | Builds en parallèle max (plafonné au nombre de CPU) |
-| `buildTimeout` | `number` | `300` | Timeout par build (s, 10–600) |
-| `autoInstall` | `boolean` | `false` | Auto-installer les thèmes/addons manquants (noms `slidev-theme-*` / `slidev-addon-*` uniquement, sans scripts d'installation) |
+| Option              | Type       | Défaut                   | Description                                                                                                                   |
+| ------------------- | ---------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `path`              | `string`   | `"./slidev"`             | Dossier des fichiers `.md` Slidev                                                                                             |
+| `routeBasePath`     | `string`   | `"/slidev"`              | URL de base des présentations                                                                                                 |
+| `theme`             | `string`   | _(aucun)_                | Thème Slidev par défaut (sinon : thème du deck ou thème par défaut de Slidev)                                                 |
+| `addons`            | `string[]` | `[]`                     | Addons Slidev globaux                                                                                                         |
+| `download`          | `boolean`  | `false`                  | Générer les exports PDF/PPTX et afficher les boutons de téléchargement (nécessite Playwright)                                 |
+| `pageTitle`         | `string`   | `"Slidev Presentations"` | Titre de la page d'overview                                                                                                   |
+| `maxParallelBuilds` | `number`   | `CPU − 1` (min. 1)       | Builds en parallèle max (plafonné au nombre de CPU)                                                                           |
+| `buildTimeout`      | `number`   | `300`                    | Timeout par build (s, 10–600)                                                                                                 |
+| `autoInstall`       | `boolean`  | `false`                  | Auto-installer les thèmes/addons manquants (noms `slidev-theme-*` / `slidev-addon-*` uniquement, sans scripts d'installation) |
 
 → [Documentation complète des options](./apps/docs/docs/options.md)
 
@@ -206,6 +210,7 @@ plugins: [
 ## 📚 Documentation
 
 Documentation complète : **[apps/docs](./apps/docs/docs/)**
+
 - [Quick Start](./apps/docs/docs/quick-start.md)
 - [Configuration](./apps/docs/docs/options.md)
 - [Frontmatter](./apps/docs/docs/frontmatter.md)
@@ -223,6 +228,7 @@ Documentation complète : **[apps/docs](./apps/docs/docs/)**
 ## 🤝 Contribuer
 
 Le repo est un monorepo pnpm + Turbo :
+
 - `packages/slidesaurus` — le plugin npm `slidesaurus`
 - `apps/docs` — site de documentation (port 3001)
 - `apps/sample` — site d'exemple (port 3000)

@@ -44,7 +44,7 @@ The cache output is **not** watched by webpack: a finished build never reloads t
 
 - A **wrapped** `SlidevPresentation` (`swizzle --wrap`) gets the build state automatically.
 - An **ejected** copy made before this version keeps working: it loads the iframe directly. While a deck is not built yet the iframe shows the dev server's fallback page; reload the page once the terminal reports the build. To get the build state, eject the component again, or poll `buildStatusUrl` yourself — the file is `{ "presentations": { "<id>": { "state", "hasOutput", "builtAt", "error" } } }` (`BuildStatusFile` in [Types](./types.md)).
-:::
+  :::
 
 The cache directory layout mirrors production:
 
@@ -127,7 +127,9 @@ Confirm the file you edited is under `path` (see the watched file types above). 
 Enable verbose output to see the full `slidev build` log:
 
 ```ts
-{ verbose: true }
+{
+  verbose: true;
+}
 ```
 
 Check for missing themes or addons. Set `autoInstall: true` to let the plugin install them automatically, or pre-install them via your `package.json`.

@@ -212,7 +212,10 @@ describe("scanPresentations", () => {
       path.join(slidevDir, "demo.md"),
       makeFrontmatter({ title: "Demo" }),
     );
-    const result = await scan({ download: true, exportFormats: ["pdf", "pptx"] });
+    const result = await scan({
+      download: true,
+      exportFormats: ["pdf", "pptx"],
+    });
     expect(result.presentations[0].exportUrls).toHaveLength(2);
     expect(result.presentations[0].exportUrls![0]).toMatch(/export\.pdf$/);
     expect(result.presentations[0].exportUrls![1]).toMatch(/export\.pptx$/);
@@ -290,7 +293,9 @@ describe("scanPresentations", () => {
       );
       const result = await scan();
       expect(result.presentations[0].duration).toBeUndefined();
-      expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('"duration"'));
+      expect(log.warn).toHaveBeenCalledWith(
+        expect.stringContaining('"duration"'),
+      );
     });
 
     it("ignores malformed lastReviewed and emits a warning", async () => {
@@ -301,7 +306,9 @@ describe("scanPresentations", () => {
       );
       const result = await scan();
       expect(result.presentations[0].lastReviewed).toBeUndefined();
-      expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('"lastReviewed"'));
+      expect(log.warn).toHaveBeenCalledWith(
+        expect.stringContaining('"lastReviewed"'),
+      );
     });
 
     it("ignores non-boolean deprecated and emits a warning", async () => {
@@ -312,7 +319,9 @@ describe("scanPresentations", () => {
       );
       const result = await scan();
       expect(result.presentations[0].deprecated).toBeUndefined();
-      expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('"deprecated"'));
+      expect(log.warn).toHaveBeenCalledWith(
+        expect.stringContaining('"deprecated"'),
+      );
     });
 
     it("leaves enriched fields undefined when absent", async () => {
@@ -378,7 +387,9 @@ describe("scanPresentations", () => {
       );
       const result = await scan();
       expect(result.presentations[0].position).toBeUndefined();
-      expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('"position"'));
+      expect(log.warn).toHaveBeenCalledWith(
+        expect.stringContaining('"position"'),
+      );
     });
 
     it("extracts valid ISO date", async () => {
@@ -443,7 +454,11 @@ describe("scanPresentations", () => {
     });
 
     it("orders playlist items by position then id", async () => {
-      for (const [name, pos] of [["z.md", 3], ["a.md", 1], ["m.md", 2]] as const) {
+      for (const [name, pos] of [
+        ["z.md", 3],
+        ["a.md", 1],
+        ["m.md", 2],
+      ] as const) {
         fs.writeFileSync(
           path.join(slidevDir, name),
           `---\ntitle: ${name}\nplaylist: Ordered\nposition: ${pos}\n---\n\n# Slide`,
@@ -471,7 +486,9 @@ describe("scanPresentations", () => {
       );
       const result = await scan();
       expect(result.presentations[0].playlist).toEqual(["Valid"]);
-      expect(log.warn).toHaveBeenCalledWith(expect.stringContaining("playlist"));
+      expect(log.warn).toHaveBeenCalledWith(
+        expect.stringContaining("playlist"),
+      );
     });
   });
 });
@@ -566,7 +583,10 @@ describe("scanPresentations — relativePath uses forward slashes", () => {
 
     const subDir = path.join(slidevDir, "getting-started");
     fs.mkdirSync(subDir, { recursive: true });
-    fs.writeFileSync(path.join(subDir, "intro.md"), "---\ntitle: Intro\n---\n\n# Intro");
+    fs.writeFileSync(
+      path.join(subDir, "intro.md"),
+      "---\ntitle: Intro\n---\n\n# Intro",
+    );
 
     const capturedPaths: string[] = [];
     await scanPresentations(
@@ -589,7 +609,10 @@ describe("scanPresentations — relativePath uses forward slashes", () => {
         exportWithClicks: false,
         devServerBasePort: 8600,
         devServerTimeout: 60000,
-        transformFrontmatter: (data, filePath) => { capturedPaths.push(filePath); return data; },
+        transformFrontmatter: (data, filePath) => {
+          capturedPaths.push(filePath);
+          return data;
+        },
       },
       { siteDir: tmpDir, baseUrl: "/" },
     );
@@ -605,7 +628,10 @@ describe("scanPresentations — relativePath uses forward slashes", () => {
 
     const subDir = path.join(slidevDir, "category");
     fs.mkdirSync(subDir, { recursive: true });
-    fs.writeFileSync(path.join(subDir, "talk.md"), "---\ntitle: Talk\n---\n\n# Talk");
+    fs.writeFileSync(
+      path.join(subDir, "talk.md"),
+      "---\ntitle: Talk\n---\n\n# Talk",
+    );
 
     const result = await scanPresentations(
       {
@@ -655,9 +681,15 @@ describe("scanPresentations — hardening", () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  async function scan(overrides: Partial<PluginOptions> = {}, ctx: Partial<BuildContext> = {}) {
+  async function scan(
+    overrides: Partial<PluginOptions> = {},
+    ctx: Partial<BuildContext> = {},
+  ) {
     const { scanPresentations } = await import("../scanner");
-    return scanPresentations({ ...defaultOptions, ...overrides }, { siteDir: tmpDir, baseUrl: "/", ...ctx });
+    return scanPresentations(
+      { ...defaultOptions, ...overrides },
+      { siteDir: tmpDir, baseUrl: "/", ...ctx },
+    );
   }
 
   function write(rel: string, content: string): void {
@@ -669,7 +701,10 @@ describe("scanPresentations — hardening", () => {
   it("never evaluates ---js front-matter", async () => {
     const g = globalThis as Record<string, unknown>;
     delete g.__slidesaurusPwned;
-    write("evil.md", "---js\n{ title: (globalThis.__slidesaurusPwned = true, 'pwned') }\n---\n\n# Evil");
+    write(
+      "evil.md",
+      "---js\n{ title: (globalThis.__slidesaurusPwned = true, 'pwned') }\n---\n\n# Evil",
+    );
 
     const result = await scan();
 
@@ -679,7 +714,10 @@ describe("scanPresentations — hardening", () => {
   });
 
   it("ignores frontmatter fields of the wrong type instead of crashing", async () => {
-    write("typed.md", "---\ntitle: 42\ntheme: 42\naddons: excalidraw\ndescription: [a]\nauthor: true\n---\n\n# x");
+    write(
+      "typed.md",
+      "---\ntitle: 42\ntheme: 42\naddons: excalidraw\ndescription: [a]\nauthor: true\n---\n\n# x",
+    );
     const { log } = await import("../../shared/logger");
 
     const p = (await scan()).presentations[0];
@@ -689,11 +727,16 @@ describe("scanPresentations — hardening", () => {
     expect(p.addons).toBeUndefined();
     expect(p.description).toBeUndefined();
     expect(p.author).toBeUndefined();
-    expect(vi.mocked(log.warn)).toHaveBeenCalledWith(expect.stringContaining('Invalid "theme"'));
+    expect(vi.mocked(log.warn)).toHaveBeenCalledWith(
+      expect.stringContaining('Invalid "theme"'),
+    );
   });
 
   it("keeps valid theme and addons (filtering invalid addon items)", async () => {
-    write("ok.md", "---\ntheme: seriph\naddons:\n  - excalidraw\n  - 3\n---\n\n# x");
+    write(
+      "ok.md",
+      "---\ntheme: seriph\naddons:\n  - excalidraw\n  - 3\n---\n\n# x",
+    );
     const p = (await scan()).presentations[0];
     expect(p.theme).toBe("seriph");
     expect(p.addons).toEqual(["excalidraw"]);
@@ -701,7 +744,8 @@ describe("scanPresentations — hardening", () => {
 
   it("ignores a transformFrontmatter hook that does not return an object", async () => {
     write("t.md", "---\ntitle: Kept\n---\n\n# x");
-    const p = (await scan({ transformFrontmatter: (() => null) as never })).presentations[0];
+    const p = (await scan({ transformFrontmatter: (() => null) as never }))
+      .presentations[0];
     expect(p.title).toBe("Kept");
   });
 
@@ -716,16 +760,29 @@ describe("scanPresentations — hardening", () => {
 
   it("prefixes presentation and category URLs with baseUrl and normalises routeBasePath", async () => {
     write("cat/talk.md", "---\ntitle: T\n---\n\n# x");
-    const result = await scan({ routeBasePath: "slidev/" }, { baseUrl: "/docs/" });
+    const result = await scan(
+      { routeBasePath: "slidev/" },
+      { baseUrl: "/docs/" },
+    );
     expect(result.presentations[0].url).toBe("/docs/slidev/cat/talk/");
     expect(result.categories[0].url).toBe("/docs/slidev/cat");
   });
 
   it("stores outputs in the per-locale cache when a locale is given", async () => {
     write("talk.md", "---\ntitle: T\n---\n\n# x");
-    const p = (await scan({}, { baseUrl: "/fr/", locale: "fr" })).presentations[0];
+    const p = (await scan({}, { baseUrl: "/fr/", locale: "fr" }))
+      .presentations[0];
     expect(p.outputPath).toBe(
-      path.join(tmpDir, ".docusaurus", "slidesaurus", "default", "i18n", "fr", "output", "talk"),
+      path.join(
+        tmpDir,
+        ".docusaurus",
+        "slidesaurus",
+        "default",
+        "i18n",
+        "fr",
+        "output",
+        "talk",
+      ),
     );
   });
 
@@ -752,15 +809,19 @@ describe("detectPresentationCollisions", () => {
 
   it("reports nested outputs but not mere common prefixes", async () => {
     const { detectPresentationCollisions } = await import("../scanner");
-    expect(detectPresentationCollisions([
-      { id: "foo", sourcePath: "foo.md" },
-      { id: "foo-bar", sourcePath: "foo-bar.md" },
-      { id: "foo/baz", sourcePath: "foo/baz.md" },
-    ])).toHaveLength(1);
-    expect(detectPresentationCollisions([
-      { id: "foo", sourcePath: "foo.md" },
-      { id: "foobar/x", sourcePath: "foobar/x.md" },
-    ])).toEqual([]);
+    expect(
+      detectPresentationCollisions([
+        { id: "foo", sourcePath: "foo.md" },
+        { id: "foo-bar", sourcePath: "foo-bar.md" },
+        { id: "foo/baz", sourcePath: "foo/baz.md" },
+      ]),
+    ).toHaveLength(1);
+    expect(
+      detectPresentationCollisions([
+        { id: "foo", sourcePath: "foo.md" },
+        { id: "foobar/x", sourcePath: "foobar/x.md" },
+      ]),
+    ).toEqual([]);
   });
 });
 
@@ -782,7 +843,9 @@ describe("frontmatter patching", () => {
     patchFrontmatterTheme(file, "@slidev/theme-default");
     expect(fs.readFileSync(file, "utf-8")).toContain("theme: seriph");
     patchFrontmatterTheme(file, "@slidev/theme-default", true);
-    expect(fs.readFileSync(file, "utf-8")).toContain("theme: '@slidev/theme-default'");
+    expect(fs.readFileSync(file, "utf-8")).toContain(
+      "theme: '@slidev/theme-default'",
+    );
   });
 
   it("patchFrontmatterAddons replaces raw shorthands with the resolved list", async () => {
@@ -799,6 +862,8 @@ describe("frontmatter patching", () => {
     const { patchFrontmatterTheme } = await import("../frontmatterValidator");
     const file = path.join(tmpDir, "c.md");
     fs.writeFileSync(file, "---js\n{ theme: 'x' }\n---\n# x");
-    expect(() => patchFrontmatterTheme(file, "seriph")).toThrow(/not supported/);
+    expect(() => patchFrontmatterTheme(file, "seriph")).toThrow(
+      /not supported/,
+    );
   });
 });

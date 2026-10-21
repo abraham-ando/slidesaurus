@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { BuildCache, FileHashMemo, computePresentationFingerprint } from "../buildCache";
+import {
+  BuildCache,
+  FileHashMemo,
+  computePresentationFingerprint,
+} from "../buildCache";
 import type { PluginOptions, PresentationMetadata } from "../../domain/types";
 
 function makeOptions(overrides: Partial<PluginOptions> = {}): PluginOptions {
@@ -41,39 +45,72 @@ afterEach(() => {
 
 describe("BuildCache.computeOptionsFingerprint", () => {
   it("returns the same hash for the same options and baseUrl", () => {
-    const opts = makeOptions({ theme: "seriph", addons: ["slidev-addon-excalidraw"] });
+    const opts = makeOptions({
+      theme: "seriph",
+      addons: ["slidev-addon-excalidraw"],
+    });
     const fp1 = BuildCache.computeOptionsFingerprint(opts, "/");
     const fp2 = BuildCache.computeOptionsFingerprint(opts, "/");
     expect(fp1).toBe(fp2);
   });
 
   it("returns a different hash when theme changes", () => {
-    const fp1 = BuildCache.computeOptionsFingerprint(makeOptions({ theme: "seriph" }), "/");
-    const fp2 = BuildCache.computeOptionsFingerprint(makeOptions({ theme: "apple-basic" }), "/");
+    const fp1 = BuildCache.computeOptionsFingerprint(
+      makeOptions({ theme: "seriph" }),
+      "/",
+    );
+    const fp2 = BuildCache.computeOptionsFingerprint(
+      makeOptions({ theme: "apple-basic" }),
+      "/",
+    );
     expect(fp1).not.toBe(fp2);
   });
 
   it("returns a different hash when addons change", () => {
-    const fp1 = BuildCache.computeOptionsFingerprint(makeOptions({ addons: ["slidev-addon-a"] }), "/");
-    const fp2 = BuildCache.computeOptionsFingerprint(makeOptions({ addons: ["slidev-addon-b"] }), "/");
+    const fp1 = BuildCache.computeOptionsFingerprint(
+      makeOptions({ addons: ["slidev-addon-a"] }),
+      "/",
+    );
+    const fp2 = BuildCache.computeOptionsFingerprint(
+      makeOptions({ addons: ["slidev-addon-b"] }),
+      "/",
+    );
     expect(fp1).not.toBe(fp2);
   });
 
   it("returns a different hash when exportFormats change", () => {
-    const fp1 = BuildCache.computeOptionsFingerprint(makeOptions({ exportFormats: [] }), "/");
-    const fp2 = BuildCache.computeOptionsFingerprint(makeOptions({ exportFormats: ["pdf"] }), "/");
+    const fp1 = BuildCache.computeOptionsFingerprint(
+      makeOptions({ exportFormats: [] }),
+      "/",
+    );
+    const fp2 = BuildCache.computeOptionsFingerprint(
+      makeOptions({ exportFormats: ["pdf"] }),
+      "/",
+    );
     expect(fp1).not.toBe(fp2);
   });
 
   it("returns a different hash when exportWithClicks changes", () => {
-    const fp1 = BuildCache.computeOptionsFingerprint(makeOptions({ exportWithClicks: false }), "/");
-    const fp2 = BuildCache.computeOptionsFingerprint(makeOptions({ exportWithClicks: true }), "/");
+    const fp1 = BuildCache.computeOptionsFingerprint(
+      makeOptions({ exportWithClicks: false }),
+      "/",
+    );
+    const fp2 = BuildCache.computeOptionsFingerprint(
+      makeOptions({ exportWithClicks: true }),
+      "/",
+    );
     expect(fp1).not.toBe(fp2);
   });
 
   it("returns a different hash when withoutNotes changes", () => {
-    const fp1 = BuildCache.computeOptionsFingerprint(makeOptions({ withoutNotes: false }), "/");
-    const fp2 = BuildCache.computeOptionsFingerprint(makeOptions({ withoutNotes: true }), "/");
+    const fp1 = BuildCache.computeOptionsFingerprint(
+      makeOptions({ withoutNotes: false }),
+      "/",
+    );
+    const fp2 = BuildCache.computeOptionsFingerprint(
+      makeOptions({ withoutNotes: true }),
+      "/",
+    );
     expect(fp1).not.toBe(fp2);
   });
 
@@ -93,7 +130,11 @@ describe("BuildCache.computeOptionsFingerprint", () => {
     // A non-deterministic JSON.stringify would produce different hashes when the
     // internal object key order changes across Node.js versions. Verify that two
     // equivalent option objects (same values, spread-copied) produce the same hash.
-    const opts = makeOptions({ theme: "seriph", addons: ["slidev-addon-a"], download: true });
+    const opts = makeOptions({
+      theme: "seriph",
+      addons: ["slidev-addon-a"],
+      download: true,
+    });
     const fp1 = BuildCache.computeOptionsFingerprint(opts, "/training/");
     const fp2 = BuildCache.computeOptionsFingerprint({ ...opts }, "/training/");
     expect(fp1).toBe(fp2);
@@ -111,7 +152,10 @@ describe("BuildCache.isCached", () => {
 
   it("returns false when hash does not match manifest", () => {
     // Seed manifest with a different hash
-    fs.writeFileSync(path.join(tmpDir, "build-hashes.json"), JSON.stringify({ talk: "old-hash" }));
+    fs.writeFileSync(
+      path.join(tmpDir, "build-hashes.json"),
+      JSON.stringify({ talk: "old-hash" }),
+    );
     const outputDir = path.join(tmpDir, "output", "talk");
     fs.mkdirSync(outputDir, { recursive: true });
     fs.writeFileSync(path.join(outputDir, "index.html"), "<html/>");
@@ -122,7 +166,10 @@ describe("BuildCache.isCached", () => {
 
   it("returns false when hash matches but output index.html is missing", () => {
     const hash = "abc123";
-    fs.writeFileSync(path.join(tmpDir, "build-hashes.json"), JSON.stringify({ talk: hash }));
+    fs.writeFileSync(
+      path.join(tmpDir, "build-hashes.json"),
+      JSON.stringify({ talk: hash }),
+    );
     // Output dir exists but is empty (no index.html)
     fs.mkdirSync(path.join(tmpDir, "output", "talk"), { recursive: true });
 
@@ -132,7 +179,10 @@ describe("BuildCache.isCached", () => {
 
   it("returns false when hash matches but output dir does not exist", () => {
     const hash = "abc123";
-    fs.writeFileSync(path.join(tmpDir, "build-hashes.json"), JSON.stringify({ talk: hash }));
+    fs.writeFileSync(
+      path.join(tmpDir, "build-hashes.json"),
+      JSON.stringify({ talk: hash }),
+    );
 
     const cache = new BuildCache(tmpDir);
     expect(cache.isCached("talk", hash)).toBe(false);
@@ -140,7 +190,10 @@ describe("BuildCache.isCached", () => {
 
   it("returns true when hash matches and index.html is present", () => {
     const hash = "abc123";
-    fs.writeFileSync(path.join(tmpDir, "build-hashes.json"), JSON.stringify({ version: 2, hashes: { talk: hash } }));
+    fs.writeFileSync(
+      path.join(tmpDir, "build-hashes.json"),
+      JSON.stringify({ version: 2, hashes: { talk: hash } }),
+    );
     const outputDir = path.join(tmpDir, "output", "talk");
     fs.mkdirSync(outputDir, { recursive: true });
     fs.writeFileSync(path.join(outputDir, "index.html"), "<html/>");
@@ -159,8 +212,13 @@ describe("BuildCache.persist", () => {
     cache.recordHash("intro", "hash-b");
     cache.persist();
 
-    const manifest = JSON.parse(fs.readFileSync(path.join(tmpDir, "build-hashes.json"), "utf-8"));
-    expect(manifest).toEqual({ version: 2, hashes: { talk: "hash-a", intro: "hash-b" } });
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(tmpDir, "build-hashes.json"), "utf-8"),
+    );
+    expect(manifest).toEqual({
+      version: 2,
+      hashes: { talk: "hash-a", intro: "hash-b" },
+    });
   });
 
   it("invalidated entries are excluded from the persisted manifest", () => {
@@ -170,7 +228,9 @@ describe("BuildCache.persist", () => {
     cache.invalidate("intro");
     cache.persist();
 
-    const manifest = JSON.parse(fs.readFileSync(path.join(tmpDir, "build-hashes.json"), "utf-8"));
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(tmpDir, "build-hashes.json"), "utf-8"),
+    );
     expect(manifest.hashes).toHaveProperty("talk", "hash-a");
     expect(manifest.hashes).not.toHaveProperty("intro");
   });
@@ -252,10 +312,18 @@ describe("BuildCache.computeHash", () => {
     fs.writeFileSync(mdFile, "# Hello");
     const cache = new BuildCache(tmpDir);
 
-    const fp1 = BuildCache.computeOptionsFingerprint(makeOptions({ theme: "seriph" }), "/");
-    const fp2 = BuildCache.computeOptionsFingerprint(makeOptions({ theme: "apple-basic" }), "/");
+    const fp1 = BuildCache.computeOptionsFingerprint(
+      makeOptions({ theme: "seriph" }),
+      "/",
+    );
+    const fp2 = BuildCache.computeOptionsFingerprint(
+      makeOptions({ theme: "apple-basic" }),
+      "/",
+    );
 
-    expect(cache.computeHash(mdFile, fp1)).not.toBe(cache.computeHash(mdFile, fp2));
+    expect(cache.computeHash(mdFile, fp1)).not.toBe(
+      cache.computeHash(mdFile, fp2),
+    );
   });
 });
 
@@ -271,7 +339,9 @@ describe("computePresentationFingerprint", () => {
     return p;
   }
 
-  function presentation(overrides: Partial<PresentationMetadata> = {}): PresentationMetadata {
+  function presentation(
+    overrides: Partial<PresentationMetadata> = {},
+  ): PresentationMetadata {
     return {
       id: "talk",
       title: "Talk",
@@ -285,7 +355,10 @@ describe("computePresentationFingerprint", () => {
     };
   }
 
-  function fp(p: PresentationMetadata, opts: Partial<PluginOptions> = {}): string {
+  function fp(
+    p: PresentationMetadata,
+    opts: Partial<PluginOptions> = {},
+  ): string {
     const options = makeOptions(opts);
     return computePresentationFingerprint(p, {
       options,
@@ -298,7 +371,10 @@ describe("computePresentationFingerprint", () => {
 
   beforeEach(() => {
     slides = path.join(tmpDir, "slidev");
-    write("talk.md", "---\nsrc: ./pages/part.md\n---\n![l](../slidev/shared/logo.png)\n");
+    write(
+      "talk.md",
+      "---\nsrc: ./pages/part.md\n---\n![l](../slidev/shared/logo.png)\n",
+    );
     write("pages/part.md", "# part");
     write("shared/logo.png", "logo-v1");
     write("components/Counter.vue", "<template>v1</template>");
@@ -335,24 +411,41 @@ describe("computePresentationFingerprint", () => {
   });
 
   it("changes with the effective base URL (routeBasePath / baseUrl)", () => {
-    expect(fp(presentation({ url: "/docs/slidev/talk/" }))).not.toBe(fp(presentation()));
+    expect(fp(presentation({ url: "/docs/slidev/talk/" }))).not.toBe(
+      fp(presentation()),
+    );
   });
 
   it("changes with metadata modified by hooks (e.g. theme override)", () => {
     expect(fp(presentation({ theme: "seriph" }))).not.toBe(fp(presentation()));
-    expect(fp(presentation({ withoutNotes: true }))).not.toBe(fp(presentation()));
+    expect(fp(presentation({ withoutNotes: true }))).not.toBe(
+      fp(presentation()),
+    );
   });
 
   it("changes with the installed theme version", () => {
-    const themeDir = path.join(tmpDir, "node_modules", "@slidev", "theme-seriph");
+    const themeDir = path.join(
+      tmpDir,
+      "node_modules",
+      "@slidev",
+      "theme-seriph",
+    );
     fs.mkdirSync(themeDir, { recursive: true });
-    fs.writeFileSync(path.join(themeDir, "package.json"), JSON.stringify({ version: "1.0.0" }));
+    fs.writeFileSync(
+      path.join(themeDir, "package.json"),
+      JSON.stringify({ version: "1.0.0" }),
+    );
     const v1 = fp(presentation({ theme: "@slidev/theme-seriph" }));
-    fs.writeFileSync(path.join(themeDir, "package.json"), JSON.stringify({ version: "1.1.0" }));
+    fs.writeFileSync(
+      path.join(themeDir, "package.json"),
+      JSON.stringify({ version: "1.1.0" }),
+    );
     expect(fp(presentation({ theme: "@slidev/theme-seriph" }))).not.toBe(v1);
   });
 
   it("ignores machine-specific absolute paths", () => {
-    expect(fp(presentation({ outputPath: "/elsewhere/talk" }))).toBe(fp(presentation()));
+    expect(fp(presentation({ outputPath: "/elsewhere/talk" }))).toBe(
+      fp(presentation()),
+    );
   });
 });

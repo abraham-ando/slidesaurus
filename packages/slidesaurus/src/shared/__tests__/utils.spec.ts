@@ -113,15 +113,21 @@ describe("validateSlidevPackageName", () => {
     ["addon", "slidev-theme-foo"],
     ["addon", "evil-package"],
   ] as const)("rejects %s %s (not a Slidev package name)", (kind, name) => {
-    expect(() => validateSlidevPackageName(name, kind)).toThrow(/Invalid Slidev/);
+    expect(() => validateSlidevPackageName(name, kind)).toThrow(
+      /Invalid Slidev/,
+    );
   });
 
   it("still rejects injection characters", () => {
-    expect(() => validateSlidevPackageName("slidev-theme-x;rm -rf /", "theme")).toThrow(/Invalid package name/);
+    expect(() =>
+      validateSlidevPackageName("slidev-theme-x;rm -rf /", "theme"),
+    ).toThrow(/Invalid package name/);
   });
 
   it("passes local paths through", () => {
-    expect(validateSlidevPackageName("./themes/mine", "theme")).toBe("./themes/mine");
+    expect(validateSlidevPackageName("./themes/mine", "theme")).toBe(
+      "./themes/mine",
+    );
   });
 });
 
@@ -165,7 +171,9 @@ describe("encodeIdForUrl", () => {
   });
 
   it("leaves simple ids unchanged", () => {
-    expect(encodeIdForUrl("getting-started/intro")).toBe("getting-started/intro");
+    expect(encodeIdForUrl("getting-started/intro")).toBe(
+      "getting-started/intro",
+    );
   });
 });
 
@@ -192,7 +200,9 @@ describe("toSafeId", () => {
 
 describe("stableStringify", () => {
   it("is independent of key insertion order (recursively)", () => {
-    expect(stableStringify({ b: 1, a: { d: 2, c: 3 } })).toBe(stableStringify({ a: { c: 3, d: 2 }, b: 1 }));
+    expect(stableStringify({ b: 1, a: { d: 2, c: 3 } })).toBe(
+      stableStringify({ a: { c: 3, d: 2 }, b: 1 }),
+    );
   });
 
   it("keeps array order", () => {

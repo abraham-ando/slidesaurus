@@ -70,7 +70,8 @@ export interface UIOptions {
 }
 
 /** Full plugin options — union of all segregated interfaces. */
-export interface PluginOptions extends ScanOptions, BuildOptions, UIOptions, DevServerOptions {
+export interface PluginOptions
+  extends ScanOptions, BuildOptions, UIOptions, DevServerOptions {
   /**
    * Called once per discovered presentation, before any build starts.
    * May return a Promise. Modifications to `presentation` are applied in-place.
@@ -78,7 +79,9 @@ export interface PluginOptions extends ScanOptions, BuildOptions, UIOptions, Dev
    * Invocations are parallelised (bounded by `maxParallelBuilds`).
    * Called after `transformFrontmatter`.
    */
-  onPresentationScanned?: (presentation: PresentationMetadata) => void | Promise<void>;
+  onPresentationScanned?: (
+    presentation: PresentationMetadata,
+  ) => void | Promise<void>;
   /**
    * Called once after all builds complete — both successful and failed ones.
    * Errors thrown here are logged but do NOT affect the overall build result
@@ -90,7 +93,10 @@ export interface PluginOptions extends ScanOptions, BuildOptions, UIOptions, Dev
    * Must return the (possibly modified) data object. Called before `onPresentationScanned`.
    * The `filePath` parameter receives a relative path only — absolute paths are never exposed.
    */
-  transformFrontmatter?: (data: SlidevFrontmatter, filePath: string) => SlidevFrontmatter;
+  transformFrontmatter?: (
+    data: SlidevFrontmatter,
+    filePath: string,
+  ) => SlidevFrontmatter;
 }
 
 export type PresentationLevel = "beginner" | "intermediate" | "advanced";
@@ -234,7 +240,10 @@ export interface BuildContext {
 // ============================================
 
 /** Presentation data exposed to theme components (subset of PresentationMetadata). */
-export type Presentation = Omit<PresentationMetadata, "sourceAbsolutePath" | "outputPath">;
+export type Presentation = Omit<
+  PresentationMetadata,
+  "sourceAbsolutePath" | "outputPath"
+>;
 
 /** Category data exposed to theme components (alias of CategoryMetadata). */
 export type Category = CategoryMetadata;
@@ -277,7 +286,8 @@ export interface PluginData {
  *  - `ready`    — the output is up to date;
  *  - `failed`   — the last build failed (`error`), a previous output may still be served.
  */
-export type PresentationBuildState = "pending" | "building" | "ready" | "failed";
+export type PresentationBuildState =
+  "pending" | "building" | "ready" | "failed";
 
 export interface PresentationBuildStatus {
   state: PresentationBuildState;

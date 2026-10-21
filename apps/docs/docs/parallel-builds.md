@@ -49,12 +49,12 @@ The option accepts values from 1 to 64, and the effective concurrency is additio
 
 ### Choosing `maxParallelBuilds`
 
-| Scenario | Recommended value |
-| --- | --- |
-| CI with 2 vCPUs | the default (`1`) |
-| Development laptop (4–8 cores) | the default |
-| Build server (16+ cores) | `8`–`12` |
-| Memory-constrained environments | `2`–`3` |
+| Scenario                        | Recommended value |
+| ------------------------------- | ----------------- |
+| CI with 2 vCPUs                 | the default (`1`) |
+| Development laptop (4–8 cores)  | the default       |
+| Build server (16+ cores)        | `8`–`12`          |
+| Memory-constrained environments | `2`–`3`           |
 
 Each Slidev build spawns a Node.js process and a Vite/Rollup compile. Memory usage peaks at roughly 1 GB per concurrent build (measured on a small deck with `@slidev/cli` 52). Thumbnails and the PDF exports printed by the plugin share a single headless Chromium (~300 MB); `slidev build --download` and each PPTX export (`slidev export`) start their own.
 

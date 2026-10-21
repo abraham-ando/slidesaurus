@@ -5,7 +5,11 @@
  * into `addRoute()` calls and the global data store (`setGlobalData()`).
  * No filesystem access — pure Docusaurus API calls.
  */
-import type { PluginContentData, PluginData, Presentation } from "../domain/types";
+import type {
+  PluginContentData,
+  PluginData,
+  Presentation,
+} from "../domain/types";
 import { buildRouteBase } from "../shared/utils";
 
 /** Minimal subset of Docusaurus `contentLoaded` actions used here. */
@@ -33,13 +37,16 @@ export function toPublicPluginData(content: PluginContentData): PluginData {
     const { sourceAbsolutePath: _abs, outputPath: _out, ...publicFields } = p;
     return publicFields;
   });
-  const { routeBasePath, path, pageTitle, pageTagline, uiTheme } = content.config;
+  const { routeBasePath, path, pageTitle, pageTagline, uiTheme } =
+    content.config;
   return {
     presentations,
     categories: content.categories,
     playlists: content.playlists,
     config: { routeBasePath, path, pageTitle, pageTagline, uiTheme },
-    ...(content.buildStatusUrl ? { buildStatusUrl: content.buildStatusUrl } : {}),
+    ...(content.buildStatusUrl
+      ? { buildStatusUrl: content.buildStatusUrl }
+      : {}),
   };
 }
 
@@ -68,7 +75,10 @@ export async function registerRoutes(
 
   // Create a JSON module containing the pluginId so each route component
   // can call usePluginData(name, pluginId) — required for multi-instance.
-  const pluginIdPath = await createData("pluginId.json", JSON.stringify(pluginId));
+  const pluginIdPath = await createData(
+    "pluginId.json",
+    JSON.stringify(pluginId),
+  );
 
   // Overview page — same prefix as category / presentation routes.
   addRoute({

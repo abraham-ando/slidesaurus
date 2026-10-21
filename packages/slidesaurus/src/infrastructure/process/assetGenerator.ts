@@ -1,8 +1,19 @@
 import path from "node:path";
 import fs from "node:fs";
-import { THUMBNAIL_TIMEOUT_CAP_MS, EXPORT_TIMEOUT_CAP_MS, EXPORT_GRACE_MS } from "../../domain/constants";
-import type { PresentationMetadata, BuildOptions, BuildContext } from "../../domain/types";
-import type { IAssetPostProcessor, AssetProcessingContext } from "../../domain/interfaces";
+import {
+  THUMBNAIL_TIMEOUT_CAP_MS,
+  EXPORT_TIMEOUT_CAP_MS,
+  EXPORT_GRACE_MS,
+} from "../../domain/constants";
+import type {
+  PresentationMetadata,
+  BuildOptions,
+  BuildContext,
+} from "../../domain/types";
+import type {
+  IAssetPostProcessor,
+  AssetProcessingContext,
+} from "../../domain/interfaces";
 import { log } from "../../shared/logger";
 import { hardLinkOrCopy, normalizeThumbnailArtifact } from "../fs/fsUtils";
 import { filterEnvAllowlist } from "../packages/env";
@@ -16,7 +27,12 @@ import {
   type PlaywrightPage,
 } from "./playwright";
 import { serveStatic } from "./staticServer";
-import { readDeckExportSettings, renderPdf, writePdfMetadata, type DeckExportSettings } from "./pdfRenderer";
+import {
+  readDeckExportSettings,
+  renderPdf,
+  writePdfMetadata,
+  type DeckExportSettings,
+} from "./pdfRenderer";
 
 /**
  * Asset generation (thumbnail PNG, PDF/PPTX exports) is OPTIONAL: it needs
@@ -26,7 +42,10 @@ import { readDeckExportSettings, renderPdf, writePdfMetadata, type DeckExportSet
  */
 
 /** Options consumed by asset generation (subset of BuildOptions). */
-export type AssetOptions = Pick<BuildOptions, "buildTimeout" | "verbose" | "download" | "exportFormats" | "exportWithClicks">;
+export type AssetOptions = Pick<
+  BuildOptions,
+  "buildTimeout" | "verbose" | "download" | "exportFormats" | "exportWithClicks"
+>;
 
 /** Matches the error Slidev prints when `playwright-chromium` is missing. */
 const PLAYWRIGHT_MISSING_RE = /playwright/i;
@@ -36,7 +55,11 @@ const INSTALL_CHROMIUM_HINT = `pnpm exec playwright install chromium`;
 
 /** True when a failed `slidev export` is due to Playwright not being installed. */
 export function isPlaywrightMissing(result: RunResult): boolean {
-  return !result.success && result.failureKind === "exit" && PLAYWRIGHT_MISSING_RE.test(result.error ?? "");
+  return (
+    !result.success &&
+    result.failureKind === "exit" &&
+    PLAYWRIGHT_MISSING_RE.test(result.error ?? "")
+  );
 }
 
 let playwrightWarned = false;
@@ -48,7 +71,11 @@ function warnPlaywrightUnavailable(message: string): void {
   log.warn(message);
 }
 
-function warnExportFailure(what: string, presentation: PresentationMetadata, result: RunResult): void {
+function warnExportFailure(
+  what: string,
+  presentation: PresentationMetadata,
+  result: RunResult,
+): void {
   if (isPlaywrightMissing(result)) {
     warnPlaywrightUnavailable(
       `${what} skipped: Playwright is not installed. Install it with ${log.code(INSTALL_PLAYWRIGHT_HINT)} ` +
@@ -57,7 +84,9 @@ function warnExportFailure(what: string, presentation: PresentationMetadata, res
     return;
   }
   const detail = (result.error ?? "unknown error").split("\n")[0];
-  log.warn(`${what} failed for ${log.code(presentation.id)} (non-blocking): ${detail}`);
+  log.warn(
+    `${what} failed for ${log.code(presentation.id)} (non-blocking): ${detail}`,
+  );
 }
 
 // ── Thumbnails ───────────────────────────────────────────────────────────────
@@ -81,12 +110,19 @@ export async function renderThumbnail(
   timeoutMs: number,
 ): Promise<void> {
   const server = await serveStatic(presentation.outputPath, presentation.url);
-  const browserContext = await browser.newContext({ viewport: { ...THUMBNAIL_VIEWPORT }, deviceScaleFactor: 1 });
+  const browserContext = await browser.newContext({
+    viewport: { ...THUMBNAIL_VIEWPORT },
+    deviceScaleFactor: 1,
+  });
   try {
     const page: PlaywrightPage = await browserContext.newPage();
     page.setDefaultTimeout(timeoutMs);
-    const base = presentation.url.endsWith("/") ? presentation.url : `${presentation.url}/`;
-    await page.goto(`${server.origin}${base}1?print=true&range=1`, { waitUntil: "load" });
+    const base = presentation.url.endsWith("/")
+      ? presentation.url
+      : `${presentation.url}/`;
+    await page.goto(`${server.origin}${base}1?print=true&range=1`, {
+      waitUntil: "load",
+    });
     await page.emulateMedia({ colorScheme: "light", media: "screen" });
     const slide = page.locator('[data-slidev-no="1"]');
     await slide.waitFor();
@@ -94,7 +130,10 @@ export async function renderThumbnail(
     for (let i = 0, n = await loading.count(); i < n; i++) {
       await loading.nth(i).waitFor({ state: "detached" });
     }
-    await page.locator("#slide-content").first().screenshot({ path: thumbnailFile });
+    await page
+      .locator("#slide-content")
+      .first()
+      .screenshot({ path: thumbnailFile });
   } finally {
     await browserContext.close().catch(() => undefined);
     await server.close();
@@ -112,19 +151,27 @@ export async function renderThumbnail(
 export class SharedBrowser {
   private browser: Promise<PlaywrightBrowser | undefined> | undefined;
 
-  constructor(private readonly loadChromium: (siteDir: string) => PlaywrightChromium | undefined = loadPlaywrightChromium) {}
+  constructor(
+    private readonly loadChromium: (
+      siteDir: string,
+    ) => PlaywrightChromium | undefined = loadPlaywrightChromium,
+  ) {}
 
   get(siteDir: string): Promise<PlaywrightBrowser | undefined> {
     this.browser ??= this.launch(siteDir);
     return this.browser;
   }
 
-  private async launch(siteDir: string): Promise<PlaywrightBrowser | undefined> {
+  private async launch(
+    siteDir: string,
+  ): Promise<PlaywrightBrowser | undefined> {
     let chromium: PlaywrightChromium | undefined;
     try {
       chromium = this.loadChromium(siteDir);
     } catch (err) {
-      log.warn(`Could not load ${PLAYWRIGHT_PACKAGE}: ${err instanceof Error ? err.message : String(err)}`);
+      log.warn(
+        `Could not load ${PLAYWRIGHT_PACKAGE}: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
     if (!chromium) {
       warnPlaywrightUnavailable(
@@ -134,9 +181,15 @@ export class SharedBrowser {
       return undefined;
     }
     try {
-      return await chromium.launch({ headless: true, env: filterEnvAllowlist(process.env), timeout: THUMBNAIL_TIMEOUT_CAP_MS });
+      return await chromium.launch({
+        headless: true,
+        env: filterEnvAllowlist(process.env),
+        timeout: THUMBNAIL_TIMEOUT_CAP_MS,
+      });
     } catch (err) {
-      const detail = (err instanceof Error ? err.message : String(err)).split("\n")[0];
+      const detail = (err instanceof Error ? err.message : String(err)).split(
+        "\n",
+      )[0];
       warnPlaywrightUnavailable(
         `Thumbnails and PDF exports skipped: Chromium for Playwright could not be started (${detail}). ` +
           `Install it with ${log.code(INSTALL_CHROMIUM_HINT)}.`,
@@ -198,16 +251,24 @@ export class ThumbnailGenerator implements IAssetPostProcessor {
     const browser = await this.browser.get(context.siteDir);
     if (!browser) return false; // already reported once
 
-    if (options.verbose) log.info(`Generating thumbnail for ${log.code(presentation.id)}`);
-    const timeoutMs = Math.min(options.buildTimeout * 1000, THUMBNAIL_TIMEOUT_CAP_MS);
+    if (options.verbose)
+      log.info(`Generating thumbnail for ${log.code(presentation.id)}`);
+    const timeoutMs = Math.min(
+      options.buildTimeout * 1000,
+      THUMBNAIL_TIMEOUT_CAP_MS,
+    );
     const tmpFile = `${thumbnailFile}.tmp.png`;
     try {
       await this.render(browser, presentation, tmpFile, timeoutMs);
       fs.renameSync(tmpFile, thumbnailFile);
       return true;
     } catch (err) {
-      const detail = (err instanceof Error ? err.message : String(err)).split("\n")[0];
-      log.warn(`Thumbnail generation failed for ${log.code(presentation.id)} (non-blocking): ${detail}`);
+      const detail = (err instanceof Error ? err.message : String(err)).split(
+        "\n",
+      )[0];
+      log.warn(
+        `Thumbnail generation failed for ${log.code(presentation.id)} (non-blocking): ${detail}`,
+      );
       return false;
     } finally {
       fs.rmSync(tmpFile, { force: true });
@@ -244,12 +305,21 @@ async function exportPdfFromOutput(
   const tmpFile = `${exportFile}.tmp.pdf`;
   try {
     await render(browser, presentation, tmpFile, settings, timeoutMs);
-    await writePdfMetadata(tmpFile, settings, presentation.title, context.siteDir).catch(() => false);
+    await writePdfMetadata(
+      tmpFile,
+      settings,
+      presentation.title,
+      context.siteDir,
+    ).catch(() => false);
     fs.renameSync(tmpFile, exportFile);
     return true;
   } catch (err) {
-    const detail = (err instanceof Error ? err.message : String(err)).split("\n")[0];
-    log.warn(`PDF export failed for ${log.code(presentation.id)} (non-blocking): ${detail}`);
+    const detail = (err instanceof Error ? err.message : String(err)).split(
+      "\n",
+    )[0];
+    log.warn(
+      `PDF export failed for ${log.code(presentation.id)} (non-blocking): ${detail}`,
+    );
     return false;
   } finally {
     fs.rmSync(tmpFile, { force: true });
@@ -261,9 +331,15 @@ async function exportPdfFromOutput(
  * headmatter `export.*` settings), if usable as `export.pdf`: it exists and
  * matches the requested clicks mode (`slidev build` ignores `exportWithClicks`).
  */
-function builtInPdf(outputPath: string, settings: DeckExportSettings): string | undefined {
+function builtInPdf(
+  outputPath: string,
+  settings: DeckExportSettings,
+): string | undefined {
   if (settings.withClicks !== settings.headmatterWithClicks) return undefined;
-  const file = path.join(outputPath, `${settings.exportFilename ?? "slidev-exported"}.pdf`);
+  const file = path.join(
+    outputPath,
+    `${settings.exportFilename ?? "slidev-exported"}.pdf`,
+  );
   return fs.existsSync(file) ? file : undefined;
 }
 
@@ -299,7 +375,10 @@ export async function generateExport(
   if (fs.existsSync(exportFile)) return true;
   const settings = readDeckExportSettings(sourcePath, options.exportWithClicks);
   // Slidev may ignore --output and use its own default filename.
-  const slidevDefaultFile = path.join(presentation.outputPath, `slidev-exported.${fmt}`);
+  const slidevDefaultFile = path.join(
+    presentation.outputPath,
+    `slidev-exported.${fmt}`,
+  );
   if (fmt === "pdf") {
     const builtIn = builtInPdf(presentation.outputPath, settings);
     if (builtIn) {
@@ -314,29 +393,48 @@ export async function generateExport(
 
   fs.mkdirSync(path.dirname(exportFile), { recursive: true });
 
-  const timeoutMs = Math.min(options.buildTimeout * 1000, EXPORT_TIMEOUT_CAP_MS);
+  const timeoutMs = Math.min(
+    options.buildTimeout * 1000,
+    EXPORT_TIMEOUT_CAP_MS,
+  );
 
   if (fmt === "pdf" && deps.browser) {
     if (!settings.needsSlidevExport) {
       const browser = await deps.browser.get(context.siteDir);
       if (!browser) return false; // already reported once
-      if (options.verbose) log.info(`Generating PDF export for ${log.code(presentation.id)} (from the built output)`);
-      return exportPdfFromOutput(browser, presentation, exportFile, settings, timeoutMs, context, deps.renderPdf ?? renderPdf);
+      if (options.verbose)
+        log.info(
+          `Generating PDF export for ${log.code(presentation.id)} (from the built output)`,
+        );
+      return exportPdfFromOutput(
+        browser,
+        presentation,
+        exportFile,
+        settings,
+        timeoutMs,
+        context,
+        deps.renderPdf ?? renderPdf,
+      );
     }
   }
 
   const args = [
     "export",
     sourcePath,
-    "--format", fmt,
-    "--output", exportFile,
-    "--timeout", String(timeoutMs),
+    "--format",
+    fmt,
+    "--output",
+    exportFile,
+    "--timeout",
+    String(timeoutMs),
   ];
   // Generate one page per click animation — disabled by default (rétrocompat).
   if (options.exportWithClicks) args.push("--with-clicks");
 
   if (options.verbose) {
-    log.info(`Generating ${fmt.toUpperCase()} export for ${log.code(presentation.id)}`);
+    log.info(
+      `Generating ${fmt.toUpperCase()} export for ${log.code(presentation.id)}`,
+    );
   }
 
   const result = await runSlidevBuild({
@@ -350,7 +448,8 @@ export async function generateExport(
 
   if (!result.success) {
     warnExportFailure(`${fmt.toUpperCase()} export`, presentation, result);
-    if (fs.existsSync(exportFile)) fs.rmSync(exportFile, { recursive: true, force: true });
+    if (fs.existsSync(exportFile))
+      fs.rmSync(exportFile, { recursive: true, force: true });
     return false;
   }
   // Slidev ignored --output; pick up its default-named file
@@ -377,14 +476,21 @@ export class ExportGenerator implements IAssetPostProcessor {
   private readonly deps: ExportDeps;
 
   /** @param deps - Injection points, or (legacy signature) the Playwright resolver alone. */
-  constructor(deps: ExportGeneratorDeps | ((siteDir: string) => string | undefined) = {}) {
+  constructor(
+    deps: ExportGeneratorDeps | ((siteDir: string) => string | undefined) = {},
+  ) {
     const d = typeof deps === "function" ? { resolve: deps } : deps;
     this.resolve = d.resolve ?? resolvePlaywright;
     this.deps = { browser: d.browser, renderPdf: d.renderPdf };
   }
 
   async prepare(options: BuildOptions, context: BuildContext): Promise<void> {
-    if (!options.download || !options.exportFormats?.length || this.playwrightAvailable !== undefined) return;
+    if (
+      !options.download ||
+      !options.exportFormats?.length ||
+      this.playwrightAvailable !== undefined
+    )
+      return;
     this.playwrightAvailable = this.resolve(context.siteDir) !== undefined;
     if (!this.playwrightAvailable) {
       warnPlaywrightUnavailable(
@@ -404,14 +510,24 @@ export class ExportGenerator implements IAssetPostProcessor {
     await this.prepare(options, context);
     if (!this.playwrightAvailable) return false; // already reported once by prepare()
     if (!assets?.sourcePath) {
-      log.warn(`No isolated source for ${log.code(presentation.id)} — export skipped`);
+      log.warn(
+        `No isolated source for ${log.code(presentation.id)} — export skipped`,
+      );
       return false;
     }
     // Sequential: a `slidev export` (PPTX) starts its own browser — running
     // them in parallel multiplies memory usage on top of the build concurrency.
     let ok = true;
     for (const fmt of options.exportFormats) {
-      ok = (await generateExport(presentation, assets.sourcePath, fmt, options, context, this.deps)) && ok;
+      ok =
+        (await generateExport(
+          presentation,
+          assets.sourcePath,
+          fmt,
+          options,
+          context,
+          this.deps,
+        )) && ok;
     }
     return ok;
   }
@@ -434,7 +550,10 @@ export interface ExportGeneratorDeps extends ExportDeps {
  */
 export function createDefaultPostProcessors(): IAssetPostProcessor[] {
   const browser = new SharedBrowser();
-  return [new ThumbnailGenerator({ browser }), new ExportGenerator({ browser })];
+  return [
+    new ThumbnailGenerator({ browser }),
+    new ExportGenerator({ browser }),
+  ];
 }
 
 /** Reset the once-per-process Playwright warning — for tests only. */

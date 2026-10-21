@@ -2,7 +2,10 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { BuildStatusFile, PresentationMetadata } from "../../../domain/types";
+import type {
+  BuildStatusFile,
+  PresentationMetadata,
+} from "../../../domain/types";
 import {
   BUILD_STATUS_FILE_NAME,
   BuildStatusTracker,
@@ -33,7 +36,9 @@ function writeOutput(id: string): void {
 }
 
 function readStatus(): BuildStatusFile {
-  return JSON.parse(fs.readFileSync(path.join(statusDir, BUILD_STATUS_FILE_NAME), "utf-8")) as BuildStatusFile;
+  return JSON.parse(
+    fs.readFileSync(path.join(statusDir, BUILD_STATUS_FILE_NAME), "utf-8"),
+  ) as BuildStatusFile;
 }
 
 beforeEach(() => {
@@ -47,14 +52,26 @@ afterEach(() => {
 
 describe("getBuildStatusDir / getBuildStatusUrl", () => {
   it("lives next to output/ in the plugin cache (never published)", () => {
-    expect(getBuildStatusDir("/site", "default")).toBe(path.join("/site", ".docusaurus", "slidesaurus", "default", "status"));
+    expect(getBuildStatusDir("/site", "default")).toBe(
+      path.join("/site", ".docusaurus", "slidesaurus", "default", "status"),
+    );
     expect(getBuildStatusDir("/site", "default", "fr")).toBe(
-      path.join("/site", ".docusaurus", "slidesaurus", "default", "i18n", "fr", "status"),
+      path.join(
+        "/site",
+        ".docusaurus",
+        "slidesaurus",
+        "default",
+        "i18n",
+        "fr",
+        "status",
+      ),
     );
   });
 
   it("is served below the presentations route", () => {
-    expect(getBuildStatusUrl("/docs/slidev")).toBe("/docs/slidev/__slidesaurus__/build-status.json");
+    expect(getBuildStatusUrl("/docs/slidev")).toBe(
+      "/docs/slidev/__slidesaurus__/build-status.json",
+    );
     expect(getBuildStatusUrl("")).toBe("/__slidesaurus__/build-status.json");
   });
 });
@@ -66,7 +83,10 @@ describe("BuildStatusTracker", () => {
     tracker.reset([presentation("old"), presentation("new")]);
 
     const { presentations } = readStatus();
-    expect(presentations.old).toMatchObject({ state: "pending", hasOutput: true });
+    expect(presentations.old).toMatchObject({
+      state: "pending",
+      hasOutput: true,
+    });
     expect(typeof presentations.old.builtAt).toBe("number");
     expect(presentations.new).toEqual({ state: "pending", hasOutput: false });
   });
@@ -79,15 +99,26 @@ describe("BuildStatusTracker", () => {
 
     writeOutput("a");
     tracker.onOutputReady("a");
-    expect(readStatus().presentations.a).toMatchObject({ state: "ready", hasOutput: true });
+    expect(readStatus().presentations.a).toMatchObject({
+      state: "ready",
+      hasOutput: true,
+    });
     expect(readStatus().presentations.a.builtAt).toBeGreaterThan(0);
   });
 
   it("records the first line of a failure, and clears it once rebuilt", () => {
     const tracker = new BuildStatusTracker(statusDir);
     tracker.reset([presentation("a")]);
-    tracker.onResult({ id: "a", success: false, error: "Slidev exited with code 1\nstack" });
-    expect(readStatus().presentations.a).toEqual({ state: "failed", hasOutput: false, error: "Slidev exited with code 1" });
+    tracker.onResult({
+      id: "a",
+      success: false,
+      error: "Slidev exited with code 1\nstack",
+    });
+    expect(readStatus().presentations.a).toEqual({
+      state: "failed",
+      hasOutput: false,
+      error: "Slidev exited with code 1",
+    });
 
     writeOutput("a");
     tracker.onResult({ id: "a", success: true });
@@ -98,7 +129,11 @@ describe("BuildStatusTracker", () => {
   it("marks everything failed when reset with an error", () => {
     const tracker = new BuildStatusTracker(statusDir);
     tracker.reset([presentation("a")], "Slidev CLI not installed");
-    expect(readStatus().presentations.a).toEqual({ state: "failed", hasOutput: false, error: "Slidev CLI not installed" });
+    expect(readStatus().presentations.a).toEqual({
+      state: "failed",
+      hasOutput: false,
+      error: "Slidev CLI not installed",
+    });
   });
 
   it("drops removed presentations and ignores late events for them", () => {

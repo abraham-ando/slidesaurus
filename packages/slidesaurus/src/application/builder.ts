@@ -16,9 +16,21 @@ import {
   purgeIsolatedBuilds,
   type IsolatedBuildDir,
 } from "../infrastructure/fs/isolatedBuild";
-import { isCompleteBuildOutput, purgeStaleOutputs } from "../infrastructure/fs/outputManager";
-import { isInside, normalizeThumbnailArtifact, removeBestEffort, replaceDir } from "../infrastructure/fs/fsUtils";
-import { BuildCache, FileHashMemo, computePresentationFingerprint } from "./buildCache";
+import {
+  isCompleteBuildOutput,
+  purgeStaleOutputs,
+} from "../infrastructure/fs/outputManager";
+import {
+  isInside,
+  normalizeThumbnailArtifact,
+  removeBestEffort,
+  replaceDir,
+} from "../infrastructure/fs/fsUtils";
+import {
+  BuildCache,
+  FileHashMemo,
+  computePresentationFingerprint,
+} from "./buildCache";
 import {
   patchFrontmatterAddons,
   patchFrontmatterTheme,
@@ -29,10 +41,20 @@ import {
   ensureThemeAvailable,
   ensureAddonsAvailable,
 } from "../infrastructure/packages/packageResolver";
-import { resolveSlidevCli, runSlidevBuild } from "../infrastructure/process/buildRunner";
-import { findPackageDir, prepareIconCollections } from "../infrastructure/fs/iconCollections";
+import {
+  resolveSlidevCli,
+  runSlidevBuild,
+} from "../infrastructure/process/buildRunner";
+import {
+  findPackageDir,
+  prepareIconCollections,
+} from "../infrastructure/fs/iconCollections";
 import { runConcurrently } from "../shared/concurrentRunner";
-import { defaultMaxParallelBuilds, isLocalPath, walkUpTree } from "../shared/utils";
+import {
+  defaultMaxParallelBuilds,
+  isLocalPath,
+  walkUpTree,
+} from "../shared/utils";
 import { TREE_WALK_MAX_DEPTH } from "../domain/constants";
 
 // ── Failure aggregation ───────────────────────────────────────────────────────
@@ -45,8 +67,12 @@ export class PresentationBuildError extends Error {
   readonly failures: BuildResult[];
 
   constructor(failures: BuildResult[]) {
-    const list = failures.map((f) => `  - ${f.id}: ${(f.error ?? "unknown error").split("\n")[0]}`).join("\n");
-    super(`${failures.length} Slidev presentation(s) failed to build:\n${list}`);
+    const list = failures
+      .map((f) => `  - ${f.id}: ${(f.error ?? "unknown error").split("\n")[0]}`)
+      .join("\n");
+    super(
+      `${failures.length} Slidev presentation(s) failed to build:\n${list}`,
+    );
     this.name = "PresentationBuildError";
     this.failures = failures;
   }
@@ -80,19 +106,23 @@ function logBuildSummary(
   const successful = built - failedResults.length;
   const warned = results.filter((r) => r.warnings?.length);
   const sequentialTime = results.reduce((sum, r) => sum + (r.duration ?? 0), 0);
-  const speedup = totalTime > 0 && sequentialTime > totalTime
-    ? ` (${(sequentialTime / totalTime).toFixed(1)}x faster than sequential ${sequentialTime.toFixed(1)}s)`
-    : "";
+  const speedup =
+    totalTime > 0 && sequentialTime > totalTime
+      ? ` (${(sequentialTime / totalTime).toFixed(1)}x faster than sequential ${sequentialTime.toFixed(1)}s)`
+      : "";
   const lines = [
     `Slidev build complete — ${total} presentation(s)`,
     `  Built:   ${built}  (${successful} ok, ${failedResults.length} failed)`,
     `  Cached:  ${skippedCount}`,
     `  Time:    ${totalTime.toFixed(2)}s${speedup}`,
   ];
-  if (warned.length > 0) lines.push(`  Asset warnings: ${warned.length} presentation(s)`);
+  if (warned.length > 0)
+    lines.push(`  Asset warnings: ${warned.length} presentation(s)`);
   if (failedResults.length > 0) {
     log.warn(lines.join("\n"));
-    failedResults.forEach((r) => log.error(`  ✗ ${log.code(r.id)}: ${r.error}`));
+    failedResults.forEach((r) =>
+      log.error(`  ✗ ${log.code(r.id)}: ${r.error}`),
+    );
   } else {
     log.success(lines.join("\n"));
   }
@@ -113,23 +143,42 @@ async function patchIsolatedSource(
   context: BuildContext,
 ): Promise<{ theme?: string; addons: string[] }> {
   // Slidev reads addons from frontmatter, not CLI flags
-  const mergedAddons = [...new Set([...(options.addons ?? []), ...(presentation.addons ?? [])])];
+  const mergedAddons = [
+    ...new Set([...(options.addons ?? []), ...(presentation.addons ?? [])]),
+  ];
   let resolvedAddons: string[] = [];
   let resolvedTheme: string | undefined;
   if (mergedAddons.length > 0) {
-    resolvedAddons = await ensureAddonsAvailable(mergedAddons, context.siteDir, options.autoInstall);
+    resolvedAddons = await ensureAddonsAvailable(
+      mergedAddons,
+      context.siteDir,
+      options.autoInstall,
+    );
     patchFrontmatterAddons(isolatedSourcePath, resolvedAddons);
-    if (options.verbose) log.info(`Patched addons (${resolvedAddons.length}) in ${log.code(presentation.id)}`);
+    if (options.verbose)
+      log.info(
+        `Patched addons (${resolvedAddons.length}) in ${log.code(presentation.id)}`,
+      );
   }
 
   // Each file's theme takes precedence over the global option, so it is
   // written directly — this enables per-presentation theme overrides.
   const themeRaw = presentation.theme || options.theme;
   if (themeRaw) {
-    resolvedTheme = await ensureThemeAvailable(themeRaw, context.siteDir, options.autoInstall);
-    patchFrontmatterTheme(isolatedSourcePath, resolvedTheme, Boolean(presentation.theme));
+    resolvedTheme = await ensureThemeAvailable(
+      themeRaw,
+      context.siteDir,
+      options.autoInstall,
+    );
+    patchFrontmatterTheme(
+      isolatedSourcePath,
+      resolvedTheme,
+      Boolean(presentation.theme),
+    );
     if (options.verbose && presentation.theme) {
-      log.info(`Theme override ${log.code(resolvedTheme)} for ${log.code(presentation.id)}`);
+      log.info(
+        `Theme override ${log.code(resolvedTheme)} for ${log.code(presentation.id)}`,
+      );
     }
   }
   return { theme: resolvedTheme, addons: resolvedAddons };
@@ -148,17 +197,30 @@ function speedUpIconResolution(
   id: string,
 ): void {
   const cli = resolveSlidevCli(context.siteDir);
-  const clientDir = cli ? findPackageDir(path.dirname(cli.entry), "@slidev/client") : undefined;
+  const clientDir = cli
+    ? findPackageDir(path.dirname(cli.entry), "@slidev/client")
+    : undefined;
   if (!clientDir) return;
   const packageDirs: string[] = [];
-  for (const name of [resolved.theme ?? "@slidev/theme-default", ...resolved.addons]) {
-    const dir = isLocalPath(name) ? path.resolve(context.siteDir, name) : findPackageDir(context.siteDir, name);
+  for (const name of [
+    resolved.theme ?? "@slidev/theme-default",
+    ...resolved.addons,
+  ]) {
+    const dir = isLocalPath(name)
+      ? path.resolve(context.siteDir, name)
+      : findPackageDir(context.siteDir, name);
     if (!dir || !fs.existsSync(dir)) return;
     packageDirs.push(dir);
   }
-  const { linked, stubbed } = prepareIconCollections(isolatedDir, { siteDir: context.siteDir, packageDirs, clientDir });
+  const { linked, stubbed } = prepareIconCollections(isolatedDir, {
+    siteDir: context.siteDir,
+    packageDirs,
+    clientDir,
+  });
   if (verbose && (linked.length || stubbed.length)) {
-    log.info(`Icon collections for ${log.code(id)}: linked [${linked.join(", ")}], empty [${stubbed.join(", ")}]`);
+    log.info(
+      `Icon collections for ${log.code(id)}: linked [${linked.join(", ")}], empty [${stubbed.join(", ")}]`,
+    );
   }
 }
 
@@ -185,7 +247,9 @@ async function runPostProcessors(
     }
   }
   // Slidev v52 may leave thumbnail.png/ as a directory — normalise it.
-  normalizeThumbnailArtifact(path.join(presentation.outputPath, "thumbnail.png"));
+  normalizeThumbnailArtifact(
+    path.join(presentation.outputPath, "thumbnail.png"),
+  );
   return warnings;
 }
 
@@ -198,7 +262,9 @@ async function callLifecycle(
   try {
     await fn();
   } catch (err) {
-    log.warn(`${processor.name}.${hook} threw (non-blocking): ${err instanceof Error ? err.message : String(err)}`);
+    log.warn(
+      `${processor.name}.${hook} threw (non-blocking): ${err instanceof Error ? err.message : String(err)}`,
+    );
   }
 }
 
@@ -217,7 +283,9 @@ function notify(fn: (() => void) | undefined): void {
   try {
     fn?.();
   } catch (err) {
-    log.warn(`Build progress listener threw: ${err instanceof Error ? err.message : String(err)}`);
+    log.warn(
+      `Build progress listener threw: ${err instanceof Error ? err.message : String(err)}`,
+    );
   }
 }
 
@@ -230,8 +298,12 @@ function notify(fn: (() => void) | undefined): void {
  * is returned as a failed `BuildResult` so other presentations still build.
  * On failure the previous output (if any) is left untouched.
  */
-async function buildPresentation(presentation: PresentationMetadata, env: BuildEnv): Promise<BuildResult> {
-  const { options, context, cacheDir, outputRoot, slidesRoot, processors } = env;
+async function buildPresentation(
+  presentation: PresentationMetadata,
+  env: BuildEnv,
+): Promise<BuildResult> {
+  const { options, context, cacheDir, outputRoot, slidesRoot, processors } =
+    env;
   const startTime = Date.now();
   const elapsed = (): number => (Date.now() - startTime) / 1000;
   // Phase durations, logged with `verbose` (where does a build spend its time?).
@@ -248,14 +320,36 @@ async function buildPresentation(presentation: PresentationMetadata, env: BuildE
   try {
     // outputPath is replaced (rm -rf) below — it must stay inside the cache.
     const outputPath = path.resolve(presentation.outputPath);
-    if (!isInside(outputRoot, outputPath) || outputPath === path.resolve(outputRoot)) {
-      throw new Error(`[Security] outputPath "${presentation.outputPath}" is outside the plugin cache`);
+    if (
+      !isInside(outputRoot, outputPath) ||
+      outputPath === path.resolve(outputRoot)
+    ) {
+      throw new Error(
+        `[Security] outputPath "${presentation.outputPath}" is outside the plugin cache`,
+      );
     }
 
-    isolated = createIsolatedBuild(presentation.sourceAbsolutePath, presentation.id, cacheDir, slidesRoot);
-    if (options.verbose) log.info(`Isolated: ${log.path(isolated.isolatedDir)}`);
-    const resolved = await patchIsolatedSource(isolated.isolatedSourcePath, presentation, options, context);
-    speedUpIconResolution(isolated.isolatedDir, resolved, context, options.verbose, presentation.id);
+    isolated = createIsolatedBuild(
+      presentation.sourceAbsolutePath,
+      presentation.id,
+      cacheDir,
+      slidesRoot,
+    );
+    if (options.verbose)
+      log.info(`Isolated: ${log.path(isolated.isolatedDir)}`);
+    const resolved = await patchIsolatedSource(
+      isolated.isolatedSourcePath,
+      presentation,
+      options,
+      context,
+    );
+    speedUpIconResolution(
+      isolated.isolatedDir,
+      resolved,
+      context,
+      options.verbose,
+      presentation.id,
+    );
     phase("isolate+patch");
 
     // `safeId` never contains a dot, so `{safeId}.out` cannot clash with another isolated dir.
@@ -263,12 +357,22 @@ async function buildPresentation(presentation: PresentationMetadata, env: BuildE
     fs.rmSync(tmpOut, { recursive: true, force: true });
 
     log.info(`Building ${log.code(presentation.id)} …`);
-    const base = presentation.url.endsWith("/") ? presentation.url : `${presentation.url}/`;
-    const args = ["build", isolated.isolatedSourcePath, "--out", tmpOut, "--base", base];
+    const base = presentation.url.endsWith("/")
+      ? presentation.url
+      : `${presentation.url}/`;
+    const args = [
+      "build",
+      isolated.isolatedSourcePath,
+      "--out",
+      tmpOut,
+      "--base",
+      base,
+    ];
     // Enables the deck's download button and `/print` route; Slidev then
     // prints `slidev-exported.pdf` itself from the built output.
     if (options.download) args.push("--download");
-    if (presentation.withoutNotes ?? options.withoutNotes) args.push("--without-notes");
+    if (presentation.withoutNotes ?? options.withoutNotes)
+      args.push("--without-notes");
 
     const result = await runSlidevBuild({
       siteDir: context.siteDir,
@@ -279,21 +383,38 @@ async function buildPresentation(presentation: PresentationMetadata, env: BuildE
     });
     if (!result.success) {
       log.error(`Error building ${log.code(presentation.id)}: ${result.error}`);
-      return { id: presentation.id, success: false, error: result.error, duration: elapsed() };
+      return {
+        id: presentation.id,
+        success: false,
+        error: result.error,
+        duration: elapsed(),
+      };
     }
     if (!isCompleteBuildOutput(tmpOut)) {
       const error = "Slidev reported success but produced no index.html";
       log.error(`Error building ${log.code(presentation.id)}: ${error}`);
-      return { id: presentation.id, success: false, error, duration: elapsed() };
+      return {
+        id: presentation.id,
+        success: false,
+        error,
+        duration: elapsed(),
+      };
     }
     phase("slidev build");
     replaceDir(tmpOut, outputPath);
     phase("replace output");
     notify(() => env.listener?.onOutputReady?.(presentation.id));
 
-    const warnings = await runPostProcessors(presentation, isolated, processors, options, context);
+    const warnings = await runPostProcessors(
+      presentation,
+      isolated,
+      processors,
+      options,
+      context,
+    );
     phase("assets");
-    if (options.verbose) log.info(`Timings ${log.code(presentation.id)}: ${phases.join(", ")}`);
+    if (options.verbose)
+      log.info(`Timings ${log.code(presentation.id)}: ${phases.join(", ")}`);
     return {
       id: presentation.id,
       success: true,
@@ -307,7 +428,8 @@ async function buildPresentation(presentation: PresentationMetadata, env: BuildE
   } finally {
     for (const leftover of [isolated?.isolatedDir, tmpOut]) {
       const error = leftover ? removeBestEffort(leftover) : undefined;
-      if (error) log.warn(`Could not clean up ${log.path(leftover!)}: ${error}`);
+      if (error)
+        log.warn(`Could not clean up ${log.path(leftover!)}: ${error}`);
     }
   }
 }
@@ -342,27 +464,47 @@ export async function buildAllPresentations(
   const totalStart = Date.now();
   const total = presentations.length;
   const cpuCount = os.cpus().length;
-  const concurrency = Math.max(1, Math.min(options.maxParallelBuilds ?? defaultMaxParallelBuilds(), cpuCount));
-  const cacheDir = getSlidevCacheDir(context.siteDir, options.id, context.locale);
+  const concurrency = Math.max(
+    1,
+    Math.min(options.maxParallelBuilds ?? defaultMaxParallelBuilds(), cpuCount),
+  );
+  const cacheDir = getSlidevCacheDir(
+    context.siteDir,
+    options.id,
+    context.locale,
+  );
   const outputRoot = path.join(cacheDir, "output");
   const slidesRoot = path.resolve(context.siteDir, options.path);
 
   const cache: ICache = injectedCache ?? new BuildCache(cacheDir);
-  const optionsFingerprint = BuildCache.computeOptionsFingerprint(options, context.baseUrl);
+  const optionsFingerprint = BuildCache.computeOptionsFingerprint(
+    options,
+    context.baseUrl,
+  );
   const memo = new FileHashMemo();
 
   log.info(`Checking ${total} presentation(s) for changes…`);
 
   // A hashing failure (file deleted since the scan…) must not abort the run:
   // the presentation is simply rebuilt — and its build reports the real error.
-  const hashes = await runConcurrently(presentations, concurrency, async (p) => {
-    try {
-      const fingerprint = computePresentationFingerprint(p, { options, context, slidesRoot, optionsFingerprint, memo });
-      return cache.computeHash(p.sourceAbsolutePath, fingerprint);
-    } catch {
-      return undefined;
-    }
-  });
+  const hashes = await runConcurrently(
+    presentations,
+    concurrency,
+    async (p) => {
+      try {
+        const fingerprint = computePresentationFingerprint(p, {
+          options,
+          context,
+          slidesRoot,
+          optionsFingerprint,
+          memo,
+        });
+        return cache.computeHash(p.sourceAbsolutePath, fingerprint);
+      } catch {
+        return undefined;
+      }
+    },
+  );
 
   const toBuild: PresentationMetadata[] = [];
   const skipped = new Set<string>();
@@ -393,11 +535,25 @@ export async function buildAllPresentations(
     // Each presentation requires its own --base /route/category/id/ so that Vite
     // embeds the correct absolute asset paths. Each invocation is isolated
     // (separate dir, no shared port) so up to `concurrency` builds run in parallel.
-    log.info(`Building ${toBuild.length}/${total} presentation(s) — concurrency: ${concurrency}`);
+    log.info(
+      `Building ${toBuild.length}/${total} presentation(s) — concurrency: ${concurrency}`,
+    );
     const processors = postProcessors ?? createDefaultPostProcessors();
-    const env: BuildEnv = { options, context, cacheDir, outputRoot, slidesRoot, processors, listener };
+    const env: BuildEnv = {
+      options,
+      context,
+      cacheDir,
+      outputRoot,
+      slidesRoot,
+      processors,
+      listener,
+    };
     // One-time checks / shared resources (Playwright browser) BEFORE the builds.
-    await Promise.all(processors.map((p) => callLifecycle(p, "prepare", () => p.prepare?.(options, context))));
+    await Promise.all(
+      processors.map((p) =>
+        callLifecycle(p, "prepare", () => p.prepare?.(options, context)),
+      ),
+    );
     let completed = 0;
     let results: BuildResult[];
     try {
@@ -412,7 +568,9 @@ export async function buildAllPresentations(
         return result;
       });
     } finally {
-      await Promise.all(processors.map((p) => callLifecycle(p, "dispose", () => p.dispose?.())));
+      await Promise.all(
+        processors.map((p) => callLifecycle(p, "dispose", () => p.dispose?.())),
+      );
     }
     process.stdout.write("\n");
     buildResults = new Map(results.map((r) => [r.id, r]));
@@ -420,20 +578,34 @@ export async function buildAllPresentations(
       if (!r.success) cache.invalidate(r.id);
     }
   } else {
-    log.success(`All ${total} presentations are up-to-date — nothing to build!`);
+    log.success(
+      `All ${total} presentations are up-to-date — nothing to build!`,
+    );
   }
 
   // Outputs of deleted / renamed decks and partial builds are never published.
-  purgeStaleOutputs(outputRoot, presentations.map((p) => p.id));
+  purgeStaleOutputs(
+    outputRoot,
+    presentations.map((p) => p.id),
+  );
   cache.persist();
 
   if (toBuild.length > 0) {
-    logBuildSummary(total, toBuild.length, [...buildResults.values()], skipped.size, (Date.now() - totalStart) / 1000);
+    logBuildSummary(
+      total,
+      toBuild.length,
+      [...buildResults.values()],
+      skipped.size,
+      (Date.now() - totalStart) / 1000,
+    );
   }
 
   const allResults: BuildResult[] = presentations.map((p) => {
-    if (skipped.has(p.id)) return { id: p.id, success: true, duration: 0, cacheHit: true };
-    return buildResults.get(p.id) ?? { id: p.id, success: false, error: "Not built" };
+    if (skipped.has(p.id))
+      return { id: p.id, success: true, duration: 0, cacheHit: true };
+    return (
+      buildResults.get(p.id) ?? { id: p.id, success: false, error: "Not built" }
+    );
   });
   for (const r of allResults) {
     if (!buildResults.has(r.id)) notify(() => listener?.onResult?.(r));
@@ -443,7 +615,9 @@ export async function buildAllPresentations(
     try {
       await options.onBuildComplete(allResults);
     } catch (err) {
-      log.error(`onBuildComplete callback threw: ${err instanceof Error ? err.message : String(err)}`);
+      log.error(
+        `onBuildComplete callback threw: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
   }
 
@@ -484,7 +658,9 @@ export class BackgroundBuildQueue {
         try {
           await run();
         } catch (err) {
-          log.error(`Background Slidev build failed: ${err instanceof Error ? err.message : String(err)}`);
+          log.error(
+            `Background Slidev build failed: ${err instanceof Error ? err.message : String(err)}`,
+          );
         }
       }
     } finally {
@@ -500,7 +676,9 @@ const backgroundQueues = new Map<string, BackgroundBuildQueue>();
  * it, so a site reload (new plugin instance) never builds concurrently with
  * a run started by the previous instance.
  */
-export function getBackgroundBuildQueue(cacheDir: string): BackgroundBuildQueue {
+export function getBackgroundBuildQueue(
+  cacheDir: string,
+): BackgroundBuildQueue {
   const key = path.resolve(cacheDir);
   let queue = backgroundQueues.get(key);
   if (!queue) {
@@ -515,9 +693,13 @@ export function getBackgroundBuildQueue(cacheDir: string): BackgroundBuildQueue 
  * Works in pnpm workspaces even without .bin links on Windows.
  */
 export function checkSlidevInstalled(siteDir?: string): boolean {
-  const found = walkUpTree(siteDir ?? process.cwd(), TREE_WALK_MAX_DEPTH, (dir) => {
-    const p = path.join(dir, "node_modules", "@slidev", "cli");
-    return fs.existsSync(p) ? true : undefined;
-  });
+  const found = walkUpTree(
+    siteDir ?? process.cwd(),
+    TREE_WALK_MAX_DEPTH,
+    (dir) => {
+      const p = path.join(dir, "node_modules", "@slidev", "cli");
+      return fs.existsSync(p) ? true : undefined;
+    },
+  );
   return found === true;
 }

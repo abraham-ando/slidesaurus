@@ -23,15 +23,24 @@ export interface FilterOptions {
   isFavorite: (id: string) => boolean;
 }
 
-export function applyFilters(presentations: Presentation[], opts: FilterOptions): Presentation[] {
+export function applyFilters(
+  presentations: Presentation[],
+  opts: FilterOptions,
+): Presentation[] {
   let result = presentations;
-  if (opts.searchQuery.trim()) result = result.filter((p) => matchesSearch(opts.searchQuery, p));
-  if (opts.selectedLevel) result = result.filter((p) => p.level === opts.selectedLevel);
-  if (opts.selectedAuthor) result = result.filter((p) => p.author === opts.selectedAuthor);
+  if (opts.searchQuery.trim())
+    result = result.filter((p) => matchesSearch(opts.searchQuery, p));
+  if (opts.selectedLevel)
+    result = result.filter((p) => p.level === opts.selectedLevel);
+  if (opts.selectedAuthor)
+    result = result.filter((p) => p.author === opts.selectedAuthor);
   if (opts.selectedTags.length > 0)
-    result = result.filter((p) => opts.selectedTags.every((tag) => p.tags?.includes(tag)));
+    result = result.filter((p) =>
+      opts.selectedTags.every((tag) => p.tags?.includes(tag)),
+    );
   if (opts.hideDeprecated) result = result.filter((p) => p.deprecated !== true);
-  if (opts.showFavoritesOnly) result = result.filter((p) => opts.isFavorite(p.id));
+  if (opts.showFavoritesOnly)
+    result = result.filter((p) => opts.isFavorite(p.id));
   if (opts.selectedPlaylist) {
     const pl = opts.playlists.find((p) => p.id === opts.selectedPlaylist);
     if (pl) result = result.filter((p) => pl.items.includes(p.id));
@@ -39,10 +48,14 @@ export function applyFilters(presentations: Presentation[], opts: FilterOptions)
   return result;
 }
 
-const naturalCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
+const naturalCollator = new Intl.Collator(undefined, {
+  numeric: true,
+  sensitivity: "base",
+});
 
 /** Locale-aware comparison where "Part 2" sorts before "Part 10". */
-export const naturalCompare = (a: string, b: string): number => naturalCollator.compare(a, b);
+export const naturalCompare = (a: string, b: string): number =>
+  naturalCollator.compare(a, b);
 
 /**
  * Orders presentations: by playlist order when a playlist is selected,
@@ -70,7 +83,10 @@ export function sortPresentations(
 }
 
 /** Orders categories by `position`, then label (reversed when `desc`). */
-export function sortCategories(categories: Category[], sortOrder: "asc" | "desc"): Category[] {
+export function sortCategories(
+  categories: Category[],
+  sortOrder: "asc" | "desc",
+): Category[] {
   const direction = sortOrder === "asc" ? 1 : -1;
   return [...categories].sort((a, b) => {
     const posCmp = a.position - b.position;

@@ -2,7 +2,11 @@ import { spawn, type ChildProcess } from "node:child_process";
 import path from "node:path";
 import fs from "node:fs";
 import { filterEnvAllowlist } from "../packages/env";
-import { STDERR_MAX_BYTES, SIGKILL_DELAY_MS, TREE_WALK_MAX_DEPTH } from "../../domain/constants";
+import {
+  STDERR_MAX_BYTES,
+  SIGKILL_DELAY_MS,
+  TREE_WALK_MAX_DEPTH,
+} from "../../domain/constants";
 import { walkUpTree } from "../../shared/utils";
 import { log } from "../../shared/logger";
 
@@ -37,10 +41,13 @@ export function resolveSlidevCli(siteDir: string): SlidevCliInfo | undefined {
       const bin = typeof pkg.bin === "string" ? pkg.bin : pkg.bin?.slidev;
       if (bin) {
         const entry = path.resolve(path.dirname(pkgJsonPath), bin);
-        if (fs.existsSync(entry)) info = { entry, version: pkg.version ?? "unknown" };
+        if (fs.existsSync(entry))
+          info = { entry, version: pkg.version ?? "unknown" };
       }
     } catch (err) {
-      log.warn(`Failed to read ${log.path(pkgJsonPath)}: ${err instanceof Error ? err.message : String(err)}`);
+      log.warn(
+        `Failed to read ${log.path(pkgJsonPath)}: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
   }
   slidevCliCache.set(siteDir, info);
@@ -71,7 +78,11 @@ export interface RunResult {
  * Keys allowed in extraEnv — must remain a small, known set of plugin-internal
  * variables. Never forward user secrets through this mechanism.
  */
-const ALLOWED_EXTRA_ENV_KEYS = new Set(["SLIDEV_SITE_DIR", "FORCE_COLOR", "NO_COLOR"]);
+const ALLOWED_EXTRA_ENV_KEYS = new Set([
+  "SLIDEV_SITE_DIR",
+  "FORCE_COLOR",
+  "NO_COLOR",
+]);
 
 /** Children still running — killed if the parent process exits first. */
 const activeChildren = new Set<ChildProcess>();
@@ -98,13 +109,23 @@ function hasExited(child: ChildProcess): boolean {
  *  - POSIX:   signal the whole process group (child spawned with `detached`).
  * Falls back to `child.kill()` when the tree kill is not possible.
  */
-export function killProcessTree(child: ChildProcess, signal: NodeJS.Signals): void {
+export function killProcessTree(
+  child: ChildProcess,
+  signal: NodeJS.Signals,
+): void {
   const pid = child.pid;
   if (pid === undefined || hasExited(child)) return;
   try {
     if (process.platform === "win32") {
-      const taskkill = path.join(process.env.SystemRoot ?? "C:\\Windows", "System32", "taskkill.exe");
-      const killer = spawn(taskkill, ["/pid", String(pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
+      const taskkill = path.join(
+        process.env.SystemRoot ?? "C:\\Windows",
+        "System32",
+        "taskkill.exe",
+      );
+      const killer = spawn(taskkill, ["/pid", String(pid), "/T", "/F"], {
+        stdio: "ignore",
+        windowsHide: true,
+      });
       killer.on("error", () => child.kill(signal));
     } else {
       process.kill(-pid, signal);
@@ -148,7 +169,8 @@ export function runSlidevBuild(options: {
     if (!cli) {
       resolve({
         success: false,
-        error: "Slidev CLI not found (@slidev/cli is not installed). Install with: pnpm add -D @slidev/cli",
+        error:
+          "Slidev CLI not found (@slidev/cli is not installed). Install with: pnpm add -D @slidev/cli",
         failureKind: "spawn",
       });
       return;
@@ -189,7 +211,9 @@ export function runSlidevBuild(options: {
       child.stderr.on("data", (data: Buffer) => {
         if (stderrBytes < STDERR_MAX_BYTES) {
           const remaining = STDERR_MAX_BYTES - stderrBytes;
-          stderrChunks.push(data.length <= remaining ? data : data.subarray(0, remaining));
+          stderrChunks.push(
+            data.length <= remaining ? data : data.subarray(0, remaining),
+          );
           stderrBytes += data.length;
         }
       });
@@ -216,18 +240,31 @@ export function runSlidevBuild(options: {
     }, timeoutMs);
 
     child.on("error", (err: Error) => {
-      finish({ success: false, error: `Failed to spawn slidev: ${err.message}`, failureKind: "spawn" });
+      finish({
+        success: false,
+        error: `Failed to spawn slidev: ${err.message}`,
+        failureKind: "spawn",
+      });
     });
 
     child.on("close", (code: number | null, signal: NodeJS.Signals | null) => {
       if (timedOut) {
-        finish({ success: false, error: `Build timed out after ${timeoutMs / 1000}s`, failureKind: "timeout" });
+        finish({
+          success: false,
+          error: `Build timed out after ${timeoutMs / 1000}s`,
+          failureKind: "timeout",
+        });
       } else if (code === 0) {
         finish({ success: true });
       } else {
         const stderr = Buffer.concat(stderrChunks).toString("utf8");
-        const status = code === null ? `signal ${signal ?? "unknown"}` : `code ${code}`;
-        finish({ success: false, error: `Slidev exited with ${status}\n${stderr}`, failureKind: "exit" });
+        const status =
+          code === null ? `signal ${signal ?? "unknown"}` : `code ${code}`;
+        finish({
+          success: false,
+          error: `Slidev exited with ${status}\n${stderr}`,
+          failureKind: "exit",
+        });
       }
     });
   });

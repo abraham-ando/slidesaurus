@@ -11,7 +11,11 @@ program
   .name("slidesaurus")
   .description("CLI for the slidesaurus Docusaurus plugin")
   .version(pkg.version, "-v, --version")
-  .option("--id <pluginId>", "Plugin instance ID (multi-instance support)", "default");
+  .option(
+    "--id <pluginId>",
+    "Plugin instance ID (multi-instance support)",
+    "default",
+  );
 
 // ── slidesaurus new <name> ────────────────────────────────────────────────────
 program
@@ -19,18 +23,23 @@ program
   .description("Scaffold a new Slidev presentation")
   .option("-c, --category <category>", "Category sub-folder")
   .option("-t, --theme <theme>", "Slidev theme to use")
-  .option("--template <template>", "Template: basic | tutorial | talk (asked interactively when omitted)")
+  .option(
+    "--template <template>",
+    "Template: basic | tutorial | talk (asked interactively when omitted)",
+  )
   .option("--force", "Overwrite if the file already exists")
-  .action(async (name: string | undefined, cmdOpts: Record<string, unknown>) => {
-    const parent = program.opts<{ id: string }>();
-    await runNew(name, {
-      category: cmdOpts.category as string | undefined,
-      theme: cmdOpts.theme as string | undefined,
-      template: cmdOpts.template as string | undefined,
-      force: Boolean(cmdOpts.force),
-      pluginId: parent.id,
-    });
-  });
+  .action(
+    async (name: string | undefined, cmdOpts: Record<string, unknown>) => {
+      const parent = program.opts<{ id: string }>();
+      await runNew(name, {
+        category: cmdOpts.category as string | undefined,
+        theme: cmdOpts.theme as string | undefined,
+        template: cmdOpts.template as string | undefined,
+        force: Boolean(cmdOpts.force),
+        pluginId: parent.id,
+      });
+    },
+  );
 
 // ── slidesaurus list ──────────────────────────────────────────────────────────
 program
@@ -59,7 +68,10 @@ const cacheCmd = program
 cacheCmd
   .command("clear")
   .description("Clear the build cache (all presentations or a specific one)")
-  .option("-p, --presentation <presentationId>", "Clear cache for a single presentation (--id selects the plugin instance)")
+  .option(
+    "-p, --presentation <presentationId>",
+    "Clear cache for a single presentation (--id selects the plugin instance)",
+  )
   .option("-y, --yes", "Skip confirmation prompt")
   .action(async (cmdOpts: Record<string, unknown>) => {
     const parent = program.opts<{ id: string }>();

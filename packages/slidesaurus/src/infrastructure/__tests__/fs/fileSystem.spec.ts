@@ -40,12 +40,23 @@ describe("getSlidevCacheDir", () => {
   it("uses a separate cache per locale", () => {
     const fr = getSlidevCacheDir("/project", "default", "fr");
     const en = getSlidevCacheDir("/project", "default", "en");
-    expect(fr).toBe(path.join("/project", ".docusaurus", "slidesaurus", "default", "i18n", "fr"));
+    expect(fr).toBe(
+      path.join(
+        "/project",
+        ".docusaurus",
+        "slidesaurus",
+        "default",
+        "i18n",
+        "fr",
+      ),
+    );
     expect(fr).not.toBe(en);
   });
 
   it("rejects a locale that could traverse the filesystem", () => {
-    expect(() => getSlidevCacheDir("/project", "default", "../evil")).toThrow("[Security]");
+    expect(() => getSlidevCacheDir("/project", "default", "../evil")).toThrow(
+      "[Security]",
+    );
   });
 });
 
@@ -59,7 +70,15 @@ describe("getSlidevBuildOutputDir", () => {
 
   it("is locale-aware", () => {
     expect(getSlidevBuildOutputDir("/project", "default", "fr")).toBe(
-      path.join("/project", ".docusaurus", "slidesaurus", "default", "i18n", "fr", "output"),
+      path.join(
+        "/project",
+        ".docusaurus",
+        "slidesaurus",
+        "default",
+        "i18n",
+        "fr",
+        "output",
+      ),
     );
   });
 });
@@ -82,7 +101,10 @@ describe("cleanupSourceDirectory", () => {
   });
 
   it("keeps a legitimate (non-empty) index.html, dist/ and .slidev/", () => {
-    fs.writeFileSync(path.join(tmpDir, "index.html"), "<head><script src=x></script></head>");
+    fs.writeFileSync(
+      path.join(tmpDir, "index.html"),
+      "<head><script src=x></script></head>",
+    );
     fs.mkdirSync(path.join(tmpDir, "dist"));
     fs.mkdirSync(path.join(tmpDir, ".slidev", "drawings"), { recursive: true });
     cleanupSourceDirectory(tmpDir);
@@ -92,7 +114,9 @@ describe("cleanupSourceDirectory", () => {
   });
 
   it("handles a missing directory", () => {
-    expect(() => cleanupSourceDirectory(path.join(tmpDir, "nope"))).not.toThrow();
+    expect(() =>
+      cleanupSourceDirectory(path.join(tmpDir, "nope")),
+    ).not.toThrow();
   });
 });
 
@@ -131,7 +155,12 @@ describe("createIsolatedBuild", () => {
     write("other.md", "# Other");
     write("image.png", "fake-png");
 
-    const { isolatedSourcePath } = createIsolatedBuild(md, "test", cacheDir, slides);
+    const { isolatedSourcePath } = createIsolatedBuild(
+      md,
+      "test",
+      cacheDir,
+      slides,
+    );
     const dir = path.dirname(isolatedSourcePath);
     expect(fs.existsSync(path.join(dir, "image.png"))).toBe(true);
     expect(fs.existsSync(path.join(dir, "other.md"))).toBe(false);
@@ -145,10 +174,17 @@ describe("createIsolatedBuild", () => {
     write("styles/index.css", "body{}");
     write("diagrams/flow.svg", "<svg/>");
 
-    const { isolatedSourcePath } = createIsolatedBuild(md, "intro", cacheDir, slides);
+    const { isolatedSourcePath } = createIsolatedBuild(
+      md,
+      "intro",
+      cacheDir,
+      slides,
+    );
     const dir = path.dirname(isolatedSourcePath);
     expect(fs.existsSync(path.join(dir, "other-category"))).toBe(false);
-    expect(fs.existsSync(path.join(dir, "components", "Counter.vue"))).toBe(true);
+    expect(fs.existsSync(path.join(dir, "components", "Counter.vue"))).toBe(
+      true,
+    );
     expect(fs.existsSync(path.join(dir, "styles", "index.css"))).toBe(true);
     // Not a category (no .md inside) → regular asset directory
     expect(fs.existsSync(path.join(dir, "diagrams", "flow.svg"))).toBe(true);
@@ -158,8 +194,16 @@ describe("createIsolatedBuild", () => {
     write("shared/logo.png", "logo");
     const md = write("cat/talk.md", "# Talk\n\n![logo](../shared/logo.png)\n");
 
-    const { isolatedSourcePath } = createIsolatedBuild(md, "cat/talk", cacheDir, slides);
-    const resolved = path.resolve(path.dirname(isolatedSourcePath), "../shared/logo.png");
+    const { isolatedSourcePath } = createIsolatedBuild(
+      md,
+      "cat/talk",
+      cacheDir,
+      slides,
+    );
+    const resolved = path.resolve(
+      path.dirname(isolatedSourcePath),
+      "../shared/logo.png",
+    );
     expect(fs.readFileSync(resolved, "utf-8")).toBe("logo");
   });
 
@@ -175,9 +219,17 @@ describe("createIsolatedBuild", () => {
   it("copies Markdown imported with src: (and its own assets)", () => {
     write("pages/part.md", "# Part\n\n![d](./diagram.png)\n");
     write("pages/diagram.png", "d");
-    const md = write("talks/main.md", "---\ntitle: Main\n---\n\n---\nsrc: ../pages/part.md\n---\n");
+    const md = write(
+      "talks/main.md",
+      "---\ntitle: Main\n---\n\n---\nsrc: ../pages/part.md\n---\n",
+    );
 
-    const { isolatedSourcePath } = createIsolatedBuild(md, "talks/main", cacheDir, slides);
+    const { isolatedSourcePath } = createIsolatedBuild(
+      md,
+      "talks/main",
+      cacheDir,
+      slides,
+    );
     const dir = path.dirname(isolatedSourcePath);
     expect(fs.existsSync(path.resolve(dir, "../pages/part.md"))).toBe(true);
     expect(fs.existsSync(path.resolve(dir, "../pages/diagram.png"))).toBe(true);
@@ -185,12 +237,22 @@ describe("createIsolatedBuild", () => {
 
   it("creates a dummy index.html without touching a user's index.html", () => {
     const md = write("slides.md", "# Slides");
-    const { isolatedSourcePath } = createIsolatedBuild(md, "test", cacheDir, slides);
-    expect(fs.existsSync(path.join(path.dirname(isolatedSourcePath), "index.html"))).toBe(true);
+    const { isolatedSourcePath } = createIsolatedBuild(
+      md,
+      "test",
+      cacheDir,
+      slides,
+    );
+    expect(
+      fs.existsSync(path.join(path.dirname(isolatedSourcePath), "index.html")),
+    ).toBe(true);
 
     const userIndex = write("index.html", "<head>custom</head>");
     const second = createIsolatedBuild(md, "test", cacheDir, slides);
-    const copy = path.join(path.dirname(second.isolatedSourcePath), "index.html");
+    const copy = path.join(
+      path.dirname(second.isolatedSourcePath),
+      "index.html",
+    );
     // Simulate Slidev overwriting its root index.html during the build
     fs.writeFileSync(copy, "generated");
     expect(fs.readFileSync(userIndex, "utf-8")).toBe("<head>custom</head>");
@@ -198,10 +260,16 @@ describe("createIsolatedBuild", () => {
 
   it("uses the injective safeId for ids with slashes", () => {
     const md = write("slides.md", "# Slides");
-    const { isolatedDir, safeId } = createIsolatedBuild(md, "cat/sub-slide", cacheDir);
+    const { isolatedDir, safeId } = createIsolatedBuild(
+      md,
+      "cat/sub-slide",
+      cacheDir,
+    );
     expect(safeId).toBe(toSafeId("cat/sub-slide"));
     expect(isolatedDir).toBe(path.resolve(cacheDir, "builds", safeId));
-    expect(createIsolatedBuild(md, "cat__sub-slide", cacheDir).isolatedDir).not.toBe(isolatedDir);
+    expect(
+      createIsolatedBuild(md, "cat__sub-slide", cacheDir).isolatedDir,
+    ).not.toBe(isolatedDir);
   });
 
   it("starts from a clean directory (stale files removed)", () => {
@@ -235,7 +303,9 @@ describe("cleanupIsolatedBuildDir / purgeIsolatedBuilds", () => {
   });
 
   it("handles non-existent directory gracefully", () => {
-    expect(() => cleanupIsolatedBuildDir(path.join(tmpDir, "nope"))).not.toThrow();
+    expect(() =>
+      cleanupIsolatedBuildDir(path.join(tmpDir, "nope")),
+    ).not.toThrow();
   });
 
   it("purges every leftover under builds/", () => {

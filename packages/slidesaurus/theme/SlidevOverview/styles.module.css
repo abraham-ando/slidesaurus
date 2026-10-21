@@ -165,7 +165,9 @@
   color: var(--ifm-font-color-base);
   font-size: 0.95rem;
   line-height: 1.5;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .searchInput:focus {
@@ -389,7 +391,9 @@
   font-size: 0.875rem;
   color: var(--ifm-color-emphasis-700);
   text-decoration: none !important;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
   border-left: 2px solid transparent;
   line-height: 1.3;
 }

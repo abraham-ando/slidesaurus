@@ -2,11 +2,19 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { _resetIconCollectionCache, findPackageDir, prepareIconCollections } from "../../fs/iconCollections";
+import {
+  _resetIconCollectionCache,
+  findPackageDir,
+  prepareIconCollections,
+} from "../../fs/iconCollections";
 
 let tmp: string;
 
-function pkg(dir: string, name: string, files: Record<string, string> = {}): string {
+function pkg(
+  dir: string,
+  name: string,
+  files: Record<string, string> = {},
+): string {
   const root = path.join(dir, "node_modules", ...name.split("/"));
   fs.mkdirSync(root, { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name }));
@@ -42,7 +50,14 @@ function layout() {
   pkg(store, "@iconify-json/carbon", { "icons.json": "{}" });
   const siteDir = path.join(tmp, "site");
   const themeDir = pkg(siteDir, "@slidev/theme-x");
-  const isolatedDir = path.join(siteDir, ".docusaurus", "slidesaurus", "default", "builds", "deck");
+  const isolatedDir = path.join(
+    siteDir,
+    ".docusaurus",
+    "slidesaurus",
+    "default",
+    "builds",
+    "deck",
+  );
   fs.mkdirSync(isolatedDir, { recursive: true });
   return { store, clientDir, siteDir, themeDir, isolatedDir };
 }
@@ -50,7 +65,9 @@ function layout() {
 describe("findPackageDir", () => {
   it("walks up node_modules like Node", () => {
     const { siteDir, themeDir } = layout();
-    expect(findPackageDir(path.join(siteDir, "a", "b"), "@slidev/theme-x")).toBe(themeDir);
+    expect(
+      findPackageDir(path.join(siteDir, "a", "b"), "@slidev/theme-x"),
+    ).toBe(themeDir);
     expect(findPackageDir(siteDir, "@slidev/missing")).toBeUndefined();
   });
 });
@@ -58,13 +75,26 @@ describe("findPackageDir", () => {
 describe("prepareIconCollections", () => {
   it("links client-only collections and creates empty ones for missing collections", () => {
     const { clientDir, siteDir, themeDir, isolatedDir, store } = layout();
-    const result = prepareIconCollections(isolatedDir, { siteDir, packageDirs: [themeDir], clientDir });
+    const result = prepareIconCollections(isolatedDir, {
+      siteDir,
+      packageDirs: [themeDir],
+      clientDir,
+    });
 
     expect(result.linked).toEqual(["carbon"]);
     expect(result.stubbed).toEqual(["vscode-icons"]);
     const scope = path.join(isolatedDir, "node_modules", "@iconify-json");
-    expect(fs.realpathSync(path.join(scope, "carbon"))).toBe(path.join(store, "node_modules", "@iconify-json", "carbon"));
-    expect(JSON.parse(fs.readFileSync(path.join(scope, "vscode-icons", "icons.json"), "utf-8"))).toEqual({
+    expect(fs.realpathSync(path.join(scope, "carbon"))).toBe(
+      path.join(store, "node_modules", "@iconify-json", "carbon"),
+    );
+    expect(
+      JSON.parse(
+        fs.readFileSync(
+          path.join(scope, "vscode-icons", "icons.json"),
+          "utf-8",
+        ),
+      ),
+    ).toEqual({
       prefix: "vscode-icons",
       icons: {},
     });
@@ -74,15 +104,33 @@ describe("prepareIconCollections", () => {
     const { clientDir, siteDir, themeDir, isolatedDir } = layout();
     pkg(siteDir, "@iconify-json/carbon", { "icons.json": "{}" });
     pkg(themeDir, "@iconify-json/vscode-icons", { "icons.json": "{}" });
-    const result = prepareIconCollections(isolatedDir, { siteDir, packageDirs: [themeDir], clientDir });
+    const result = prepareIconCollections(isolatedDir, {
+      siteDir,
+      packageDirs: [themeDir],
+      clientDir,
+    });
     expect(result).toEqual({ linked: [], stubbed: [] });
     expect(fs.existsSync(path.join(isolatedDir, "node_modules"))).toBe(false);
   });
 
   it("removing the isolated dir keeps the linked package intact", () => {
     const { clientDir, siteDir, themeDir, isolatedDir, store } = layout();
-    prepareIconCollections(isolatedDir, { siteDir, packageDirs: [themeDir], clientDir });
+    prepareIconCollections(isolatedDir, {
+      siteDir,
+      packageDirs: [themeDir],
+      clientDir,
+    });
     fs.rmSync(isolatedDir, { recursive: true, force: true });
-    expect(fs.existsSync(path.join(store, "node_modules", "@iconify-json", "carbon", "icons.json"))).toBe(true);
+    expect(
+      fs.existsSync(
+        path.join(
+          store,
+          "node_modules",
+          "@iconify-json",
+          "carbon",
+          "icons.json",
+        ),
+      ),
+    ).toBe(true);
   });
 });

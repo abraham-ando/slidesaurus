@@ -18,6 +18,7 @@ import SlidevLink from "@theme/SlidevLink";
 ```
 
 This renders a card with:
+
 - A live iframe preview of the first slide
 - The presentation title and description
 - A click to open the full presentation in a new tab
@@ -46,13 +47,13 @@ Control what the card displays by setting frontmatter in your `.md` file:
 
 ```md
 ---
-title: My Presentation Title       # shown in the card header
-description: A one-line summary    # shown below the title
-author: Jane Doe                   # shown with an author icon
+title: My Presentation Title # shown in the card header
+description: A one-line summary # shown below the title
+author: Jane Doe # shown with an author icon
 tags:
   - intro
   - tutorial
-position: 1                        # controls sort order in the overview
+position: 1 # controls sort order in the overview
 ---
 ```
 

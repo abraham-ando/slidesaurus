@@ -10,11 +10,11 @@ Slidev has a rich ecosystem of themes and addons. This plugin makes it easy to u
 
 A Slidev theme is an npm package that provides custom layouts, styles, and components for your slides. The plugin resolves theme names using the same convention as Slidev:
 
-| Shorthand | Resolved Package |
-|---|---|
-| `seriph` | `@slidev/theme-seriph` |
+| Shorthand     | Resolved Package            |
+| ------------- | --------------------------- |
+| `seriph`      | `@slidev/theme-seriph`      |
 | `apple-basic` | `@slidev/theme-apple-basic` |
-| `dracula` | `slidev-theme-dracula` |
+| `dracula`     | `slidev-theme-dracula`      |
 
 The resolution order is:
 
@@ -47,6 +47,7 @@ theme: apple-basic
 ---
 
 # Slide 1
+
 This presentation uses apple-basic instead of the default theme.
 ```
 
@@ -102,21 +103,21 @@ Addons follow the same shorthand resolution (`excalidraw` → `slidev-addon-exca
 
 ## Popular Themes
 
-| Theme | Description |
-|---|---|
-| `seriph` | Clean, professional serif typography |
-| `apple-basic` | Minimal Apple-style slides |
-| `dracula` | Dark theme with Dracula color palette |
-| `default` | The built-in Slidev default theme |
-| `bricks` | Colorful, brick-like card layouts |
+| Theme         | Description                           |
+| ------------- | ------------------------------------- |
+| `seriph`      | Clean, professional serif typography  |
+| `apple-basic` | Minimal Apple-style slides            |
+| `dracula`     | Dark theme with Dracula color palette |
+| `default`     | The built-in Slidev default theme     |
+| `bricks`      | Colorful, brick-like card layouts     |
 
 Browse more at [sli.dev/themes/gallery](https://sli.dev/themes/gallery).
 
 ## Popular Addons
 
-| Addon | Description |
-|---|---|
+| Addon        | Description               |
+| ------------ | ------------------------- |
 | `excalidraw` | Embed Excalidraw diagrams |
-| `tldraw` | Embed tldraw whiteboard |
+| `tldraw`     | Embed tldraw whiteboard   |
 
 Browse more at [sli.dev/addons](https://sli.dev/addons).

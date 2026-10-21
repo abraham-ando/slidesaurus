@@ -4,10 +4,10 @@
 
 Security patches are provided for the 1.x line of `slidesaurus`.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.x     | ✅ Yes             |
-| < 1.0   | ❌ No              |
+| Version | Supported |
+| ------- | --------- |
+| 1.x     | ✅ Yes    |
+| < 1.0   | ❌ No     |
 
 ## Reporting a Vulnerability
 
@@ -40,12 +40,12 @@ Whichever channel you use, please include:
 
 ### Response Timeline
 
-| Step | Target |
-|------|--------|
-| Acknowledgement | Within 48 hours |
-| Status update | Within 7 days |
-| Patch for critical issues | Within 14 days |
-| Coordinated disclosure | After patch is released |
+| Step                      | Target                  |
+| ------------------------- | ----------------------- |
+| Acknowledgement           | Within 48 hours         |
+| Status update             | Within 7 days           |
+| Patch for critical issues | Within 14 days          |
+| Coordinated disclosure    | After patch is released |
 
 ## Scope
 

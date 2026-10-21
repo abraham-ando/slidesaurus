@@ -47,7 +47,10 @@ export default function OverviewFilterBar(props: OverviewFilterBarProps) {
   } = props;
 
   const hasFilters =
-    availableLevels.length > 0 || availableAuthors.length > 0 || availableTags.length > 0 || hasDeprecated;
+    availableLevels.length > 0 ||
+    availableAuthors.length > 0 ||
+    availableTags.length > 0 ||
+    hasDeprecated;
 
   return (
     <div className={styles.searchFilterBar}>
@@ -84,7 +87,9 @@ export default function OverviewFilterBar(props: OverviewFilterBarProps) {
             >
               <option value="">All levels</option>
               {availableLevels.map((l) => (
-                <option key={l} value={l}>{LEVEL_LABELS[l] ?? l}</option>
+                <option key={l} value={l}>
+                  {LEVEL_LABELS[l] ?? l}
+                </option>
               ))}
             </select>
           )}
@@ -98,20 +103,28 @@ export default function OverviewFilterBar(props: OverviewFilterBarProps) {
             >
               <option value="">All authors</option>
               {availableAuthors.map((a) => (
-                <option key={a} value={a}>{a}</option>
+                <option key={a} value={a}>
+                  {a}
+                </option>
               ))}
             </select>
           )}
 
           {availableTags.length > 0 && (
-            <div className={styles.tagChips} role="group" aria-label="Filter by tag">
+            <div
+              className={styles.tagChips}
+              role="group"
+              aria-label="Filter by tag"
+            >
               {availableTags.map((tag) => (
                 <button
                   key={tag}
                   type="button"
                   className={`${styles.tagChip} ${selectedTags.includes(tag) ? styles.tagChipActive : ""}`}
                   onClick={() => props.onToggleTag(tag)}
-                  aria-label={selectedTags.includes(tag) ? `${tag} (active)` : tag}
+                  aria-label={
+                    selectedTags.includes(tag) ? `${tag} (active)` : tag
+                  }
                 >
                   {tag}
                 </button>
@@ -120,17 +133,28 @@ export default function OverviewFilterBar(props: OverviewFilterBarProps) {
           )}
 
           {availablePlaylists.length > 0 && (
-            <div className={styles.tagChips} role="group" aria-label="Filter by playlist">
+            <div
+              className={styles.tagChips}
+              role="group"
+              aria-label="Filter by playlist"
+            >
               {availablePlaylists.map((pl) => (
                 <button
                   key={pl.id}
                   type="button"
                   className={`${styles.tagChip} ${styles.playlistChip} ${selectedPlaylist === pl.id ? styles.tagChipActive : ""}`}
-                  onClick={() => props.onPlaylistChange(selectedPlaylist === pl.id ? "" : pl.id)}
-                  aria-label={selectedPlaylist === pl.id ? `${pl.title} playlist (active)` : `${pl.title} playlist`}
+                  onClick={() =>
+                    props.onPlaylistChange(
+                      selectedPlaylist === pl.id ? "" : pl.id,
+                    )
+                  }
+                  aria-label={
+                    selectedPlaylist === pl.id
+                      ? `${pl.title} playlist (active)`
+                      : `${pl.title} playlist`
+                  }
                 >
-                  <PlaylistIcon width={10} height={10} />
-                  {" "}{pl.title}
+                  <PlaylistIcon width={10} height={10} /> {pl.title}
                 </button>
               ))}
             </div>
@@ -142,8 +166,8 @@ export default function OverviewFilterBar(props: OverviewFilterBarProps) {
             onClick={props.onToggleFavorites}
             aria-label={showFavoritesOnly ? "Favorites (active)" : "Favorites"}
           >
-            <StarIcon width={12} height={12} filled={showFavoritesOnly} />
-            {" "}Favorites
+            <StarIcon width={12} height={12} filled={showFavoritesOnly} />{" "}
+            Favorites
           </button>
 
           {hasDeprecated && (
@@ -151,14 +175,21 @@ export default function OverviewFilterBar(props: OverviewFilterBarProps) {
               type="button"
               className={`${styles.tagChip} ${hideDeprecated ? styles.tagChipActive : ""}`}
               onClick={props.onToggleHideDeprecated}
-              aria-label={hideDeprecated ? "Hide deprecated (active)" : "Hide deprecated"}
+              aria-label={
+                hideDeprecated ? "Hide deprecated (active)" : "Hide deprecated"
+              }
             >
               Hide deprecated
             </button>
           )}
 
           {isFilterActive && (
-            <button type="button" className={styles.resetButton} onClick={props.onReset} aria-label="Reset all filters">
+            <button
+              type="button"
+              className={styles.resetButton}
+              onClick={props.onReset}
+              aria-label="Reset all filters"
+            >
               <CloseIcon width={12} height={12} />
               Reset
             </button>

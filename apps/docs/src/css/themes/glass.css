@@ -23,21 +23,25 @@
 
 [data-slidev-ui-theme="glass"] {
   /* Card surface */
-  --slidev-card-bg:             rgba(255, 255, 255, 0.55);
-  --slidev-card-shadow:         0 4px 24px rgba(124, 58, 237, 0.08),
-                                inset 0 0 0 1px rgba(255, 255, 255, 0.7);
-  --slidev-card-radius:         14px;
+  --slidev-card-bg: rgba(255, 255, 255, 0.55);
+  --slidev-card-shadow:
+    0 4px 24px rgba(124, 58, 237, 0.08),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+  --slidev-card-radius: 14px;
   --slidev-card-hover-transform: translateY(-4px) scale(1.01);
-  --slidev-card-hover-shadow:   0 12px 40px rgba(124, 58, 237, 0.22),
-                                inset 0 0 0 1.5px rgba(124, 58, 237, 0.5);
+  --slidev-card-hover-shadow:
+    0 12px 40px rgba(124, 58, 237, 0.22),
+    inset 0 0 0 1.5px rgba(124, 58, 237, 0.5);
 
   /* Preview area */
-  --slidev-card-preview-bg:     linear-gradient(135deg,
-                                  rgba(196, 181, 253, 0.4) 0%,
-                                  rgba(167, 139, 250, 0.5) 100%);
+  --slidev-card-preview-bg: linear-gradient(
+    135deg,
+    rgba(196, 181, 253, 0.4) 0%,
+    rgba(167, 139, 250, 0.5) 100%
+  );
 
   /* Typography */
-  --slidev-card-title-color:    #3b0764;
+  --slidev-card-title-color: #3b0764;
 
   /* Glass blur on the element itself */
   backdrop-filter: blur(14px);
@@ -47,17 +51,20 @@
 /* ── Design tokens — dark mode ──────────────────────────────────────────── */
 
 [data-theme="dark"] [data-slidev-ui-theme="glass"] {
-  --slidev-card-bg:             rgba(15, 10, 40, 0.55);
-  --slidev-card-shadow:         0 4px 24px rgba(0, 0, 0, 0.4),
-                                inset 0 0 0 1px rgba(167, 139, 250, 0.15);
-  --slidev-card-hover-shadow:   0 12px 40px rgba(124, 58, 237, 0.4),
-                                inset 0 0 0 1.5px rgba(167, 139, 250, 0.6);
+  --slidev-card-bg: rgba(15, 10, 40, 0.55);
+  --slidev-card-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(167, 139, 250, 0.15);
+  --slidev-card-hover-shadow:
+    0 12px 40px rgba(124, 58, 237, 0.4),
+    inset 0 0 0 1.5px rgba(167, 139, 250, 0.6);
 
-  --slidev-card-preview-bg:     linear-gradient(135deg,
-                                  rgba(76, 29, 149, 0.5) 0%,
-                                  rgba(109, 40, 217, 0.5) 100%);
+  --slidev-card-preview-bg: linear-gradient(
+    135deg,
+    rgba(76, 29, 149, 0.5) 0%,
+    rgba(109, 40, 217, 0.5) 100%
+  );
 
-  --slidev-card-title-color:    #e9d5ff;
+  --slidev-card-title-color: #e9d5ff;
 }
 
 /* ── SlidevOverview — page-level glass container ────────────────────────── */

@@ -10,11 +10,11 @@ Each discovered presentation gets its own page, accessible from the overview or 
 
 Presentations are served under the configured `routeBasePath`. The URL slug is derived from the file path relative to the `path` directory:
 
-| File | URL |
-|---|---|
-| `slidev/intro.md` | `/presentations/intro` |
+| File                                  | URL                                        |
+| ------------------------------------- | ------------------------------------------ |
+| `slidev/intro.md`                     | `/presentations/intro`                     |
 | `slidev/tutorials/getting-started.md` | `/presentations/tutorials/getting-started` |
-| `slidev/advanced/deep-dive.md` | `/presentations/advanced/deep-dive` |
+| `slidev/advanced/deep-dive.md`        | `/presentations/advanced/deep-dive`        |
 
 ---
 
@@ -55,7 +55,7 @@ When the `download` plugin option is set to `true`, one download button per entr
   {
     download: true,
   },
-]
+];
 ```
 
 The files are generated at build time, without starting a Vite dev server for the PDF. The **PDF** is the one `slidev build --download` prints from the built presentation (also behind the deck's own "Download" button); with `exportWithClicks`, the plugin prints the built output again, one page per click step, with the headless Chromium already used for thumbnails — same `/print` page and `page.pdf()` settings as `slidev export`. The **PPTX** — and a PDF whose headmatter sets `export.withToc` or `export.perSlide` when it must be re-printed — uses `slidev export` on the isolated copy. This requires [Playwright](https://playwright.dev/) to be installed in the project:
@@ -109,12 +109,12 @@ The presentation page automatically injects structured metadata into the documen
 
 ### Open Graph Tags
 
-| Tag | Value |
-|---|---|
-| `og:title` | The presentation's `title` frontmatter field |
-| `og:description` | The presentation's `description` frontmatter field |
-| `og:url` | The absolute URL of the presentation page (built from the site `url` in `docusaurus.config.ts`) |
-| `og:image` | The absolute URL of the presentation's thumbnail, when available |
+| Tag              | Value                                                                                           |
+| ---------------- | ----------------------------------------------------------------------------------------------- |
+| `og:title`       | The presentation's `title` frontmatter field                                                    |
+| `og:description` | The presentation's `description` frontmatter field                                              |
+| `og:url`         | The absolute URL of the presentation page (built from the site `url` in `docusaurus.config.ts`) |
+| `og:image`       | The absolute URL of the presentation's thumbnail, when available                                |
 
 Set the site `url` (and `baseUrl`) correctly in `docusaurus.config.ts` so these absolute URLs are right.
 
@@ -148,13 +148,13 @@ Only `@context`, `@type` and `name` are always present. `description`, `author`,
 
 Inside the iframe, standard Slidev keyboard shortcuts work:
 
-| Key | Action |
-|---|---|
-| `→` / `Space` | Next slide |
-| `←` | Previous slide |
-| `f` | Toggle fullscreen |
-| `o` | Toggle slide overview |
-| `d` | Toggle dark mode |
+| Key           | Action                |
+| ------------- | --------------------- |
+| `→` / `Space` | Next slide            |
+| `←`           | Previous slide        |
+| `f`           | Toggle fullscreen     |
+| `o`           | Toggle slide overview |
+| `d`           | Toggle dark mode      |
 
 ---
 

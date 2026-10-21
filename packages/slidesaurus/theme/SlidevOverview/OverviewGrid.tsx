@@ -11,14 +11,26 @@ interface OverviewGridProps {
 }
 
 /** Card grid: categories first, then presentations. */
-export default function OverviewGrid({ categories, presentations, uiTheme }: OverviewGridProps) {
+export default function OverviewGrid({
+  categories,
+  presentations,
+  uiTheme,
+}: OverviewGridProps) {
   return (
     <div className={styles.grid}>
       {categories.map((category) => (
-        <SlidevCategoryCard key={`cat-${category.path}`} category={category} uiTheme={uiTheme} />
+        <SlidevCategoryCard
+          key={`cat-${category.path}`}
+          category={category}
+          uiTheme={uiTheme}
+        />
       ))}
       {presentations.map((presentation) => (
-        <SlidevCard key={presentation.id} presentation={presentation} uiTheme={uiTheme} />
+        <SlidevCard
+          key={presentation.id}
+          presentation={presentation}
+          uiTheme={uiTheme}
+        />
       ))}
     </div>
   );

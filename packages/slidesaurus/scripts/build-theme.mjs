@@ -87,7 +87,9 @@ export function buildTheme() {
 }
 
 function logResult({ compiled, copied }) {
-  console.log(`theme: ${compiled} module(s) compiled, ${copied} stylesheet(s) copied → lib/theme`);
+  console.log(
+    `theme: ${compiled} module(s) compiled, ${copied} stylesheet(s) copied → lib/theme`,
+  );
 }
 
 /** Rollup plugin: rebuilds lib/theme after each build and watches theme/. */
@@ -105,6 +107,9 @@ export function themeBuildPlugin() {
 }
 
 // Allow standalone use: `node scripts/build-theme.mjs`
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
   logResult(buildTheme());
 }

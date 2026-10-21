@@ -5,7 +5,12 @@
  * enabling dependency injection, easier testing (no vi.mock required), and
  * extension without modifying existing code (Open/Closed Principle).
  */
-import type { BuildOptions, BuildContext, PresentationMetadata, PluginOptions } from "./types";
+import type {
+  BuildOptions,
+  BuildContext,
+  PresentationMetadata,
+  PluginOptions,
+} from "./types";
 
 // ── ILogger ───────────────────────────────────────────────────────────────────
 

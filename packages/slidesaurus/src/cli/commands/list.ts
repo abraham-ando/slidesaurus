@@ -13,14 +13,22 @@ interface ListOptions {
 
 export async function runList(opts: ListOptions): Promise<void> {
   const cwd = process.cwd();
-  const { options: pluginOpts, configFile, pluginFound } = loadPluginOptions(cwd, opts.pluginId);
+  const {
+    options: pluginOpts,
+    configFile,
+    pluginFound,
+  } = loadPluginOptions(cwd, opts.pluginId);
   const options = resolveOptions(pluginOpts, opts.pluginId);
 
   if (!configFile && !opts.json) {
-    warn("No docusaurus.config.ts found — using defaults. Run from your project root.");
+    warn(
+      "No docusaurus.config.ts found — using defaults. Run from your project root.",
+    );
   }
   if (configFile && !pluginFound && !opts.json) {
-    warn(`Plugin "slidesaurus" (id="${opts.pluginId}") not found in config — using defaults.`);
+    warn(
+      `Plugin "slidesaurus" (id="${opts.pluginId}") not found in config — using defaults.`,
+    );
   }
 
   const result = await scanPresentations(options, {
@@ -34,11 +42,17 @@ export async function runList(opts: ListOptions): Promise<void> {
   }
 
   if (result.presentations.length === 0) {
-    console.log(pc.dim(`\nNo presentations found in "${path.resolve(cwd, options.path)}".`));
+    console.log(
+      pc.dim(
+        `\nNo presentations found in "${path.resolve(cwd, options.path)}".`,
+      ),
+    );
     return;
   }
 
-  heading(`Presentations — ${path.relative(cwd, path.resolve(cwd, options.path))} (${result.presentations.length})`);
+  heading(
+    `Presentations — ${path.relative(cwd, path.resolve(cwd, options.path))} (${result.presentations.length})`,
+  );
 
   renderTable(
     result.presentations.map((p) => ({
@@ -60,6 +74,10 @@ export async function runList(opts: ListOptions): Promise<void> {
   );
 
   if (result.categories.length > 0) {
-    console.log(pc.dim(`\n  ${result.categories.length} category(ies): ${result.categories.map((c) => c.label).join(", ")}`));
+    console.log(
+      pc.dim(
+        `\n  ${result.categories.length} category(ies): ${result.categories.map((c) => c.label).join(", ")}`,
+      ),
+    );
   }
 }

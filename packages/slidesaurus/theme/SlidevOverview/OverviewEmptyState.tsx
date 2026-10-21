@@ -3,7 +3,11 @@ import { FolderIcon, EmptyPresentationIcon, SearchIcon } from "../icons";
 import styles from "./styles.module.css";
 
 /** Shown when the site has no presentation at all. */
-export function NoPresentationsState({ sourceDir }: { readonly sourceDir: string }) {
+export function NoPresentationsState({
+  sourceDir,
+}: {
+  readonly sourceDir: string;
+}) {
   return (
     <div className={styles.emptyState}>
       <EmptyPresentationIcon className={styles.emptyStateIcon} />

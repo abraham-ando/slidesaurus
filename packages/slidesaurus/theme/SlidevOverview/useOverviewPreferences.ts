@@ -15,7 +15,9 @@ export interface OverviewPreferences {
   sortOrder: SortOrder;
   setSortOrder: (order: SortOrder) => void;
   showFavoritesOnly: boolean;
-  setShowFavoritesOnly: (value: boolean | ((previous: boolean) => boolean)) => void;
+  setShowFavoritesOnly: (
+    value: boolean | ((previous: boolean) => boolean),
+  ) => void;
 }
 
 /**
@@ -34,9 +36,19 @@ export function useOverviewPreferences(): OverviewPreferences {
 
   useEffect(() => {
     try {
-      setShowFavoritesOnly(localStorage.getItem(STORAGE_KEYS.showFavoritesOnly) === "1");
-      setViewMode(localStorage.getItem(STORAGE_KEYS.viewMode) === "list" ? "list" : "grid");
-      setSortOrder(localStorage.getItem(STORAGE_KEYS.sortOrder) === "desc" ? "desc" : "asc");
+      setShowFavoritesOnly(
+        localStorage.getItem(STORAGE_KEYS.showFavoritesOnly) === "1",
+      );
+      setViewMode(
+        localStorage.getItem(STORAGE_KEYS.viewMode) === "list"
+          ? "list"
+          : "grid",
+      );
+      setSortOrder(
+        localStorage.getItem(STORAGE_KEYS.sortOrder) === "desc"
+          ? "desc"
+          : "asc",
+      );
     } catch {
       // localStorage unavailable (private mode, blocked storage): keep defaults
     }
@@ -48,11 +60,21 @@ export function useOverviewPreferences(): OverviewPreferences {
     try {
       localStorage.setItem(STORAGE_KEYS.viewMode, viewMode);
       localStorage.setItem(STORAGE_KEYS.sortOrder, sortOrder);
-      localStorage.setItem(STORAGE_KEYS.showFavoritesOnly, showFavoritesOnly ? "1" : "0");
+      localStorage.setItem(
+        STORAGE_KEYS.showFavoritesOnly,
+        showFavoritesOnly ? "1" : "0",
+      );
     } catch {
       // ignore storage errors
     }
   }, [hydrated, viewMode, sortOrder, showFavoritesOnly]);
 
-  return { viewMode, setViewMode, sortOrder, setSortOrder, showFavoritesOnly, setShowFavoritesOnly };
+  return {
+    viewMode,
+    setViewMode,
+    sortOrder,
+    setSortOrder,
+    showFavoritesOnly,
+    setShowFavoritesOnly,
+  };
 }

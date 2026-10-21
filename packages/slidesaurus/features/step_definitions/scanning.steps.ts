@@ -3,7 +3,11 @@ import assert from "node:assert";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { PluginOptions, ScanResult, BuildContext } from "../../src/domain/types";
+import type {
+  PluginOptions,
+  ScanResult,
+  BuildContext,
+} from "../../src/domain/types";
 
 interface ScanWorld {
   tmpDir: string;
@@ -58,7 +62,9 @@ After(function () {
 
 Given(
   "a slidev directory with the following files:",
-  function (dataTable: { hashes: () => Array<{ file: string; title: string }> }) {
+  function (dataTable: {
+    hashes: () => Array<{ file: string; title: string }>;
+  }) {
     for (const row of dataTable.hashes()) {
       const filePath = path.join(world.slidevDir, row.file);
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -69,7 +75,9 @@ Given(
 
 Given(
   "a slidev directory with the following structure:",
-  function (dataTable: { hashes: () => Array<{ path: string; title: string }> }) {
+  function (dataTable: {
+    hashes: () => Array<{ path: string; title: string }>;
+  }) {
     for (const row of dataTable.hashes()) {
       const filePath = path.join(world.slidevDir, row.path);
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -87,7 +95,10 @@ Given(
     const row = dataTable.hashes()[0];
     const filePath = path.join(world.slidevDir, relPath);
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    fs.writeFileSync(filePath, `label: ${row.label}\nposition: ${row.position}\n`);
+    fs.writeFileSync(
+      filePath,
+      `label: ${row.label}\nposition: ${row.position}\n`,
+    );
   },
 );
 

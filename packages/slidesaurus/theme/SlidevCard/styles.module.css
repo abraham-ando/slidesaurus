@@ -26,10 +26,16 @@
   display: flex;
   flex-direction: column;
   border-radius: var(--slidev-card-radius, 8px);
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
   text-decoration: none !important;
   background: var(--slidev-card-bg, var(--ifm-card-background-color));
-  box-shadow: var(--slidev-card-shadow, 0 1px 3px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--ifm-color-emphasis-200));
+  box-shadow: var(
+    --slidev-card-shadow,
+    0 1px 3px rgba(0, 0, 0, 0.08),
+    0 0 0 1px var(--ifm-color-emphasis-200)
+  );
   overflow: hidden;
   width: 100%;
   /* Needed so .favoriteBtn (position: absolute) is anchored to the card */
@@ -38,7 +44,11 @@
 
 .card:hover {
   transform: var(--slidev-card-hover-transform, translateY(-3px));
-  box-shadow: var(--slidev-card-hover-shadow, 0 8px 24px rgba(0, 0, 0, 0.12), 0 0 0 1px var(--ifm-color-primary-light));
+  box-shadow: var(
+    --slidev-card-hover-shadow,
+    0 8px 24px rgba(0, 0, 0, 0.12),
+    0 0 0 1px var(--ifm-color-primary-light)
+  );
   text-decoration: none;
 }
 
@@ -79,11 +89,14 @@
 .preview {
   width: 100%;
   aspect-ratio: 16 / 9;
-  background: var(--slidev-card-preview-bg, linear-gradient(
-    135deg,
-    var(--ifm-color-emphasis-200) 0%,
-    var(--ifm-color-emphasis-300) 100%
-  ));
+  background: var(
+    --slidev-card-preview-bg,
+    linear-gradient(
+      135deg,
+      var(--ifm-color-emphasis-200) 0%,
+      var(--ifm-color-emphasis-300) 100%
+    )
+  );
   position: relative;
   overflow: hidden;
   display: flex;
@@ -271,8 +284,12 @@
 /* Skeleton shimmer while iframe / thumbnail is loading.
    Uses translateX (compositor-only) to avoid paint on every frame. */
 @keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 .previewLoading::after {
@@ -363,7 +380,10 @@
   justify-content: center;
   cursor: pointer;
   color: var(--ifm-color-emphasis-400);
-  transition: color 0.15s, transform 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    transform 0.15s,
+    background 0.15s;
   padding: 0;
 }
 
@@ -498,7 +518,9 @@
   background: var(--ifm-card-background-color);
   border: 1px solid var(--ifm-color-emphasis-200);
   width: 100%;
-  transition: background 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
   min-height: 0;
 }
 
@@ -571,7 +593,9 @@
   border: none;
   cursor: pointer;
   color: var(--ifm-color-emphasis-400);
-  transition: color 0.15s, transform 0.15s;
+  transition:
+    color 0.15s,
+    transform 0.15s;
   padding: 0.2rem;
   border-radius: 4px;
   display: flex;

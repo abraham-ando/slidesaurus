@@ -2,13 +2,22 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import path from "node:path";
 import fs from "node:fs";
 import os from "node:os";
-import { findConfigFile, loadPluginOptions, resolveOptions, CONFIG_DEFAULTS } from "../config";
+import {
+  findConfigFile,
+  loadPluginOptions,
+  resolveOptions,
+  CONFIG_DEFAULTS,
+} from "../config";
 
 describe("findConfigFile", () => {
   let tmpDir: string;
 
-  beforeEach(() => { tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "cli-config-")); });
-  afterEach(() => { fs.rmSync(tmpDir, { recursive: true, force: true }); });
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "cli-config-"));
+  });
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
 
   it("returns null when no config exists", () => {
     expect(findConfigFile(tmpDir)).toBeNull();
@@ -32,8 +41,12 @@ describe("findConfigFile", () => {
 describe("loadPluginOptions", () => {
   let tmpDir: string;
 
-  beforeEach(() => { tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "cli-config-")); });
-  afterEach(() => { fs.rmSync(tmpDir, { recursive: true, force: true }); });
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "cli-config-"));
+  });
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
 
   it("returns empty options when no config file exists", () => {
     const result = loadPluginOptions(tmpDir, "default");

@@ -16,7 +16,13 @@ export function PresentationIcon({ className }: IconProps) {
     //     <path d="m8 12l3-3l2 2l3-3" />
     //   </g>
     // </svg>
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" className={className} aria-hidden="true">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 100 100"
+      fill="none"
+      className={className}
+      aria-hidden="true"
+    >
       <rect width="100" height="100" rx="20" fill="#7a5af8" />
       <rect
         x="18"
@@ -216,7 +222,15 @@ export function BackIcon({ className, width = 24, height = 24 }: IconProps) {
 
 export function ClockIcon({ className, width = 14, height = 14 }: IconProps) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={width}
+      height={height}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
       <path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10s10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8s8 3.589 8 8s-3.589 8-8 8z" />
       <path d="M13 7h-2v5.414l3.293 3.293l1.414-1.414L13 11.586z" />
     </svg>
@@ -225,7 +239,15 @@ export function ClockIcon({ className, width = 14, height = 14 }: IconProps) {
 
 export function SearchIcon({ className, width = 20, height = 20 }: IconProps) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={width}
+      height={height}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
       <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5A6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5S14 7.01 14 9.5S11.99 14 9.5 14z" />
     </svg>
   );
@@ -233,7 +255,15 @@ export function SearchIcon({ className, width = 20, height = 20 }: IconProps) {
 
 export function CloseIcon({ className, width = 16, height = 16 }: IconProps) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={width}
+      height={height}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
       <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
     </svg>
   );
@@ -264,7 +294,11 @@ export function StarIcon({
   );
 }
 
-export function PresenterIcon({ className, width = 16, height = 16 }: IconProps) {
+export function PresenterIcon({
+  className,
+  width = 16,
+  height = 16,
+}: IconProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -286,11 +320,25 @@ export function PresenterIcon({ className, width = 16, height = 16 }: IconProps)
   );
 }
 
-export function DownloadIcon({ className, width = 16, height = 16 }: IconProps) {
+export function DownloadIcon({
+  className,
+  width = 16,
+  height = 16,
+}: IconProps) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox="0 0 24 24"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-      className={className} aria-hidden="true">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={width}
+      height={height}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
       <polyline points="7 10 12 15 17 10" />
       <line x1="12" y1="15" x2="12" y2="3" />
@@ -298,11 +346,25 @@ export function DownloadIcon({ className, width = 16, height = 16 }: IconProps) 
   );
 }
 
-export function PlaylistIcon({ className, width = 16, height = 16 }: IconProps) {
+export function PlaylistIcon({
+  className,
+  width = 16,
+  height = 16,
+}: IconProps) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox="0 0 24 24"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-      className={className} aria-hidden="true">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={width}
+      height={height}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
       <line x1="8" y1="6" x2="21" y2="6" />
       <line x1="8" y1="12" x2="21" y2="12" />
       <line x1="8" y1="18" x2="21" y2="18" />

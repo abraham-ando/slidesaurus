@@ -78,6 +78,7 @@ Subtitle displayed on the overview page.
 Default Slidev theme applied to all presentations. Can be overridden per-presentation in frontmatter.
 
 Short names are resolved to npm packages:
+
 - `"seriph"` → `@slidev/theme-seriph`
 - `"unicorn"` → `slidev-theme-unicorn`
 - `"./local"` → local path (used as-is)

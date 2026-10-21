@@ -1,6 +1,15 @@
 import { useMemo } from "react";
-import type { Category, PlaylistData, Presentation, PresentationLevel } from "../types";
-import { applyFilters, sortCategories, sortPresentations } from "../filterUtils";
+import type {
+  Category,
+  PlaylistData,
+  Presentation,
+  PresentationLevel,
+} from "../types";
+import {
+  applyFilters,
+  sortCategories,
+  sortPresentations,
+} from "../filterUtils";
 import { useFavorites } from "../useFavorites";
 import type { UrlFiltersState } from "./useUrlFilters";
 import type { SortOrder } from "./useOverviewPreferences";
@@ -30,7 +39,14 @@ export function usePresentationList({
   sortOrder,
 }: PresentationListInput) {
   const { isFavorite } = useFavorites();
-  const { searchQuery, selectedLevel, selectedAuthor, selectedTags, hideDeprecated, selectedPlaylist } = filters;
+  const {
+    searchQuery,
+    selectedLevel,
+    selectedAuthor,
+    selectedTags,
+    hideDeprecated,
+    selectedPlaylist,
+  } = filters;
 
   const inCategory = useMemo(
     () => presentations.filter((p) => (p.category || "") === currentCategory),
@@ -38,11 +54,24 @@ export function usePresentationList({
   );
 
   const availableAuthors = useMemo(
-    () => [...new Set(inCategory.map((p) => p.author).filter((a): a is string => Boolean(a)))].sort(),
+    () =>
+      [
+        ...new Set(
+          inCategory
+            .map((p) => p.author)
+            .filter((a): a is string => Boolean(a)),
+        ),
+      ].sort(),
     [inCategory],
   );
   const availableLevels = useMemo(
-    () => [...new Set(inCategory.map((p) => p.level).filter((l): l is PresentationLevel => Boolean(l)))],
+    () => [
+      ...new Set(
+        inCategory
+          .map((p) => p.level)
+          .filter((l): l is PresentationLevel => Boolean(l)),
+      ),
+    ],
     [inCategory],
   );
   const availableTags = useMemo(
@@ -50,10 +79,16 @@ export function usePresentationList({
     [inCategory],
   );
   const availablePlaylists = useMemo(
-    () => playlists.filter((pl) => pl.items.some((id) => inCategory.some((p) => p.id === id))),
+    () =>
+      playlists.filter((pl) =>
+        pl.items.some((id) => inCategory.some((p) => p.id === id)),
+      ),
     [playlists, inCategory],
   );
-  const hasDeprecated = useMemo(() => inCategory.some((p) => p.deprecated === true), [inCategory]);
+  const hasDeprecated = useMemo(
+    () => inCategory.some((p) => p.deprecated === true),
+    [inCategory],
+  );
 
   // `isFavorite` changes identity whenever the favorites change.
   const visiblePresentations = useMemo(
@@ -88,12 +123,17 @@ export function usePresentationList({
       sortPresentations(
         visiblePresentations,
         sortOrder,
-        selectedPlaylist ? playlists.find((p) => p.id === selectedPlaylist) : undefined,
+        selectedPlaylist
+          ? playlists.find((p) => p.id === selectedPlaylist)
+          : undefined,
       ),
     [visiblePresentations, sortOrder, selectedPlaylist, playlists],
   );
 
-  const sortedCategories = useMemo(() => sortCategories(childCategories, sortOrder), [childCategories, sortOrder]);
+  const sortedCategories = useMemo(
+    () => sortCategories(childCategories, sortOrder),
+    [childCategories, sortOrder],
+  );
 
   return {
     inCategory,

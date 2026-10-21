@@ -47,16 +47,22 @@ describe("resolveThemePackageName", () => {
   });
 
   it("returns scoped package as-is", () => {
-    expect(resolveThemePackageName("@slidev/theme-seriph", tmpDir)).toBe("@slidev/theme-seriph");
+    expect(resolveThemePackageName("@slidev/theme-seriph", tmpDir)).toBe(
+      "@slidev/theme-seriph",
+    );
   });
 
   it("returns community full name as-is", () => {
-    expect(resolveThemePackageName("slidev-theme-unicorn", tmpDir)).toBe("slidev-theme-unicorn");
+    expect(resolveThemePackageName("slidev-theme-unicorn", tmpDir)).toBe(
+      "slidev-theme-unicorn",
+    );
   });
 
   it("resolves shorthand to official prefix when nothing installed", () => {
     // Neither official nor community is installed → defaults to official
-    expect(resolveThemePackageName("seriph", tmpDir)).toBe("@slidev/theme-seriph");
+    expect(resolveThemePackageName("seriph", tmpDir)).toBe(
+      "@slidev/theme-seriph",
+    );
   });
 
   it("resolves shorthand to community when community is installed", () => {
@@ -64,7 +70,9 @@ describe("resolveThemePackageName", () => {
     const pkgDir = path.join(tmpDir, "node_modules", "slidev-theme-unicorn");
     fs.mkdirSync(pkgDir, { recursive: true });
 
-    expect(resolveThemePackageName("unicorn", tmpDir)).toBe("slidev-theme-unicorn");
+    expect(resolveThemePackageName("unicorn", tmpDir)).toBe(
+      "slidev-theme-unicorn",
+    );
   });
 });
 
@@ -78,7 +86,9 @@ describe("resolveAddonPackageName", () => {
   });
 
   it("returns community full name as-is", () => {
-    expect(resolveAddonPackageName("slidev-addon-foo")).toBe("slidev-addon-foo");
+    expect(resolveAddonPackageName("slidev-addon-foo")).toBe(
+      "slidev-addon-foo",
+    );
   });
 
   it("resolves shorthand to community prefix", () => {
@@ -225,16 +235,20 @@ describe("resolvePmCommand", () => {
   it("uses node + npm_execpath when it points to the detected package manager", () => {
     const entry = path.join(tmpDir, "pnpm.cjs");
     fs.writeFileSync(entry, "");
-    expect(resolvePmCommand("pnpm", { npm_execpath: entry, PATH: "" })).toEqual({
-      file: process.execPath,
-      args: [entry],
-    });
+    expect(resolvePmCommand("pnpm", { npm_execpath: entry, PATH: "" })).toEqual(
+      {
+        file: process.execPath,
+        args: [entry],
+      },
+    );
   });
 
   it("ignores npm_execpath of another package manager", () => {
     const entry = path.join(tmpDir, "npm-cli.js");
     fs.writeFileSync(entry, "");
-    expect(resolvePmCommand("pnpm", { npm_execpath: entry, PATH: "" })).toBeUndefined();
+    expect(
+      resolvePmCommand("pnpm", { npm_execpath: entry, PATH: "" }),
+    ).toBeUndefined();
   });
 
   it("on Windows, runs the JS entry next to a .cmd shim with node (never the .cmd itself)", () => {
@@ -243,14 +257,20 @@ describe("resolvePmCommand", () => {
     const entry = path.join(tmpDir, "node_modules", "pnpm", "bin", "pnpm.cjs");
     fs.mkdirSync(path.dirname(entry), { recursive: true });
     fs.writeFileSync(entry, "");
-    expect(resolvePmCommand("pnpm", { PATH: tmpDir })).toEqual({ file: process.execPath, args: [entry] });
+    expect(resolvePmCommand("pnpm", { PATH: tmpDir })).toEqual({
+      file: process.execPath,
+      args: [entry],
+    });
   });
 
   it("on Windows, runs a native .exe directly", () => {
     restorePlatform = setPlatform("win32");
     const exe = path.join(tmpDir, "pnpm.exe");
     fs.writeFileSync(exe, "");
-    expect(resolvePmCommand("pnpm", { PATH: tmpDir })).toEqual({ file: exe, args: [] });
+    expect(resolvePmCommand("pnpm", { PATH: tmpDir })).toEqual({
+      file: exe,
+      args: [],
+    });
   });
 
   it("on Windows, returns undefined when only a .cmd shim exists", () => {
@@ -263,19 +283,37 @@ describe("resolvePmCommand", () => {
     restorePlatform = setPlatform("linux");
     const bin = path.join(tmpDir, "npm");
     fs.writeFileSync(bin, "");
-    expect(resolvePmCommand("npm", { PATH: tmpDir })).toEqual({ file: bin, args: [] });
+    expect(resolvePmCommand("npm", { PATH: tmpDir })).toEqual({
+      file: bin,
+      args: [],
+    });
   });
 });
 
 describe("buildInstallArgs", () => {
   it("always disables lifecycle scripts", () => {
-    expect(buildInstallArgs("npm", "slidev-theme-x", false)).toEqual(["install", "slidev-theme-x", "--ignore-scripts"]);
-    expect(buildInstallArgs("pnpm", "slidev-theme-x", false)).toEqual(["add", "slidev-theme-x", "--ignore-scripts"]);
-    expect(buildInstallArgs("yarn", "slidev-theme-x", false)).toEqual(["add", "slidev-theme-x", "--ignore-scripts"]);
+    expect(buildInstallArgs("npm", "slidev-theme-x", false)).toEqual([
+      "install",
+      "slidev-theme-x",
+      "--ignore-scripts",
+    ]);
+    expect(buildInstallArgs("pnpm", "slidev-theme-x", false)).toEqual([
+      "add",
+      "slidev-theme-x",
+      "--ignore-scripts",
+    ]);
+    expect(buildInstallArgs("yarn", "slidev-theme-x", false)).toEqual([
+      "add",
+      "slidev-theme-x",
+      "--ignore-scripts",
+    ]);
   });
 
   it("does not pass the unsupported flag to Yarn Berry (scripts disabled through env)", () => {
-    expect(buildInstallArgs("yarn", "slidev-theme-x", true)).toEqual(["add", "slidev-theme-x"]);
+    expect(buildInstallArgs("yarn", "slidev-theme-x", true)).toEqual([
+      "add",
+      "slidev-theme-x",
+    ]);
   });
 });
 
@@ -287,7 +325,10 @@ describe("installPackage", () => {
     _resetPackageResolverCaches();
     vi.mocked(execFile).mockReset();
     vi.mocked(execFile).mockImplementation(((...args: unknown[]) => {
-      const cb = args[args.length - 1] as (err: Error | null, out: { stdout: string; stderr: string }) => void;
+      const cb = args[args.length - 1] as (
+        err: Error | null,
+        out: { stdout: string; stderr: string },
+      ) => void;
       cb(null, { stdout: "", stderr: "" });
     }) as never);
     fs.writeFileSync(path.join(tmpDir, "pnpm-lock.yaml"), "");
@@ -302,12 +343,26 @@ describe("installPackage", () => {
   });
 
   it("runs the package manager without a shell, with --ignore-scripts and a timeout", async () => {
-    await expect(installPackage("slidev-theme-unicorn", tmpDir, "theme")).resolves.toBe(true);
+    await expect(
+      installPackage("slidev-theme-unicorn", tmpDir, "theme"),
+    ).resolves.toBe(true);
     const [file, args, opts] = vi.mocked(execFile).mock.calls[0] as unknown as [
-      string, string[], { shell: boolean; timeout: number; env: Record<string, string>; cwd: string },
+      string,
+      string[],
+      {
+        shell: boolean;
+        timeout: number;
+        env: Record<string, string>;
+        cwd: string;
+      },
     ];
     expect(file).toBe(process.execPath);
-    expect(args).toEqual([path.join(tmpDir, "pnpm.cjs"), "add", "slidev-theme-unicorn", "--ignore-scripts"]);
+    expect(args).toEqual([
+      path.join(tmpDir, "pnpm.cjs"),
+      "add",
+      "slidev-theme-unicorn",
+      "--ignore-scripts",
+    ]);
     expect(opts.shell).toBe(false);
     expect(opts.timeout).toBeGreaterThan(0);
     expect(opts.cwd).toBe(tmpDir);
@@ -315,8 +370,12 @@ describe("installPackage", () => {
   });
 
   it("refuses to install a package that is not a Slidev theme / addon", async () => {
-    await expect(installPackage("lodash", tmpDir, "theme")).resolves.toBe(false);
-    await expect(installPackage("@org/addon", tmpDir, "addon")).resolves.toBe(false);
+    await expect(installPackage("lodash", tmpDir, "theme")).resolves.toBe(
+      false,
+    );
+    await expect(installPackage("@org/addon", tmpDir, "addon")).resolves.toBe(
+      false,
+    );
     expect(execFile).not.toHaveBeenCalled();
   });
 
@@ -325,14 +384,18 @@ describe("installPackage", () => {
       const cb = args[args.length - 1] as (err: Error | null) => void;
       cb(new Error("ETIMEDOUT"));
     }) as never);
-    await expect(installPackage("slidev-addon-qrcode", tmpDir, "addon")).resolves.toBe(false);
+    await expect(
+      installPackage("slidev-addon-qrcode", tmpDir, "addon"),
+    ).resolves.toBe(false);
   });
 });
 
 describe("ensureThemeAvailable — name validation", () => {
   it("rejects a scoped package that is not a Slidev theme", async () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "ensure-theme-"));
-    await expect(ensureThemeAvailable("@evil/pkg", tmpDir, true)).rejects.toThrow(/Invalid Slidev theme/);
+    await expect(
+      ensureThemeAvailable("@evil/pkg", tmpDir, true),
+    ).rejects.toThrow(/Invalid Slidev theme/);
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 });
@@ -346,7 +409,9 @@ describe("isPackageInstalled — negative cache TTL", () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "pkg-ttl-"));
     expect(isPackageInstalled("slidev-theme-late", tmpDir)).toBe(false);
 
-    fs.mkdirSync(path.join(tmpDir, "node_modules", "slidev-theme-late"), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, "node_modules", "slidev-theme-late"), {
+      recursive: true,
+    });
     // Still memoized as "not installed" within the TTL
     expect(isPackageInstalled("slidev-theme-late", tmpDir)).toBe(false);
 
@@ -361,9 +426,16 @@ describe("getInstalledPackageVersion", () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "pkg-version-"));
     const dir = path.join(tmpDir, "node_modules", "@slidev", "theme-seriph");
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, "package.json"), JSON.stringify({ version: "0.25.0" }));
-    expect(getInstalledPackageVersion("@slidev/theme-seriph", tmpDir)).toBe("0.25.0");
-    expect(getInstalledPackageVersion("slidev-theme-none", tmpDir)).toBeUndefined();
+    fs.writeFileSync(
+      path.join(dir, "package.json"),
+      JSON.stringify({ version: "0.25.0" }),
+    );
+    expect(getInstalledPackageVersion("@slidev/theme-seriph", tmpDir)).toBe(
+      "0.25.0",
+    );
+    expect(
+      getInstalledPackageVersion("slidev-theme-none", tmpDir),
+    ).toBeUndefined();
     expect(getInstalledPackageVersion("./local", tmpDir)).toBeUndefined();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });

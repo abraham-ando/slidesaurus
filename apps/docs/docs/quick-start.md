@@ -77,7 +77,7 @@ Questions?
 npm start
 ```
 
-Navigate to `/presentations`. You will see the **overview page** showing a card for *My First Talk* — click it to view the full presentation in an iframe.
+Navigate to `/presentations`. You will see the **overview page** showing a card for _My First Talk_ — click it to view the full presentation in an iframe.
 
 :::tip What you're seeing
 The **overview page** is the auto-generated index of all your presentations. It includes a search bar, tag/level filters, and switches between grid and list views. See [Overview Page](./overview-page.md) for the full feature list.

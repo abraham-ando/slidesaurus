@@ -17,11 +17,18 @@ const COMMUNITY_ADDON_PREFIX = "slidev-addon-";
  * - Official shorthand (e.g. "seriph"): resolved to @slidev/theme-seriph
  * - Community shorthand (e.g. "unicorn"): resolved to slidev-theme-unicorn
  */
-export function resolveThemePackageName(theme: string, siteDir: string): string {
+export function resolveThemePackageName(
+  theme: string,
+  siteDir: string,
+): string {
   if (isLocalPath(theme)) {
     return theme;
   }
-  if (theme.startsWith("@") || theme.startsWith(COMMUNITY_THEME_PREFIX) || theme.startsWith(OFFICIAL_THEME_PREFIX)) {
+  if (
+    theme.startsWith("@") ||
+    theme.startsWith(COMMUNITY_THEME_PREFIX) ||
+    theme.startsWith(OFFICIAL_THEME_PREFIX)
+  ) {
     return theme;
   }
   const officialName = `${OFFICIAL_THEME_PREFIX}${theme}`;

@@ -16,7 +16,10 @@ const CONFIG_CANDIDATES = [
 ];
 
 /** Minimal defaults so the CLI is usable even without a config file. */
-export const CONFIG_DEFAULTS: Pick<PluginOptions, "path" | "routeBasePath" | "id"> = {
+export const CONFIG_DEFAULTS: Pick<
+  PluginOptions,
+  "path" | "routeBasePath" | "id"
+> = {
   path: "./slidev",
   routeBasePath: "/slidev",
   id: "default",
@@ -64,7 +67,11 @@ export function loadPluginOptions(cwd: string, pluginId: string): LoadedConfig {
     if (name !== PLUGIN_NAME) continue;
     const id = (opts.id as string | undefined) ?? "default";
     if (id === pluginId) {
-      return { options: opts as Partial<PluginOptions>, configFile, pluginFound: true };
+      return {
+        options: opts as Partial<PluginOptions>,
+        configFile,
+        pluginFound: true,
+      };
     }
   }
 
@@ -109,10 +116,16 @@ function execLoadConfig(configFile: string): Record<string, unknown> {
 
 /** Extract a short, single-line reason from a config loading failure. */
 function describeLoadError(err: unknown): string {
-  const e = err as { stderr?: unknown; message?: unknown; signal?: unknown } | null;
-  if (e?.signal === "SIGTERM") return `timed out after ${CONFIG_LOAD_TIMEOUT_MS / 1000}s`;
+  const e = err as {
+    stderr?: unknown;
+    message?: unknown;
+    signal?: unknown;
+  } | null;
+  if (e?.signal === "SIGTERM")
+    return `timed out after ${CONFIG_LOAD_TIMEOUT_MS / 1000}s`;
   const stderr = typeof e?.stderr === "string" ? e.stderr.trim() : "";
-  const message = stderr || (typeof e?.message === "string" ? e.message : String(err));
+  const message =
+    stderr || (typeof e?.message === "string" ? e.message : String(err));
   return message.split(/\r?\n/)[0];
 }
 
@@ -120,7 +133,10 @@ function describeLoadError(err: unknown): string {
 export type CliOptions = Partial<PluginOptions> & typeof CONFIG_DEFAULTS;
 
 /** Merge loaded config with defaults. */
-export function resolveOptions(loaded: Partial<PluginOptions>, pluginId: string): CliOptions {
+export function resolveOptions(
+  loaded: Partial<PluginOptions>,
+  pluginId: string,
+): CliOptions {
   return {
     ...CONFIG_DEFAULTS,
     id: pluginId,

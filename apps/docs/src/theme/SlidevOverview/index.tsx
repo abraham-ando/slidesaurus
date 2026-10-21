@@ -32,7 +32,8 @@ const TEAM_BANNER = {
   /** Team or organisation name. */
   name: "Engineering Learning Hub",
   /** Short tagline displayed below the name. */
-  tagline: "Curated Slidev presentations from the engineering team — learn, share, grow.",
+  tagline:
+    "Curated Slidev presentations from the engineering team — learn, share, grow.",
   /** Label and URL for the call-to-action button. */
   cta: {
     label: "Contribute a presentation →",

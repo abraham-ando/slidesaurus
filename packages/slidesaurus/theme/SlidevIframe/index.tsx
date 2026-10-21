@@ -78,54 +78,63 @@ interface SlidevIframeProps {
  *
  * Security: see {@link SLIDEV_IFRAME_SANDBOX}.
  */
-const SlidevIframe = forwardRef<HTMLIFrameElement, SlidevIframeProps>(function SlidevIframe({
-  src,
-  title,
-  className,
-  loadingClassName,
-  loadedClassName,
-  spinnerContainerClassName,
-  spinnerClassName,
-  sandbox = SLIDEV_IFRAME_SANDBOX,
-  allowFullScreen = false,
-  loading,
-  withSpinner = false,
-  decorative = false,
-  onLoad,
-}, ref) {
-  const [isLoading, setIsLoading] = useState(true);
+const SlidevIframe = forwardRef<HTMLIFrameElement, SlidevIframeProps>(
+  function SlidevIframe(
+    {
+      src,
+      title,
+      className,
+      loadingClassName,
+      loadedClassName,
+      spinnerContainerClassName,
+      spinnerClassName,
+      sandbox = SLIDEV_IFRAME_SANDBOX,
+      allowFullScreen = false,
+      loading,
+      withSpinner = false,
+      decorative = false,
+      onLoad,
+    },
+    ref,
+  ) {
+    const [isLoading, setIsLoading] = useState(true);
 
-  const iframeClass = [
-    className,
-    withSpinner ? (isLoading ? loadingClassName : loadedClassName) : undefined,
-  ]
-    .filter(Boolean)
-    .join(" ");
+    const iframeClass = [
+      className,
+      withSpinner
+        ? isLoading
+          ? loadingClassName
+          : loadedClassName
+        : undefined,
+    ]
+      .filter(Boolean)
+      .join(" ");
 
-  return (
-    <>
-      {withSpinner && isLoading && spinnerContainerClassName && (
-        <div className={spinnerContainerClassName}>
-          {spinnerClassName && <div className={spinnerClassName} />}
-        </div>
-      )}
-      <iframe
-        ref={ref}
-        src={src}
-        title={title}
-        className={iframeClass}
-        sandbox={sandbox}
-        allowFullScreen={allowFullScreen}
-        loading={loading}
-        tabIndex={decorative ? -1 : undefined}
-        aria-hidden={decorative ? true : undefined}
-        onLoad={() => {
-          if (withSpinner) setIsLoading(false);
-          onLoad?.();
-        }}
-      />
-    </>
-  );
-});
+    return (
+      <>
+        {withSpinner && isLoading && spinnerContainerClassName && (
+          <div className={spinnerContainerClassName}>
+            {spinnerClassName && <div className={spinnerClassName} />}
+          </div>
+        )}
+        <iframe
+          ref={ref}
+          src={src}
+          title={title}
+          className={iframeClass}
+          sandbox={sandbox}
+          allowFullScreen={allowFullScreen}
+          loading={loading}
+          tabIndex={decorative ? -1 : undefined}
+          aria-hidden={decorative ? true : undefined}
+          onLoad={() => {
+            if (withSpinner) setIsLoading(false);
+            onLoad?.();
+          }}
+        />
+      </>
+    );
+  },
+);
 
 export default SlidevIframe;

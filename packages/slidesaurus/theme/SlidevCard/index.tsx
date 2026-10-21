@@ -1,6 +1,14 @@
 import React, { useRef, useEffect, useState } from "react";
 import SlidevIframe from "../SlidevIframe";
-import { PresentationIcon, AuthorIcon, ClockIcon, StarIcon, PresenterIcon, DownloadIcon, PlaylistIcon } from "../icons";
+import {
+  PresentationIcon,
+  AuthorIcon,
+  ClockIcon,
+  StarIcon,
+  PresenterIcon,
+  DownloadIcon,
+  PlaylistIcon,
+} from "../icons";
 import type { Presentation, UITheme } from "../types";
 import { LEVEL_LABELS } from "../types";
 import { useFavorites } from "../useFavorites";
@@ -43,7 +51,13 @@ interface Props {
 // row with a ::after pseudo-element ("card link" pattern), so the favorite
 // <button> is a sibling of the link rather than nested inside it (nesting
 // interactive content in <a> is invalid HTML).
-function SlidevCardMinimal({ presentation, uiTheme }: { readonly presentation: Presentation; readonly uiTheme: UITheme }) {
+function SlidevCardMinimal({
+  presentation,
+  uiTheme,
+}: {
+  readonly presentation: Presentation;
+  readonly uiTheme: UITheme;
+}) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const favorite = isFavorite(presentation.id);
 
@@ -62,10 +76,14 @@ function SlidevCardMinimal({ presentation, uiTheme }: { readonly presentation: P
       </span>
       <div className={styles.minimalBadges}>
         {presentation.deprecated && (
-          <span className={`${styles.metaBadge} ${styles.badgeDeprecated}`}>Deprecated</span>
+          <span className={`${styles.metaBadge} ${styles.badgeDeprecated}`}>
+            Deprecated
+          </span>
         )}
         {presentation.level && (
-          <span className={`${styles.metaBadge} ${LEVEL_CLASS[presentation.level] ?? ""}`}>
+          <span
+            className={`${styles.metaBadge} ${LEVEL_CLASS[presentation.level] ?? ""}`}
+          >
             {LEVEL_LABELS[presentation.level] ?? presentation.level}
           </span>
         )}
@@ -73,7 +91,8 @@ function SlidevCardMinimal({ presentation, uiTheme }: { readonly presentation: P
           <span className={`${styles.metaBadge} ${styles.badgePlaylist}`}>
             <PlaylistIcon width={8} height={8} />
             {presentation.playlist[0]}
-            {presentation.playlist.length > 1 && ` +${presentation.playlist.length - 1}`}
+            {presentation.playlist.length > 1 &&
+              ` +${presentation.playlist.length - 1}`}
           </span>
         )}
       </div>
@@ -131,10 +150,9 @@ function SlidevCardFull({
     return () => observer.disconnect();
   }, []);
 
-  const cardClass = [
-    styles.card,
-    horizontal ? styles.cardHorizontal : "",
-  ].filter(Boolean).join(" ");
+  const cardClass = [styles.card, horizontal ? styles.cardHorizontal : ""]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     // data-slidev-ui-theme drives all visual variants via CSS attribute selectors.
@@ -146,7 +164,10 @@ function SlidevCardFull({
     // favorite button are siblings of that link and sit above it (z-index), so no
     // interactive element is nested inside another one.
     <div className={cardClass} data-slidev-ui-theme={uiTheme}>
-      <div className={`${styles.preview} ${previewLoaded ? "" : styles.previewLoading}`} ref={previewRef}>
+      <div
+        className={`${styles.preview} ${previewLoaded ? "" : styles.previewLoading}`}
+        ref={previewRef}
+      >
         {presentation.thumbnailUrl && !thumbnailError ? (
           <img
             src={presentation.thumbnailUrl}
@@ -235,21 +256,31 @@ function SlidevCardFull({
             </div>
           )}
         </div>
-        {(presentation.level !== undefined || presentation.deprecated === true || (presentation.playlist && presentation.playlist.length > 0)) && (
+        {(presentation.level !== undefined ||
+          presentation.deprecated === true ||
+          (presentation.playlist && presentation.playlist.length > 0)) && (
           <div className={styles.metaBadges}>
             {presentation.deprecated && (
-              <span className={`${styles.metaBadge} ${styles.badgeDeprecated}`}>Deprecated</span>
+              <span className={`${styles.metaBadge} ${styles.badgeDeprecated}`}>
+                Deprecated
+              </span>
             )}
             {presentation.level && (
-              <span className={`${styles.metaBadge} ${LEVEL_CLASS[presentation.level] ?? ""}`}>
+              <span
+                className={`${styles.metaBadge} ${LEVEL_CLASS[presentation.level] ?? ""}`}
+              >
                 {LEVEL_LABELS[presentation.level] ?? presentation.level}
               </span>
             )}
             {presentation.playlist && presentation.playlist.length > 0 && (
-              <span className={`${styles.metaBadge} ${styles.badgePlaylist}`} title={presentation.playlist.join(", ")}>
+              <span
+                className={`${styles.metaBadge} ${styles.badgePlaylist}`}
+                title={presentation.playlist.join(", ")}
+              >
                 <PlaylistIcon width={9} height={9} />
                 {presentation.playlist[0]}
-                {presentation.playlist.length > 1 && ` +${presentation.playlist.length - 1}`}
+                {presentation.playlist.length > 1 &&
+                  ` +${presentation.playlist.length - 1}`}
               </span>
             )}
           </div>
@@ -259,12 +290,22 @@ function SlidevCardFull({
   );
 }
 
-export default function SlidevCard({ presentation, horizontal = false, uiTheme = "default" }: Props) {
+export default function SlidevCard({
+  presentation,
+  horizontal = false,
+  uiTheme = "default",
+}: Props) {
   // Minimal: fundamentally different DOM (no preview, row layout) → dedicated component.
   // Each variant is its own component (not an early return before hooks here), so the
   // rules of hooks are respected.
   if (uiTheme === "minimal") {
     return <SlidevCardMinimal presentation={presentation} uiTheme={uiTheme} />;
   }
-  return <SlidevCardFull presentation={presentation} horizontal={horizontal} uiTheme={uiTheme} />;
+  return (
+    <SlidevCardFull
+      presentation={presentation}
+      horizontal={horizontal}
+      uiTheme={uiTheme}
+    />
+  );
 }

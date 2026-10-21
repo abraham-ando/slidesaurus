@@ -20,18 +20,25 @@ export interface CategoryNavigation {
 }
 
 /** Derives the current category and the category tree slices from the URL. */
-export function useCategoryNavigation(routeBasePath: string, categories: Category[]): CategoryNavigation {
+export function useCategoryNavigation(
+  routeBasePath: string,
+  categories: Category[],
+): CategoryNavigation {
   const location = useLocation();
   const basePath = useBaseUrl(routeBasePath).replace(/\/$/, "");
 
   const currentCategory = useMemo(() => {
     const currentPath = location.pathname.replace(/\/$/, "");
-    if (currentPath === basePath || !currentPath.startsWith(basePath + "/")) return "";
+    if (currentPath === basePath || !currentPath.startsWith(basePath + "/"))
+      return "";
     return currentPath.slice(basePath.length + 1);
   }, [location.pathname, basePath]);
 
   const currentCategoryMeta = useMemo(
-    () => (!currentCategory ? null : categories.find((cat) => cat.path === currentCategory)),
+    () =>
+      !currentCategory
+        ? null
+        : categories.find((cat) => cat.path === currentCategory),
     [currentCategory, categories],
   );
 
@@ -46,14 +53,20 @@ export function useCategoryNavigation(routeBasePath: string, categories: Categor
   }, [categories, currentCategory]);
 
   const topLevelCategories = useMemo(
-    () => sortCategories(categories.filter((cat) => !cat.path.includes("/")), "asc"),
+    () =>
+      sortCategories(
+        categories.filter((cat) => !cat.path.includes("/")),
+        "asc",
+      ),
     [categories],
   );
 
   const backUrl = useMemo(() => {
     if (!currentCategory) return null;
     const parts = currentCategory.split("/");
-    return parts.length === 1 ? basePath : `${basePath}/${parts.slice(0, -1).join("/")}`;
+    return parts.length === 1
+      ? basePath
+      : `${basePath}/${parts.slice(0, -1).join("/")}`;
   }, [currentCategory, basePath]);
 
   return {

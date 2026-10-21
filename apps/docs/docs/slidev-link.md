@@ -26,11 +26,11 @@ npx docusaurus swizzle slidesaurus SlidevLink --wrap
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-| --- | --- | --- | --- | --- |
-| `link` | `string` | Yes | — | Route of a registered presentation **without the site `baseUrl`** (e.g. `/training/getting-started/introduction`); the `baseUrl` is added automatically. Must match the presentation URL (trailing slash and letter case are ignored). |
-| `width` | `string` | No | `"550px"` | CSS width of the card component. |
-| `pluginId` | `string` | No | `"default"` | Plugin instance ID. Set this when using multiple `slidesaurus` instances in `docusaurus.config.ts`. |
+| Prop       | Type     | Required | Default     | Description                                                                                                                                                                                                                            |
+| ---------- | -------- | -------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `link`     | `string` | Yes      | —           | Route of a registered presentation **without the site `baseUrl`** (e.g. `/training/getting-started/introduction`); the `baseUrl` is added automatically. Must match the presentation URL (trailing slash and letter case are ignored). |
+| `width`    | `string` | No       | `"550px"`   | CSS width of the card component.                                                                                                                                                                                                       |
+| `pluginId` | `string` | No       | `"default"` | Plugin instance ID. Set this when using multiple `slidesaurus` instances in `docusaurus.config.ts`.                                                                                                                                    |
 
 ## How `link` resolution works
 
@@ -47,10 +47,7 @@ If the presentation is not found, check that the `link` value matches the route 
 
 ```tsx
 // Embed a presentation from the "training" plugin instance
-<SlidevLink
-  link="/training/getting-started/introduction"
-  pluginId="training"
-/>
+<SlidevLink link="/training/getting-started/introduction" pluginId="training" />
 ```
 
 ## Preview behavior
@@ -63,9 +60,9 @@ The iframe is scaled via a `ResizeObserver`-driven CSS variable so the preview s
 
 ## SlidevCard vs SlidevLink
 
-| Component | Use Case |
-| --- | --- |
+| Component    | Use Case                                                                    |
+| ------------ | --------------------------------------------------------------------------- |
 | `SlidevLink` | Inline embed inside a documentation page — compact card with iframe preview |
-| `SlidevCard` | Grid/list card on the overview page — rich metadata, thumbnail preview |
+| `SlidevCard` | Grid/list card on the overview page — rich metadata, thumbnail preview      |
 
 Use `SlidevLink` when cross-referencing a presentation from a doc page. `SlidevCard` is used internally by the overview page and is not intended for manual embedding.

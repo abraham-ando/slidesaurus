@@ -49,7 +49,11 @@ function installFakeCli(root: string): string {
   fs.mkdirSync(path.join(cliDir, "bin"), { recursive: true });
   fs.writeFileSync(
     path.join(cliDir, "package.json"),
-    JSON.stringify({ name: "@slidev/cli", version: "52.1.0", bin: { slidev: "./bin/slidev.mjs" } }),
+    JSON.stringify({
+      name: "@slidev/cli",
+      version: "52.1.0",
+      bin: { slidev: "./bin/slidev.mjs" },
+    }),
   );
   const entry = path.join(cliDir, "bin", "slidev.mjs");
   fs.writeFileSync(entry, "");
@@ -98,12 +102,22 @@ describe("runSlidevBuild", () => {
   function start(args: string[] = ["build", "x.md"], timeoutMs = 10_000) {
     const child = new FakeChild();
     vi.mocked(spawn).mockReturnValue(child as never);
-    const promise = runSlidevBuild({ siteDir: tmpDir, args, timeoutMs, verbose: false });
+    const promise = runSlidevBuild({
+      siteDir: tmpDir,
+      args,
+      timeoutMs,
+      verbose: false,
+    });
     return { child, promise };
   }
 
   it("fails without spawning when @slidev/cli is missing", async () => {
-    const result = await runSlidevBuild({ siteDir: tmpDir, args: ["build"], timeoutMs: 1000, verbose: false });
+    const result = await runSlidevBuild({
+      siteDir: tmpDir,
+      args: ["build"],
+      timeoutMs: 1000,
+      verbose: false,
+    });
     expect(result).toMatchObject({ success: false, failureKind: "spawn" });
     expect(spawn).not.toHaveBeenCalled();
   });
@@ -111,7 +125,11 @@ describe("runSlidevBuild", () => {
   it("rejects unexpected extraEnv keys", async () => {
     installFakeCli(tmpDir);
     const result = await runSlidevBuild({
-      siteDir: tmpDir, args: [], timeoutMs: 1000, verbose: false, extraEnv: { NPM_TOKEN: "x" },
+      siteDir: tmpDir,
+      args: [],
+      timeoutMs: 1000,
+      verbose: false,
+      extraEnv: { NPM_TOKEN: "x" },
     });
     expect(result.success).toBe(false);
     expect(result.error).toContain("[Security]");
@@ -128,7 +146,11 @@ describe("runSlidevBuild", () => {
     const [cmd, args, opts] = vi.mocked(spawn).mock.calls[0];
     expect(cmd).toBe(process.execPath);
     expect(args).toEqual([entry, "build", weird]);
-    expect(opts).toMatchObject({ shell: false, cwd: tmpDir, windowsHide: true });
+    expect(opts).toMatchObject({
+      shell: false,
+      cwd: tmpDir,
+      windowsHide: true,
+    });
   });
 
   it("filters the environment passed to the child", async () => {
@@ -137,7 +159,9 @@ describe("runSlidevBuild", () => {
     const { child, promise } = start();
     child.exit(0);
     await promise;
-    const opts = vi.mocked(spawn).mock.calls[0][2] as { env: Record<string, string> };
+    const opts = vi.mocked(spawn).mock.calls[0][2] as {
+      env: Record<string, string>;
+    };
     expect(opts.env).not.toHaveProperty("SUPER_SECRET_TOKEN");
     vi.unstubAllEnvs();
   });
@@ -157,7 +181,10 @@ describe("runSlidevBuild", () => {
     installFakeCli(tmpDir);
     const { child, promise } = start();
     child.emit("error", new Error("EACCES"));
-    await expect(promise).resolves.toMatchObject({ success: false, failureKind: "spawn" });
+    await expect(promise).resolves.toMatchObject({
+      success: false,
+      failureKind: "spawn",
+    });
   });
 
   describe("timeout (POSIX)", () => {
@@ -175,7 +202,9 @@ describe("runSlidevBuild", () => {
 
     it("spawns the child in its own process group", async () => {
       const { child, promise } = start();
-      expect(vi.mocked(spawn).mock.calls[0][2]).toMatchObject({ detached: true });
+      expect(vi.mocked(spawn).mock.calls[0][2]).toMatchObject({
+        detached: true,
+      });
       child.exit(0);
       await promise;
     });
@@ -189,7 +218,10 @@ describe("runSlidevBuild", () => {
       expect(killSpy).toHaveBeenCalledWith(-child.pid, "SIGKILL");
 
       child.exit(null, "SIGKILL");
-      await expect(promise).resolves.toMatchObject({ success: false, failureKind: "timeout" });
+      await expect(promise).resolves.toMatchObject({
+        success: false,
+        failureKind: "timeout",
+      });
     });
 
     it("does not send SIGKILL when the child exited after SIGTERM (exit state, not child.killed)", async () => {
@@ -220,7 +252,10 @@ describe("runSlidevBuild", () => {
       const killer = new FakeChild();
       vi.mocked(spawn).mockReturnValue(killer as never);
       expect(vi.mocked(spawn).mock.calls[0][0]).toBe(process.execPath);
-      expect(vi.mocked(spawn).mock.calls[0][2]).toMatchObject({ detached: false, shell: false });
+      expect(vi.mocked(spawn).mock.calls[0][2]).toMatchObject({
+        detached: false,
+        shell: false,
+      });
 
       vi.advanceTimersByTime(1000);
       const [cmd, args] = vi.mocked(spawn).mock.calls[1];

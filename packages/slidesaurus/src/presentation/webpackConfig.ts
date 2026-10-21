@@ -12,7 +12,10 @@
  * status file and reloads its own iframe instead.
  */
 import { getSlidevBuildOutputDir } from "../infrastructure/fs/outputManager";
-import { BUILD_STATUS_URL_SEGMENT, getBuildStatusDir } from "../infrastructure/fs/buildStatus";
+import {
+  BUILD_STATUS_URL_SEGMENT,
+  getBuildStatusDir,
+} from "../infrastructure/fs/buildStatus";
 import { buildRouteBase } from "../shared/utils";
 import type { BuildContext, PluginOptions } from "../domain/types";
 
@@ -34,8 +37,15 @@ export function buildWebpackDevServerConfig(
   options: PluginOptions,
   context: Partial<Pick<BuildContext, "baseUrl" | "locale">> = {},
 ): Record<string, unknown> {
-  const outputDir = getSlidevBuildOutputDir(siteDir, options.id, context.locale);
-  const routeBase = buildRouteBase(context.baseUrl ?? "/", options.routeBasePath);
+  const outputDir = getSlidevBuildOutputDir(
+    siteDir,
+    options.id,
+    context.locale,
+  );
+  const routeBase = buildRouteBase(
+    context.baseUrl ?? "/",
+    options.routeBasePath,
+  );
 
   return {
     devServer: {

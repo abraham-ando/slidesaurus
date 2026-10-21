@@ -4,7 +4,11 @@ import type { PluginOptions } from "../../domain/types";
 import { buildWebpackDevServerConfig } from "../webpackConfig";
 
 function options(overrides: Partial<PluginOptions> = {}): PluginOptions {
-  return { id: "default", routeBasePath: "/slidev", ...overrides } as PluginOptions;
+  return {
+    id: "default",
+    routeBasePath: "/slidev",
+    ...overrides,
+  } as PluginOptions;
 }
 
 type StaticEntry = { directory: string; publicPath: string; watch: unknown };
@@ -17,27 +21,54 @@ describe("buildWebpackDevServerConfig", () => {
   it("serves the cache output under routeBasePath", () => {
     const entry = staticEntry(buildWebpackDevServerConfig("/site", options()));
     expect(entry.publicPath).toBe("/slidev");
-    expect(entry.directory).toBe(path.join("/site", ".docusaurus", "slidesaurus", "default", "output"));
+    expect(entry.directory).toBe(
+      path.join("/site", ".docusaurus", "slidesaurus", "default", "output"),
+    );
   });
 
   it("includes the site baseUrl in the public path", () => {
-    const entry = staticEntry(buildWebpackDevServerConfig("/site", options(), { baseUrl: "/docs/" }));
+    const entry = staticEntry(
+      buildWebpackDevServerConfig("/site", options(), { baseUrl: "/docs/" }),
+    );
     expect(entry.publicPath).toBe("/docs/slidev");
   });
 
   it("normalises routeBasePath slashes", () => {
-    const entry = staticEntry(buildWebpackDevServerConfig("/site", options({ routeBasePath: "talks/" }), { baseUrl: "/" }));
+    const entry = staticEntry(
+      buildWebpackDevServerConfig(
+        "/site",
+        options({ routeBasePath: "talks/" }),
+        { baseUrl: "/" },
+      ),
+    );
     expect(entry.publicPath).toBe("/talks");
   });
 
   it("serves the per-locale cache for a non-default locale", () => {
-    const entry = staticEntry(buildWebpackDevServerConfig("/site", options(), { baseUrl: "/fr/", locale: "fr" }));
+    const entry = staticEntry(
+      buildWebpackDevServerConfig("/site", options(), {
+        baseUrl: "/fr/",
+        locale: "fr",
+      }),
+    );
     expect(entry.publicPath).toBe("/fr/slidev");
-    expect(entry.directory).toBe(path.join("/site", ".docusaurus", "slidesaurus", "default", "i18n", "fr", "output"));
+    expect(entry.directory).toBe(
+      path.join(
+        "/site",
+        ".docusaurus",
+        "slidesaurus",
+        "default",
+        "i18n",
+        "fr",
+        "output",
+      ),
+    );
   });
 
   it("uses '/' when both baseUrl and routeBasePath are the root", () => {
-    const entry = staticEntry(buildWebpackDevServerConfig("/site", options({ routeBasePath: "/" })));
+    const entry = staticEntry(
+      buildWebpackDevServerConfig("/site", options({ routeBasePath: "/" })),
+    );
     expect(entry.publicPath).toBe("/");
   });
 
@@ -48,13 +79,21 @@ describe("buildWebpackDevServerConfig", () => {
   });
 
   it("serves the build status directory under routeBasePath/__slidesaurus__", () => {
-    const entry = staticEntry(buildWebpackDevServerConfig("/site", options(), { baseUrl: "/docs/" }), 1);
+    const entry = staticEntry(
+      buildWebpackDevServerConfig("/site", options(), { baseUrl: "/docs/" }),
+      1,
+    );
     expect(entry.publicPath).toBe("/docs/slidev/__slidesaurus__");
-    expect(entry.directory).toBe(path.join("/site", ".docusaurus", "slidesaurus", "default", "status"));
+    expect(entry.directory).toBe(
+      path.join("/site", ".docusaurus", "slidesaurus", "default", "status"),
+    );
   });
 
   it("serves the status directory at the root when routeBasePath is '/'", () => {
-    const entry = staticEntry(buildWebpackDevServerConfig("/site", options({ routeBasePath: "/" })), 1);
+    const entry = staticEntry(
+      buildWebpackDevServerConfig("/site", options({ routeBasePath: "/" })),
+      1,
+    );
     expect(entry.publicPath).toBe("/__slidesaurus__");
   });
 });

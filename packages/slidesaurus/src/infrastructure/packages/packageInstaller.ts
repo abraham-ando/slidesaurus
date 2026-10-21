@@ -3,7 +3,11 @@ import { promisify } from "node:util";
 import path from "node:path";
 import fs from "node:fs";
 import { log } from "../../shared/logger";
-import { isLocalPath, validateSlidevPackageName, walkUpTree } from "../../shared/utils";
+import {
+  isLocalPath,
+  validateSlidevPackageName,
+  walkUpTree,
+} from "../../shared/utils";
 import { TREE_WALK_MAX_DEPTH } from "../../domain/constants";
 import { filterEnvAllowlist } from "./env";
 import { forgetNotInstalled } from "./packageAvailability";
@@ -30,7 +34,8 @@ export function detectPackageManager(siteDir: string): PackageManager {
   const pm = walkUpTree(siteDir, TREE_WALK_MAX_DEPTH, (dir) => {
     if (fs.existsSync(path.join(dir, "pnpm-lock.yaml"))) return "pnpm" as const;
     if (fs.existsSync(path.join(dir, "yarn.lock"))) return "yarn" as const;
-    if (fs.existsSync(path.join(dir, "package-lock.json"))) return "npm" as const;
+    if (fs.existsSync(path.join(dir, "package-lock.json")))
+      return "npm" as const;
     return undefined;
   });
   return pm ?? "npm";
@@ -38,15 +43,20 @@ export function detectPackageManager(siteDir: string): PackageManager {
 
 /** True when the project uses Yarn Berry (v2+), which has no `--ignore-scripts` flag. */
 function isYarnBerry(siteDir: string): boolean {
-  return walkUpTree(siteDir, TREE_WALK_MAX_DEPTH, (dir) =>
-    fs.existsSync(path.join(dir, ".yarnrc.yml")) ? true : undefined,
-  ) === true;
+  return (
+    walkUpTree(siteDir, TREE_WALK_MAX_DEPTH, (dir) =>
+      fs.existsSync(path.join(dir, ".yarnrc.yml")) ? true : undefined,
+    ) === true
+  );
 }
 
 /** JS entry points of each package manager, relative to its global install dir. */
 const PM_JS_ENTRIES: Record<PackageManager, string[]> = {
   npm: [path.join("node_modules", "npm", "bin", "npm-cli.js")],
-  pnpm: [path.join("node_modules", "pnpm", "bin", "pnpm.cjs"), path.join("node_modules", "pnpm", "bin", "pnpm.js")],
+  pnpm: [
+    path.join("node_modules", "pnpm", "bin", "pnpm.cjs"),
+    path.join("node_modules", "pnpm", "bin", "pnpm.js"),
+  ],
   yarn: [path.join("node_modules", "yarn", "bin", "yarn.js")],
 };
 
@@ -75,13 +85,22 @@ export interface PmCommand {
  *     directly; next to a Windows `.cmd` shim, the pm's JS entry is run with node.
  * Returns `undefined` when no shell-free invocation is possible.
  */
-export function resolvePmCommand(pm: PackageManager, env: NodeJS.ProcessEnv = process.env): PmCommand | undefined {
+export function resolvePmCommand(
+  pm: PackageManager,
+  env: NodeJS.ProcessEnv = process.env,
+): PmCommand | undefined {
   const execPath = env.npm_execpath;
-  if (execPath && PM_EXECPATH_NAMES[pm].test(path.basename(execPath)) && fs.existsSync(execPath)) {
+  if (
+    execPath &&
+    PM_EXECPATH_NAMES[pm].test(path.basename(execPath)) &&
+    fs.existsSync(execPath)
+  ) {
     return { file: process.execPath, args: [execPath] };
   }
   const isWin = process.platform === "win32";
-  for (const dir of (env.PATH ?? env.Path ?? "").split(path.delimiter).filter(Boolean)) {
+  for (const dir of (env.PATH ?? env.Path ?? "")
+    .split(path.delimiter)
+    .filter(Boolean)) {
     if (!isWin) {
       const candidate = path.join(dir, pm);
       if (fs.existsSync(candidate)) return { file: candidate, args: [] };
@@ -92,7 +111,8 @@ export function resolvePmCommand(pm: PackageManager, env: NodeJS.ProcessEnv = pr
     if (fs.existsSync(path.join(dir, `${pm}.cmd`))) {
       for (const rel of PM_JS_ENTRIES[pm]) {
         const entry = path.join(dir, rel);
-        if (fs.existsSync(entry)) return { file: process.execPath, args: [entry] };
+        if (fs.existsSync(entry))
+          return { file: process.execPath, args: [entry] };
       }
     }
   }
@@ -103,7 +123,11 @@ export function resolvePmCommand(pm: PackageManager, env: NodeJS.ProcessEnv = pr
  * Build the install arguments. Lifecycle scripts are always disabled: a theme
  * or addon never needs a postinstall, and auto-install must not execute code.
  */
-export function buildInstallArgs(pm: PackageManager, packageName: string, berry: boolean): string[] {
+export function buildInstallArgs(
+  pm: PackageManager,
+  packageName: string,
+  berry: boolean,
+): string[] {
   if (pm === "npm") return ["install", packageName, "--ignore-scripts"];
   if (pm === "yarn" && berry) return ["add", packageName]; // scripts disabled via YARN_ENABLE_SCRIPTS
   return ["add", packageName, "--ignore-scripts"];
@@ -128,13 +152,21 @@ export async function installPackage(
   return promise;
 }
 
-async function runInstall(packageName: string, siteDir: string, kind: "theme" | "addon"): Promise<boolean> {
+async function runInstall(
+  packageName: string,
+  siteDir: string,
+  kind: "theme" | "addon",
+): Promise<boolean> {
   try {
     validateSlidevPackageName(packageName, kind);
-    if (isLocalPath(packageName)) throw new Error("local paths cannot be installed");
+    if (isLocalPath(packageName))
+      throw new Error("local paths cannot be installed");
     const pm = detectPackageManager(siteDir);
     const cmd = resolvePmCommand(pm);
-    if (!cmd) throw new Error(`could not locate the "${pm}" executable without a shell`);
+    if (!cmd)
+      throw new Error(
+        `could not locate the "${pm}" executable without a shell`,
+      );
     const berry = pm === "yarn" && isYarnBerry(siteDir);
     log.info(`Auto-installing ${log.code(packageName)} with ${pm}...`);
     // Filter env to prevent leaking secrets (NPM_TOKEN, custom registries, etc.)
@@ -143,15 +175,19 @@ async function runInstall(packageName: string, siteDir: string, kind: "theme" | 
       npm_config_ignore_scripts: "true",
       ...(berry ? { YARN_ENABLE_SCRIPTS: "false" } : {}),
     };
-    await execFileAsync(cmd.file, [...cmd.args, ...buildInstallArgs(pm, packageName, berry)], {
-      cwd: siteDir,
-      env,
-      shell: false,
-      windowsHide: true,
-      timeout: INSTALL_TIMEOUT_MS,
-      killSignal: "SIGKILL",
-      maxBuffer: 10 * 1024 * 1024,
-    });
+    await execFileAsync(
+      cmd.file,
+      [...cmd.args, ...buildInstallArgs(pm, packageName, berry)],
+      {
+        cwd: siteDir,
+        env,
+        shell: false,
+        windowsHide: true,
+        timeout: INSTALL_TIMEOUT_MS,
+        killSignal: "SIGKILL",
+        maxBuffer: 10 * 1024 * 1024,
+      },
+    );
     forgetNotInstalled(packageName, siteDir);
     log.success(`Installed ${log.code(packageName)}`);
     return true;

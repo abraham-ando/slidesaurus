@@ -24,7 +24,11 @@ export const BUILD_STATUS_URL_SEGMENT = "__slidesaurus__";
 export const BUILD_STATUS_FILE_NAME = "build-status.json";
 
 /** Directory holding the status file — outside `output/`, so it is never published. */
-export function getBuildStatusDir(siteDir: string, pluginId: string, locale?: string): string {
+export function getBuildStatusDir(
+  siteDir: string,
+  pluginId: string,
+  locale?: string,
+): string {
   return path.join(getSlidevCacheDir(siteDir, pluginId, locale), "status");
 }
 
@@ -95,10 +99,19 @@ export class BuildStatusTracker implements BuildProgressListener {
     }
   }
 
-  private refreshOutput(id: string, state: PresentationBuildStatus["state"], error?: string): void {
+  private refreshOutput(
+    id: string,
+    state: PresentationBuildStatus["state"],
+    error?: string,
+  ): void {
     const outputPath = this.outputPaths.get(id);
     const builtAt = outputPath ? outputBuiltAt(outputPath) : undefined;
-    this.update(id, { state, hasOutput: builtAt !== undefined, builtAt, error });
+    this.update(id, {
+      state,
+      hasOutput: builtAt !== undefined,
+      builtAt,
+      error,
+    });
   }
 
   private update(id: string, patch: Partial<PresentationBuildStatus>): void {

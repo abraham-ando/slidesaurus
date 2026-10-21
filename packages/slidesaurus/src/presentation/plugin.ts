@@ -12,7 +12,11 @@
 import path from "node:path";
 import type { LoadContext, Plugin } from "@docusaurus/types";
 import * as utilsValidation from "@docusaurus/utils-validation";
-import type { PluginOptions, PluginContentData, PresentationMetadata } from "../domain/types";
+import type {
+  PluginOptions,
+  PluginContentData,
+  PresentationMetadata,
+} from "../domain/types";
 import { PLUGIN_NAME } from "../domain/constants";
 import { scanPresentations } from "../application/scanner";
 import {
@@ -23,7 +27,10 @@ import {
   getBackgroundBuildQueue,
 } from "../application/builder";
 import { log } from "../shared/logger";
-import { cleanupSourceDirectory, getSlidevCacheDir } from "../infrastructure/fs/fileSystem";
+import {
+  cleanupSourceDirectory,
+  getSlidevCacheDir,
+} from "../infrastructure/fs/fileSystem";
 import {
   BuildStatusTracker,
   getBuildStatusDir,
@@ -35,7 +42,11 @@ import {
   createPresenterFallbacks,
   writeSearchIndex,
 } from "../infrastructure/fs/outputManager";
-import { buildRouteBase, defaultMaxParallelBuilds, stripSlashes } from "../shared/utils";
+import {
+  buildRouteBase,
+  defaultMaxParallelBuilds,
+  stripSlashes,
+} from "../shared/utils";
 import { registerRoutes } from "./routeBuilder";
 import { registerCliCommands } from "./cliCommands";
 import { buildWebpackDevServerConfig } from "./webpackConfig";
@@ -130,7 +141,9 @@ export default function pluginSlidev(
   };
   // Dev only: builds run in the background and publish their progress here.
   const buildStatus = isDev
-    ? new BuildStatusTracker(getBuildStatusDir(context.siteDir, options.id, buildContext.locale))
+    ? new BuildStatusTracker(
+        getBuildStatusDir(context.siteDir, options.id, buildContext.locale),
+      )
     : undefined;
   const buildStatusUrl = isDev
     ? getBuildStatusUrl(buildRouteBase(context.baseUrl, options.routeBasePath))
@@ -142,7 +155,9 @@ export default function pluginSlidev(
    * Failures are logged (and published), never thrown.
    */
   const scheduleDevBuild = (presentations: PresentationMetadata[]): void => {
-    const queue = getBackgroundBuildQueue(getSlidevCacheDir(context.siteDir, options.id, buildContext.locale));
+    const queue = getBackgroundBuildQueue(
+      getSlidevCacheDir(context.siteDir, options.id, buildContext.locale),
+    );
     queue.schedule(async () => {
       buildStatus?.reset(presentations);
       const results = await buildAllPresentations(
@@ -218,13 +233,22 @@ export default function pluginSlidev(
           log.warn(
             `Slidev CLI not installed. Presentations will not be ${isDev ? "available in dev mode" : "built"}. Install with: pnpm add @slidev/cli`,
           );
-          buildStatus?.reset(presentations, "Slidev CLI not installed (pnpm add -D @slidev/cli)");
+          buildStatus?.reset(
+            presentations,
+            "Slidev CLI not installed (pnpm add -D @slidev/cli)",
+          );
         }
       } else {
         buildStatus?.reset([]);
       }
 
-      return { presentations, categories, playlists, config: options, buildStatusUrl };
+      return {
+        presentations,
+        categories,
+        playlists,
+        config: options,
+        buildStatusUrl,
+      };
     },
 
     async contentLoaded({ content, actions }) {
@@ -255,7 +279,11 @@ export default function pluginSlidev(
 
     configureWebpack() {
       if (!isDev) return {};
-      return buildWebpackDevServerConfig(context.siteDir, options, buildContext);
+      return buildWebpackDevServerConfig(
+        context.siteDir,
+        options,
+        buildContext,
+      );
     },
   };
 }

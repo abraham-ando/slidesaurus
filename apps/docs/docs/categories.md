@@ -29,11 +29,11 @@ position: 1
 description: Step-by-step tutorial presentations
 ```
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `label` | `string` | No | Display name for the category. Defaults to the title-cased directory name. |
-| `position` | `number` | No | Sort order. Lower values appear first. Defaults to `99`. |
-| `description` | `string` | No | Short description displayed below the category heading. |
+| Field         | Type     | Required | Description                                                                |
+| ------------- | -------- | -------- | -------------------------------------------------------------------------- |
+| `label`       | `string` | No       | Display name for the category. Defaults to the title-cased directory name. |
+| `position`    | `number` | No       | Sort order. Lower values appear first. Defaults to `99`.                   |
+| `description` | `string` | No       | Short description displayed below the category heading.                    |
 
 ## How Categories Render
 

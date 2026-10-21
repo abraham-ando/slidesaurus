@@ -268,10 +268,16 @@ interface UIOptions {
   uiTheme: UITheme;
 }
 
-interface PluginOptions extends ScanOptions, BuildOptions, UIOptions, DevServerOptions {
-  onPresentationScanned?: (presentation: PresentationMetadata) => void | Promise<void>;
+interface PluginOptions
+  extends ScanOptions, BuildOptions, UIOptions, DevServerOptions {
+  onPresentationScanned?: (
+    presentation: PresentationMetadata,
+  ) => void | Promise<void>;
   onBuildComplete?: (results: BuildResult[]) => void | Promise<void>;
-  transformFrontmatter?: (data: SlidevFrontmatter, filePath: string) => SlidevFrontmatter;
+  transformFrontmatter?: (
+    data: SlidevFrontmatter,
+    filePath: string,
+  ) => SlidevFrontmatter;
 }
 ```
 
@@ -300,7 +306,10 @@ These types are exposed to React theme components via `usePluginData()`. They om
 
 ```ts
 /** Presentation data exposed to theme components. */
-type Presentation = Omit<PresentationMetadata, "sourceAbsolutePath" | "outputPath">;
+type Presentation = Omit<
+  PresentationMetadata,
+  "sourceAbsolutePath" | "outputPath"
+>;
 
 /** Category data exposed to theme components. */
 type Category = CategoryMetadata;
@@ -369,7 +378,7 @@ A convenience hook that reads the active `uiTheme` from plugin data. Useful when
 import { useUITheme } from "@theme/useUITheme";
 
 // Returns the uiTheme value from the plugin data (defaults to "default")
-const uiTheme = useUITheme();           // uses pluginId "default"
+const uiTheme = useUITheme(); // uses pluginId "default"
 const uiTheme = useUITheme("training"); // named plugin instance
 ```
 

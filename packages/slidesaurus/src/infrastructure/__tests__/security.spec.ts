@@ -64,7 +64,9 @@ describe("hasCachedOutput — path traversal guard", () => {
   });
 
   it("throws on combined traversal", () => {
-    expect(() => hasCachedOutput(tmpDir, "valid/../../escape")).toThrow("[Security]");
+    expect(() => hasCachedOutput(tmpDir, "valid/../../escape")).toThrow(
+      "[Security]",
+    );
   });
 
   it("returns false for a valid ID with no cached output", () => {
@@ -115,7 +117,10 @@ describe("filterEnvAllowlist", () => {
   });
 
   it("key matching is case-insensitive", () => {
-    const result = filterEnvAllowlist({ path: "/usr/bin", Path: "/usr/local/bin" });
+    const result = filterEnvAllowlist({
+      path: "/usr/bin",
+      Path: "/usr/local/bin",
+    });
     // At least one of the path variants should pass through
     const hasPath = "path" in result || "Path" in result;
     expect(hasPath).toBe(true);

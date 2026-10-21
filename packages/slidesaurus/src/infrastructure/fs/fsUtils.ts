@@ -83,7 +83,9 @@ export type ThumbnailArtifactState = "file" | "promoted" | "removed" | "absent";
  *   - empty / unknown directory   → "removed"  (no broken <img> served)
  *   - missing                     → "absent"
  */
-export function normalizeThumbnailArtifact(thumbnailFile: string): ThumbnailArtifactState {
+export function normalizeThumbnailArtifact(
+  thumbnailFile: string,
+): ThumbnailArtifactState {
   if (!fs.existsSync(thumbnailFile)) return "absent";
   const stat = fs.statSync(thumbnailFile);
   if (stat.isFile()) return "file";

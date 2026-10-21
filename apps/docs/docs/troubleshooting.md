@@ -77,7 +77,9 @@ npm install @slidev/theme-seriph
 2. Or enable auto-install (disabled by default):
 
 ```ts
-{ autoInstall: true }
+{
+  autoInstall: true;
+}
 ```
 
 Check the theme name spelling. Official themes use `@slidev/theme-*`, community themes use `slidev-theme-*`.
@@ -233,12 +235,12 @@ Or configure it in your `package.json` scripts:
 
 Common mistakes:
 
-| Field | Valid | Invalid |
-|---|---|---|
-| `level` | `beginner`, `intermediate`, `advanced` | `"hard"`, `"easy"` |
-| `date` | `2026-03-15` | `15/03/2026`, `"March 2026"` |
-| `deprecated` | `true`, `false` | `"yes"`, `1` |
-| `duration` | `45` | `"45 min"`, `-5` |
+| Field        | Valid                                  | Invalid                      |
+| ------------ | -------------------------------------- | ---------------------------- |
+| `level`      | `beginner`, `intermediate`, `advanced` | `"hard"`, `"easy"`           |
+| `date`       | `2026-03-15`                           | `15/03/2026`, `"March 2026"` |
+| `deprecated` | `true`, `false`                        | `"yes"`, `1`                 |
+| `duration`   | `45`                                   | `"45 min"`, `-5`             |
 
 Enable `verbose: true` to see full validation output during a build.
 
@@ -271,10 +273,14 @@ Then verify the setup with `slidesaurus doctor`, which reports whether `playwrig
 
 ```css
 /* ✅ Correct */
-:root { --slidev-card-radius: 12px; }
+:root {
+  --slidev-card-radius: 12px;
+}
 
 /* ❌ Wrong — custom properties are consumed by the component, not applied here */
-.slidev-card { --slidev-card-radius: 12px; }
+.slidev-card {
+  --slidev-card-radius: 12px;
+}
 ```
 
 2. **Import order** — Ensure `custom.css` (or your theme file) is imported **after** any Docusaurus default stylesheets. Docusaurus automatically places `custom.css` last, so this is usually not an issue unless you are using `@import` chains.

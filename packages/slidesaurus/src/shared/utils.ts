@@ -52,14 +52,21 @@ export function encodeIdForUrl(id: string): string {
 export function toSafeId(id: string): string {
   let out = "";
   for (const ch of id) {
-    out += /[A-Za-z0-9-]/.test(ch) ? ch : `_${ch.codePointAt(0)!.toString(16)}_`;
+    out += /[A-Za-z0-9-]/.test(ch)
+      ? ch
+      : `_${ch.codePointAt(0)!.toString(16)}_`;
   }
   return out;
 }
 
 /** True when a theme/addon reference is a local path rather than an npm package name. */
 export function isLocalPath(name: string): boolean {
-  return name.startsWith(".") || name.startsWith("/") || name.startsWith("\\") || path.isAbsolute(name);
+  return (
+    name.startsWith(".") ||
+    name.startsWith("/") ||
+    name.startsWith("\\") ||
+    path.isAbsolute(name)
+  );
 }
 
 /**
@@ -76,7 +83,8 @@ export function getUrlPathFromPath(pathOption: string): string {
  * Valid npm package name pattern.
  * Allows scoped packages (@scope/name) and regular names (my-pkg).
  */
-const SAFE_NPM_PKG = /^(@[a-zA-Z0-9_-][a-zA-Z0-9._-]*\/)?[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
+const SAFE_NPM_PKG =
+  /^(@[a-zA-Z0-9_-][a-zA-Z0-9._-]*\/)?[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
 
 /**
  * Validate a resolved npm package name to prevent argument / shell injection.
@@ -100,9 +108,11 @@ export function validatePackageName(name: string): string {
 /** Package name patterns accepted for Slidev themes and addons. */
 const SLIDEV_PACKAGE_PATTERNS: Record<"theme" | "addon", RegExp> = {
   // slidev-theme-x | @slidev/theme-x | @scope/slidev-theme-x
-  theme: /^(?:slidev-theme-[a-z0-9][a-z0-9._-]*|@slidev\/theme-[a-z0-9][a-z0-9._-]*|@[a-z0-9][a-z0-9._-]*\/slidev-theme-[a-z0-9][a-z0-9._-]*)$/i,
+  theme:
+    /^(?:slidev-theme-[a-z0-9][a-z0-9._-]*|@slidev\/theme-[a-z0-9][a-z0-9._-]*|@[a-z0-9][a-z0-9._-]*\/slidev-theme-[a-z0-9][a-z0-9._-]*)$/i,
   // slidev-addon-x | @slidev/addon-x | @scope/slidev-addon-x
-  addon: /^(?:slidev-addon-[a-z0-9][a-z0-9._-]*|@slidev\/addon-[a-z0-9][a-z0-9._-]*|@[a-z0-9][a-z0-9._-]*\/slidev-addon-[a-z0-9][a-z0-9._-]*)$/i,
+  addon:
+    /^(?:slidev-addon-[a-z0-9][a-z0-9._-]*|@slidev\/addon-[a-z0-9][a-z0-9._-]*|@[a-z0-9][a-z0-9._-]*\/slidev-addon-[a-z0-9][a-z0-9._-]*)$/i,
 };
 
 /**
@@ -115,7 +125,10 @@ const SLIDEV_PACKAGE_PATTERNS: Record<"theme" | "addon", RegExp> = {
  *   - addons: `slidev-addon-*`, `@slidev/addon-*`, `@scope/slidev-addon-*`
  * Local paths are passed through (their containment is checked separately).
  */
-export function validateSlidevPackageName(name: string, kind: "theme" | "addon"): string {
+export function validateSlidevPackageName(
+  name: string,
+  kind: "theme" | "addon",
+): string {
   validatePackageName(name);
   if (isLocalPath(name)) return name;
   if (!SLIDEV_PACKAGE_PATTERNS[kind].test(name)) {
@@ -134,9 +147,16 @@ export function validateSlidevPackageName(name: string, kind: "theme" | "addon")
  */
 export function stableStringify(value: unknown): string {
   return JSON.stringify(value, (_key, v: unknown) => {
-    if (v && typeof v === "object" && !Array.isArray(v) && !(v instanceof Date)) {
+    if (
+      v &&
+      typeof v === "object" &&
+      !Array.isArray(v) &&
+      !(v instanceof Date)
+    ) {
       return Object.fromEntries(
-        Object.entries(v as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+        Object.entries(v as Record<string, unknown>).sort(([a], [b]) =>
+          a < b ? -1 : a > b ? 1 : 0,
+        ),
       );
     }
     return v;

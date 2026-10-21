@@ -8,7 +8,11 @@ function readFavorites(): Set<string> {
   try {
     const raw = localStorage.getItem(FAVORITES_KEY);
     const parsed: unknown = raw ? JSON.parse(raw) : [];
-    return new Set(Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : []);
+    return new Set(
+      Array.isArray(parsed)
+        ? parsed.filter((id): id is string => typeof id === "string")
+        : [],
+    );
   } catch {
     return new Set();
   }
@@ -56,7 +60,10 @@ export function useFavorites(): {
     writeFavorites(next);
   }, []);
 
-  const isFavorite = useCallback((id: string) => favorites.has(id), [favorites]);
+  const isFavorite = useCallback(
+    (id: string) => favorites.has(id),
+    [favorites],
+  );
 
   return { favorites, toggleFavorite, isFavorite };
 }

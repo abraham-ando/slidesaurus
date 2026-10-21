@@ -23,21 +23,21 @@ slidev/
 
 This generates the following routes:
 
-| Route | Content |
-|-------|---------|
-| `/presentations` | Root overview (lists both categories) |
-| `/presentations/intro` | Category overview (lists `getting-started`, `installation`) |
-| `/presentations/advanced` | Category overview (lists `deep-dive`, `theming`) |
-| `/presentations/intro/getting-started` | The individual Slidev presentation |
+| Route                                  | Content                                                     |
+| -------------------------------------- | ----------------------------------------------------------- |
+| `/presentations`                       | Root overview (lists both categories)                       |
+| `/presentations/intro`                 | Category overview (lists `getting-started`, `installation`) |
+| `/presentations/advanced`              | Category overview (lists `deep-dive`, `theming`)            |
+| `/presentations/intro/getting-started` | The individual Slidev presentation                          |
 
 ## _category_.yml
 
 Place a `_category_.yml` (or `.yaml` / `.json`) file inside any sub-folder to customise it:
 
 ```yaml title="slidev/intro/_category_.yml"
-label: Introduction           # display name (default: auto-formatted folder name)
-description: Getting started  # shown as subtitle on the category page
-position: 1                   # sort order among categories
+label: Introduction # display name (default: auto-formatted folder name)
+description: Getting started # shown as subtitle on the category page
+position: 1 # sort order among categories
 ```
 
 ## Nested Categories

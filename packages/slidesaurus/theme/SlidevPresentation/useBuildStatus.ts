@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 // Type-only: erased at compile time, the published theme never loads `src/`.
-import type { BuildStatusFile, PresentationBuildStatus } from "../../src/domain/types";
+import type {
+  BuildStatusFile,
+  PresentationBuildStatus,
+} from "../../src/domain/types";
 
 /** Poll interval while the presentation is queued or building. */
 const BUSY_POLL_MS = 1500;
@@ -36,10 +39,16 @@ export function useBuildStatus(
       if (document.visibilityState !== "hidden") {
         try {
           // `Accept: application/json` bypasses the dev server's SPA (HTML) fallback.
-          const res = await fetch(statusUrl, { cache: "no-cache", headers: { Accept: "application/json" } });
+          const res = await fetch(statusUrl, {
+            cache: "no-cache",
+            headers: { Accept: "application/json" },
+          });
           if (res.ok) {
             const file = (await res.json()) as BuildStatusFile;
-            next = file.presentations?.[presentationId] ?? { state: "pending", hasOutput: false };
+            next = file.presentations?.[presentationId] ?? {
+              state: "pending",
+              hasOutput: false,
+            };
           } else if (res.status === 404) {
             // No status written yet: the first build run has not started.
             next = { state: "pending", hasOutput: false };
@@ -61,7 +70,8 @@ export function useBuildStatus(
             : value,
         );
       }
-      const busy = !next || next.state === "pending" || next.state === "building";
+      const busy =
+        !next || next.state === "pending" || next.state === "building";
       timer = setTimeout(poll, busy ? BUSY_POLL_MS : IDLE_POLL_MS);
     };
     void poll();

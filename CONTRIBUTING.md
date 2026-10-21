@@ -24,13 +24,13 @@ This project follows the [Contributor Covenant](https://www.contributor-covenant
 
 ## Ways to Contribute
 
-| Type | Description |
-|---|---|
-| Bug reports | Open an issue with reproduction steps |
-| Feature requests | Open an issue with use-case context |
-| Documentation | Fix typos, improve examples, add missing docs in `apps/docs/docs/` |
-| Code | Fix bugs or implement features — start by commenting on the issue |
-| Themes/addons | Share examples in Discussions |
+| Type             | Description                                                        |
+| ---------------- | ------------------------------------------------------------------ |
+| Bug reports      | Open an issue with reproduction steps                              |
+| Feature requests | Open an issue with use-case context                                |
+| Documentation    | Fix typos, improve examples, add missing docs in `apps/docs/docs/` |
+| Code             | Fix bugs or implement features — start by commenting on the issue  |
+| Themes/addons    | Share examples in Discussions                                      |
 
 For significant changes, open an issue first to align on the approach before writing code.
 
@@ -128,12 +128,12 @@ Unit tests live next to each layer in `src/**/__tests__/`. Dependencies point in
 
 ### Branch naming
 
-| Type | Pattern | Example |
-|---|---|---|
-| Feature | `feat/<short-description>` | `feat/category-icons` |
-| Bug fix | `fix/<issue-number>-<description>` | `fix/42-symlink-crash` |
-| Docs | `docs/<what>` | `docs/themes-addons` |
-| Refactor | `refactor/<what>` | `refactor/scanner-perf` |
+| Type     | Pattern                            | Example                 |
+| -------- | ---------------------------------- | ----------------------- |
+| Feature  | `feat/<short-description>`         | `feat/category-icons`   |
+| Bug fix  | `fix/<issue-number>-<description>` | `fix/42-symlink-crash`  |
+| Docs     | `docs/<what>`                      | `docs/themes-addons`    |
+| Refactor | `refactor/<what>`                  | `refactor/scanner-perf` |
 
 ### Development workflow
 
@@ -204,16 +204,16 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 **Types:**
 
-| Type | When to use |
-|---|---|
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `docs` | Documentation only |
+| Type       | When to use                                |
+| ---------- | ------------------------------------------ |
+| `feat`     | New feature                                |
+| `fix`      | Bug fix                                    |
+| `docs`     | Documentation only                         |
 | `refactor` | Code change without new feature or bug fix |
-| `test` | Adding or updating tests |
-| `security` | Security hardening |
-| `chore` | Build system, CI, dependencies |
-| `perf` | Performance improvement |
+| `test`     | Adding or updating tests                   |
+| `security` | Security hardening                         |
+| `chore`    | Build system, CI, dependencies             |
+| `perf`     | Performance improvement                    |
 
 **Examples:**
 

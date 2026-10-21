@@ -12,7 +12,8 @@ import { TREE_WALK_MAX_DEPTH } from "../../domain/constants";
 const NOT_INSTALLED_TTL_MS = 30 * 1000;
 const notInstalledCache = new Map<string, number>();
 
-const notInstalledKey = (packageName: string, siteDir: string): string => `${siteDir}::${packageName}`;
+const notInstalledKey = (packageName: string, siteDir: string): string =>
+  `${siteDir}::${packageName}`;
 
 /** Forget a memoized "not installed" result (after a successful install). */
 export function forgetNotInstalled(packageName: string, siteDir: string): void {
@@ -25,7 +26,10 @@ export function _resetAvailabilityCache(): void {
 }
 
 /** Locate `node_modules/<packageName>` walking up from siteDir (monorepo hoisting). */
-function findPackageDir(packageName: string, siteDir: string): string | undefined {
+function findPackageDir(
+  packageName: string,
+  siteDir: string,
+): string | undefined {
   const segments = packageName.split("/");
   return walkUpTree(siteDir, TREE_WALK_MAX_DEPTH, (dir) => {
     const p = path.join(dir, "node_modules", ...segments);
@@ -38,7 +42,10 @@ function findPackageDir(packageName: string, siteDir: string): string | undefine
  * Walks up the directory tree to support monorepo hoisted packages.
  * Negative results are memoized for `NOT_INSTALLED_TTL_MS`.
  */
-export function isPackageInstalled(packageName: string, siteDir: string): boolean {
+export function isPackageInstalled(
+  packageName: string,
+  siteDir: string,
+): boolean {
   const cacheKey = notInstalledKey(packageName, siteDir);
   const cachedAt = notInstalledCache.get(cacheKey);
   if (cachedAt !== undefined) {
@@ -52,7 +59,9 @@ export function isPackageInstalled(packageName: string, siteDir: string): boolea
     }
     return true;
   } catch (err) {
-    log.warn(`Failed to check if package ${packageName} is installed: ${err instanceof Error ? err.message : String(err)}`);
+    log.warn(
+      `Failed to check if package ${packageName} is installed: ${err instanceof Error ? err.message : String(err)}`,
+    );
     return false;
   }
 }
@@ -62,12 +71,17 @@ export function isPackageInstalled(packageName: string, siteDir: string): boolea
  * Returns `undefined` when the package is not installed or unreadable.
  * Used to fingerprint the toolchain in the incremental build cache.
  */
-export function getInstalledPackageVersion(packageName: string, siteDir: string): string | undefined {
+export function getInstalledPackageVersion(
+  packageName: string,
+  siteDir: string,
+): string | undefined {
   if (isLocalPath(packageName)) return undefined;
   const dir = findPackageDir(packageName, siteDir);
   if (!dir) return undefined;
   try {
-    const pkg = JSON.parse(fs.readFileSync(path.join(dir, "package.json"), "utf-8")) as { version?: unknown };
+    const pkg = JSON.parse(
+      fs.readFileSync(path.join(dir, "package.json"), "utf-8"),
+    ) as { version?: unknown };
     return typeof pkg.version === "string" ? pkg.version : undefined;
   } catch {
     return undefined;
@@ -101,7 +115,11 @@ export function checkPackageAvailable(
     if (fs.existsSync(fullPath)) {
       return { installed: true, resolvedName: packageName };
     }
-    return { installed: false, resolvedName: packageName, error: `Local path not found: ${fullPath}` };
+    return {
+      installed: false,
+      resolvedName: packageName,
+      error: `Local path not found: ${fullPath}`,
+    };
   }
   if (isPackageInstalled(packageName, siteDir)) {
     return { installed: true, resolvedName: packageName };
@@ -109,14 +127,22 @@ export function checkPackageAvailable(
   try {
     const pkgPath = path.join(siteDir, "package.json");
     if (fs.existsSync(pkgPath)) {
-      const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8")) as ManifestDependencies;
+      const pkg = JSON.parse(
+        fs.readFileSync(pkgPath, "utf-8"),
+      ) as ManifestDependencies;
       const allDeps = { ...pkg.dependencies, ...pkg.devDependencies };
       if (packageName in allDeps) {
         return { installed: true, resolvedName: packageName };
       }
     }
   } catch (err) {
-    log.warn(`Failed to read package.json in ${siteDir}: ${err instanceof Error ? err.message : String(err)}`);
+    log.warn(
+      `Failed to read package.json in ${siteDir}: ${err instanceof Error ? err.message : String(err)}`,
+    );
   }
-  return { installed: false, resolvedName: packageName, error: `Package '${packageName}' not found. Install with: npm install ${packageName}` };
+  return {
+    installed: false,
+    resolvedName: packageName,
+    error: `Package '${packageName}' not found. Install with: npm install ${packageName}`,
+  };
 }

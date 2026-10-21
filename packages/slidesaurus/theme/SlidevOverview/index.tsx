@@ -6,7 +6,11 @@ import type { PluginData } from "../types";
 import { PLUGIN_NAME } from "../types";
 import { FolderIcon, BackIcon } from "../icons";
 import OverviewControls from "./OverviewControls";
-import { EmptyCategoryState, NoPresentationsState, NoResultsState } from "./OverviewEmptyState";
+import {
+  EmptyCategoryState,
+  NoPresentationsState,
+  NoResultsState,
+} from "./OverviewEmptyState";
 import OverviewFilterBar from "./OverviewFilterBar";
 import OverviewGrid from "./OverviewGrid";
 import OverviewList from "./OverviewList";
@@ -27,7 +31,10 @@ interface SlidevOverviewProps {
   readonly children?: React.ReactNode;
 }
 
-export default function SlidevOverview({ pluginId = "default", children }: SlidevOverviewProps) {
+export default function SlidevOverview({
+  pluginId = "default",
+  children,
+}: SlidevOverviewProps) {
   const { presentations, categories, playlists, config } = usePluginData(
     PLUGIN_NAME,
     pluginId,
@@ -35,11 +42,24 @@ export default function SlidevOverview({ pluginId = "default", children }: Slide
   const uiTheme = config.uiTheme ?? "default";
 
   const nav = useCategoryNavigation(config.routeBasePath, categories);
-  const { basePath, currentCategory, isInCategory, currentCategoryMeta, topLevelCategories, backUrl } = nav;
+  const {
+    basePath,
+    currentCategory,
+    isInCategory,
+    currentCategoryMeta,
+    topLevelCategories,
+    backUrl,
+  } = nav;
 
   const filters = useUrlFilters();
-  const { viewMode, sortOrder, setViewMode, setSortOrder, showFavoritesOnly, setShowFavoritesOnly } =
-    useOverviewPreferences();
+  const {
+    viewMode,
+    sortOrder,
+    setViewMode,
+    setSortOrder,
+    showFavoritesOnly,
+    setShowFavoritesOnly,
+  } = useOverviewPreferences();
   const list = usePresentationList({
     presentations,
     playlists,
@@ -70,11 +90,19 @@ export default function SlidevOverview({ pluginId = "default", children }: Slide
   const effectiveViewMode = isMinimal ? "list" : viewMode;
   const hasSidebar = topLevelCategories.length > 0 && !isMinimal;
 
-  const title = currentCategoryMeta?.label || config.pageTitle || "Slidev Presentations";
-  const tagline = currentCategoryMeta?.description || config.pageTagline || "Interactive presentation overview";
+  const title =
+    currentCategoryMeta?.label || config.pageTitle || "Slidev Presentations";
+  const tagline =
+    currentCategoryMeta?.description ||
+    config.pageTagline ||
+    "Interactive presentation overview";
 
-  const hasContent = list.inCategory.length > 0 || nav.childCategories.length > 0;
-  const noResults = isFilterActive && list.sortedPresentations.length === 0 && list.sortedCategories.length === 0;
+  const hasContent =
+    list.inCategory.length > 0 || nav.childCategories.length > 0;
+  const noResults =
+    isFilterActive &&
+    list.sortedPresentations.length === 0 &&
+    list.sortedCategories.length === 0;
   const sourceDir = config.path || "./slidev";
 
   const mainContent = (
@@ -106,14 +134,24 @@ export default function SlidevOverview({ pluginId = "default", children }: Slide
       )}
 
       <div className={styles.contentContainer}>
-        {!hasContent && !isInCategory && <NoPresentationsState sourceDir={sourceDir} />}
+        {!hasContent && !isInCategory && (
+          <NoPresentationsState sourceDir={sourceDir} />
+        )}
         {!hasContent && isInCategory && <EmptyCategoryState />}
         {noResults && <NoResultsState onReset={resetFilters} />}
         {hasContent && !noResults && effectiveViewMode === "grid" && (
-          <OverviewGrid categories={list.sortedCategories} presentations={list.sortedPresentations} uiTheme={uiTheme} />
+          <OverviewGrid
+            categories={list.sortedCategories}
+            presentations={list.sortedPresentations}
+            uiTheme={uiTheme}
+          />
         )}
         {hasContent && !noResults && effectiveViewMode === "list" && (
-          <OverviewList categories={list.sortedCategories} presentations={list.sortedPresentations} uiTheme={uiTheme} />
+          <OverviewList
+            categories={list.sortedCategories}
+            presentations={list.sortedPresentations}
+            uiTheme={uiTheme}
+          />
         )}
       </div>
     </>
@@ -125,13 +163,23 @@ export default function SlidevOverview({ pluginId = "default", children }: Slide
       <div className={styles.container} data-slidev-ui-theme={uiTheme}>
         <div className={styles.bannerWrapper}>
           {isInCategory && backUrl !== null && (
-            <Link to={backUrl} className={styles.backButton} aria-label="Go back">
+            <Link
+              to={backUrl}
+              className={styles.backButton}
+              aria-label="Go back"
+            >
               <BackIcon width={24} height={24} />
             </Link>
           )}
           <div className={styles.banner}>
             <h1 className={styles.title}>
-              {isInCategory && <FolderIcon className={styles.titleIcon} width={50} height={50} />}
+              {isInCategory && (
+                <FolderIcon
+                  className={styles.titleIcon}
+                  width={50}
+                  height={50}
+                />
+              )}
               <span>{title}</span>
             </h1>
             <p className={styles.subtitle}>{tagline}</p>
@@ -139,9 +187,13 @@ export default function SlidevOverview({ pluginId = "default", children }: Slide
           {(hasContent || isInCategory) && !isMinimal && (
             <OverviewControls
               sortOrder={sortOrder}
-              onToggleSort={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+              onToggleSort={() =>
+                setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+              }
               viewMode={effectiveViewMode}
-              onToggleView={() => setViewMode(effectiveViewMode === "grid" ? "list" : "grid")}
+              onToggleView={() =>
+                setViewMode(effectiveViewMode === "grid" ? "list" : "grid")
+              }
             />
           )}
         </div>
