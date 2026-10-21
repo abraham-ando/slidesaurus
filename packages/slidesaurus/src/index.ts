@@ -24,6 +24,7 @@ export { defaultMaxParallelBuilds } from "./shared/utils";
 // `onBuildComplete`) and swizzled theme components rely on these shapes.
 export type {
   BuildResult,
+  BuildStatusFile,
   Category,
   CategoryMetadata,
   CorePresentationMetadata,
@@ -34,6 +35,7 @@ export type {
   PluginData,
   PluginOptions,
   Presentation,
+  PresentationBuildStatus,
   PresentationLevel,
   PresentationMetadata,
   SlidevFrontmatter,

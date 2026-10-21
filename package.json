@@ -19,7 +19,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@slidev/cli": "^52.0.0",
+    "@slidev/cli": "^52.20.1",
     "@slidev/theme-seriph": "*",
     "eslint": "^10.13.0",
     "eslint-config-prettier": "^10.1.8",
@@ -38,7 +38,10 @@
       "webpack-dev-server": "^5.2.6",
       "uuid": ">=14.0.0",
       "js-yaml@3": "^3.15.2",
-      "js-yaml@4": "^4.3.2"
+      "js-yaml@4": "^4.3.2",
+      "markdown-it": "^14.3.3",
+      "image-size": ">=2.0.3",
+      "tinypool": ">=2.1.2"
     },
     "onlyBuiltDependencies": [
       "core-js",

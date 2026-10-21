@@ -41,7 +41,8 @@
     "build": "rollup -c rollup.config.mjs",
     "watch": "rollup -c rollup.config.mjs --watch",
     "clean": "node -e \"require('node:fs').rmSync('lib',{recursive:true,force:true})\"",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc -p theme/tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc -p theme/tsconfig.json && pnpm typecheck:features",
+    "typecheck:features": "tsc -p tsconfig.features.json",
     "test": "vitest run",
     "test:integration": "cucumber-js",
     "prepublishOnly": "pnpm run build"
