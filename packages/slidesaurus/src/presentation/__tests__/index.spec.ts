@@ -21,7 +21,7 @@ describe("validateOptions", () => {
 
     expect(result.path).toBe("./slidev");
     expect(result.routeBasePath).toBe("/slidev");
-    expect(result.buildTimeout).toBe(120);
+    expect(result.buildTimeout).toBe(300);
     expect(result.verbose).toBe(false);
     expect(result.theme).toBeUndefined();
     expect(result.maxParallelBuilds).toBeGreaterThanOrEqual(1);

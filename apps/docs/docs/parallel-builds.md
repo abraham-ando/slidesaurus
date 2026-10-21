@@ -30,7 +30,7 @@ Earlier versions of the plugin ran builds sequentially out of caution. The `EADD
 {
   // Default: min(cpus - 1, free memory in GiB), at least 1
   maxParallelBuilds: 4,
-  buildTimeout: 120,  // Default: 120 seconds per presentation
+  buildTimeout: 300,  // Default: 300 seconds per presentation
 }
 ```
 
@@ -64,7 +64,7 @@ If a single presentation takes longer than `buildTimeout` seconds, the Slidev pr
 
 ```ts
 {
-  buildTimeout: 300,  // 5 minutes for complex presentations
+  buildTimeout: 600,  // 10 minutes (the maximum) for very large decks or slow runners
 }
 ```
 
@@ -160,7 +160,7 @@ The Slidev CLI lookup is similarly cached per `siteDir` for the lifetime of the 
 1. **Reduce slide count** — split large decks into smaller presentations so concurrency has more leverage.
 2. **Pre-install themes** — keep `autoInstall: false` (the default) and install themes once via `package.json`. This avoids any package installation during the build hot path.
 3. **Avoid heavy addons in many presentations** — addons increase per-deck startup time.
-4. **Increase `buildTimeout` for CI** — slower CI runners may need `buildTimeout: 300` for complex decks.
+4. **Increase `buildTimeout` for CI** — the default (300 s) covers cold builds; very slow CI runners or very large decks may need up to `buildTimeout: 600`.
 5. **Tune `maxParallelBuilds` to your hardware** — too low underuses the machine; too high causes memory pressure and contention. The default (CPU count − 1, capped by free memory) is a sane starting point; only override it when you have a measured reason to, or when several sites build at the same time.
 
 ## Build summary and speedup comparison

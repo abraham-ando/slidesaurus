@@ -14,6 +14,7 @@ export type ExportFormat = "pdf" | "pptx";
 export interface BuildOptions {
   theme?: string;
   addons?: string[];
+  /** Maximum duration of one presentation build, in seconds (10–600, default 300). */
   buildTimeout: number;
   verbose: boolean;
   maxParallelBuilds: number;

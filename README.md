@@ -170,7 +170,7 @@ npx docusaurus swizzle slidesaurus SlidevCard --wrap
 | `download` | `boolean` | `false` | Générer les exports PDF/PPTX et afficher les boutons de téléchargement (nécessite Playwright) |
 | `pageTitle` | `string` | `"Slidev Presentations"` | Titre de la page d'overview |
 | `maxParallelBuilds` | `number` | `CPU − 1` (min. 1) | Builds en parallèle max (plafonné au nombre de CPU) |
-| `buildTimeout` | `number` | `120` | Timeout par build (s) |
+| `buildTimeout` | `number` | `300` | Timeout par build (s, 10–600) |
 | `autoInstall` | `boolean` | `false` | Auto-installer les thèmes/addons manquants (noms `slidev-theme-*` / `slidev-addon-*` uniquement, sans scripts d'installation) |
 
 → [Documentation complète des options](./apps/docs/docs/options.md)
