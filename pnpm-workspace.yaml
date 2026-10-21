@@ -13,9 +13,10 @@ minimumReleaseAge: 1440
 # lives in the root package.json "pnpm" field).
 strictDepBuilds: true
 
-# Refuse a transitive dependency that moves to a weaker trust level
-# (e.g. a package previously published with provenance, now without).
-trustPolicy: no-downgrade
+# `trustPolicy: no-downgrade` is intentionally NOT enabled: it makes a
+# non-frozen `pnpm install` / `pnpm update` fail on widespread legitimate
+# packages (e.g. undici-types@6.21.0 via @types/node, published without
+# provenance after earlier versions had it: ERR_PNPM_TRUST_DOWNGRADE).
 
 # Audit allowlist: only for advisories WITHOUT an available fix, each with a
 # justification (see docs "Security" page). Keep empty otherwise.
